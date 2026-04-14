@@ -27,7 +27,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **`create_task`** -- create a new Jira issue with ADF description, assignee, labels, epic link
 - **`search_tasks`** -- search Jira issues with raw JQL (no caching)
 
-### CLI Commands (17)
+### CLI Commands (16)
 
 - **`jira-mcp`** / **`jira-mcp serve`** -- start MCP server (stdio transport)
 - **`jira-mcp config init`** -- initialize global config at `~/.softspark/jira-mcp/`

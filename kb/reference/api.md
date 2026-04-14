@@ -13,7 +13,7 @@ description: "Complete reference for all 15 MCP tools exposed by the Jira MCP se
 
 All tools communicate over stdio using the MCP JSON-RPC protocol. Every tool returns `{ content: [{ type: "text", text: "..." }] }`.
 
-## Task Management Tools (13)
+## Task Management Tools (15)
 
 ### sync_tasks
 
