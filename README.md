@@ -12,7 +12,7 @@
 ## What's New in v1.1.0
 
 - **Hardening & market readiness** -- boundary tests, retry/backoff, security fixes, server refactor.
-- **509 tests** across 51 test files -- boundary tests for `server.ts`, CLI bootstrap, and `JiraConnector` (96 new tests).
+- **518 tests** across 52 test files -- boundary tests for `server.ts`, CLI bootstrap, and `JiraConnector`.
 - **Retry/backoff** -- transient Jira API failures (429, 503) retried up to 3x with exponential backoff.
 - **server.ts refactored** -- 719 → 324 lines. Tool definitions and argument helpers extracted to dedicated modules.
 - **Major dep upgrades** -- TypeScript 6, ESLint 10, zod 4, vitest 4.
@@ -222,7 +222,7 @@ src/
 
 **Typed error hierarchy** -- 15 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 509 tests across 51 test files. Self-contained 520KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 518 tests across 52 test files. Self-contained 520KB package.
 
 ## Documentation
 
