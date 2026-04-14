@@ -29,7 +29,7 @@ Release Creation (this SOP) --> git tag --> CI publish --> Post-Release Testing 
 ```bash
 # 1. Decide version bump (patch / minor / major)
 # 2. Edit package.json "version" field
-# 3. Write CHANGELOG.md entry
+# 3. Write CHANGELOG.md entry + update README "What's New" section
 # 4. Run quality gates
 npm run typecheck && npm run lint && npm test && npm run build
 # 4.5. Validate README counts match source
@@ -111,6 +111,21 @@ Add an entry at the top of `CHANGELOG.md`, below the header and above `[Unreleas
 - [ ] Descriptions start with a verb
 - [ ] Tool names in backticks: `sync_tasks`
 - [ ] Date format: `YYYY-MM-DD`
+
+### Step 3.2: Update README "What's New" Section
+
+Replace the "What's New in vOLD" section in `README.md` with the new version highlights:
+
+```markdown
+## What's New in vX.Y.Z
+
+- **Highlight 1** -- short description.
+- **Highlight 2** -- short description.
+```
+
+- [ ] Section title updated to `## What's New in vX.Y.Z`
+- [ ] Bullet points reflect the most important changes from CHANGELOG
+- [ ] Test/file counts match actual values (verified by `validate_counts.py`)
 
 ---
 
@@ -337,7 +352,8 @@ gh release delete vX.Y.Z --repo softspark/jira-mcp --yes
 |---|-------|--------|---------------|
 | 1 | Version bump | Decide patch/minor/major | Type selected |
 | 2 | Update version | Edit `package.json` | Version matches target |
-| 3 | CHANGELOG | Add release entry | Entry exists with correct format |
+| 3a | CHANGELOG | Add release entry | Entry exists with correct format |
+| 3b | README | Update "What's New" section | Title + bullets match new version |
 | 4a | Typecheck | `npm run typecheck` | 0 errors |
 | 4b | Lint | `npm run lint` | 0 errors, 0 warnings |
 | 4c | Test | `npm test` | All pass |

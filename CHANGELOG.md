@@ -7,6 +7,40 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.1.0 -- Hardening & Market Readiness (2026-04-14)
+
+### Added
+- **Boundary test suite** -- 96 new tests covering `server.ts` (25), `cli/index.ts` (27), and `JiraConnector` (44). Total: 509 tests across 51 files.
+- **Retry/backoff for transient failures** -- `JiraConnector` retries 429 and 503 responses up to 3 times with exponential backoff (1s/2s/4s). Respects `Retry-After` header.
+- **Count validation script** -- `scripts/validate_counts.py` verifies README counts match source code. Enforced in CI via `validate-counts` job.
+- **Count validation in CI** -- new `validate-counts` job in `ci.yml` catches README drift before merge.
+- **ADR-0001** -- documented "hardening before refactor" decision with alternatives and guardrails.
+- **Hardening plan** -- full plan with success criteria and pre-mortem in `kb/planning/`.
+
+### Changed
+- **server.ts refactored** -- 719 → 324 lines (-55%). Tool definitions extracted to `src/tools/definitions.ts`, argument helpers to `src/tools/args.ts`.
+- **Major dependency upgrades** -- TypeScript 5 → 6, ESLint 9 → 10, zod 3 → 4, vitest 3 → 4, @types/node 22 → 25.
+- **TypeScript 6 migration** -- added `types: ["node"]` and `ignoreDeprecations: "6.0"` to tsconfig.
+- **zod 4 migration** -- `.default({})` replaced with factory function in `BulkOptionsSchema`.
+- **vitest 4 migration** -- arrow function mocks replaced with regular function syntax for constructor compatibility.
+- **Bundle size** -- 325KB → 520KB (due to zod 4, which is significantly larger).
+- **README** -- "Zero runtime dependencies" corrected to "Minimal runtime dependencies". Test counts updated.
+- **CONTRIBUTING.md** -- full CI workflow documented, `validate:counts` noted as maintainer-managed.
+- **Coverage exclusions reduced** -- `server.ts` and `jira-connector.ts` removed from vitest exclusion list.
+
+### Security
+- **Cache file permissions** -- all cache writes use `mode: 0o600` (owner-only). Prevents local privilege escalation on shared machines.
+- **CWD config loading warning** -- stderr warning when `config.json` or `credentials.json` loaded from working directory instead of global config.
+- **Error message truncation** -- Jira API error responses truncated to 200 characters to prevent information leakage.
+- **`saveJsonFile` JSDoc** -- `@security` annotation warns against use for sensitive data.
+
+### Documentation
+- **Hardcoded counts removed** from secondary docs (CLAUDE.md, kb/, rules/, copilot-instructions). Counts live only in README (single source of truth pattern from ai-toolkit).
+- **KB docs updated** -- caching.md, architecture.md, configuration.md, troubleshooting/common-issues.md reflect security changes.
+- **Release SOP updated** -- Step 4.5 (validate counts) and Step 3.2 (README "What's New" update) added.
+
+---
+
 ## v1.0.0 -- Initial Public Release (2026-04-14)
 
 ### MCP Tools (15)

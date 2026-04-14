@@ -1,6 +1,6 @@
 {
   "name": "@softspark/jira-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Jira integration — multi-instance routing, ADF formatting, task caching, and comment templates via the Model Context Protocol.",
   "keywords": [
     "mcp",

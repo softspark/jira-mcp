@@ -4,20 +4,19 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.0.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.1.0-blue)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## What's New in v1.0.0
+## What's New in v1.1.0
 
-- **15 MCP tools** -- `update_task` for editing issues, `get_project_language` for AI language awareness.
-- **Language configuration** -- global `default_language` + per-project override. Supports: pl, en, de, es, fr, pt, it, nl.
-- **16 CLI commands** -- `config set-default`, `config set-language`, `config set-project-language` added.
-- **Minimal runtime dependencies** -- 1 runtime dep (`commander` for CLI), built-in `fetch` client (Jira REST API v3), built-in ADF parsers. Self-contained 520KB bundle.
-- **Per-instance credentials** -- different username/token per Jira instance URL (Format A + Format B).
-- **Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires.
-- **509 tests** across 51 test files with strict TypeScript.
+- **Hardening & market readiness** -- boundary tests, retry/backoff, security fixes, server refactor.
+- **509 tests** across 51 test files -- boundary tests for `server.ts`, CLI bootstrap, and `JiraConnector` (96 new tests).
+- **Retry/backoff** -- transient Jira API failures (429, 503) retried up to 3x with exponential backoff.
+- **server.ts refactored** -- 719 → 324 lines. Tool definitions and argument helpers extracted to dedicated modules.
+- **Major dep upgrades** -- TypeScript 6, ESLint 10, zod 4, vitest 4.
+- **Security hardened** -- cache 0o600, CWD config warning, error truncation, count validation in CI.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
