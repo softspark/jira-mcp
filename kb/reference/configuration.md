@@ -54,6 +54,10 @@ In this example `DEVOPS` uses `"en"` and `ADMIN` inherits `"pl"` from `default_l
 
 ### credentials.json
 
+Two formats are supported. The loader auto-detects which is in use.
+
+**Format A (legacy) — single credential for all instances:**
+
 ```json
 {
   "username": "user@example.com",
@@ -61,14 +65,47 @@ In this example `DEVOPS` uses `"en"` and `ADMIN` inherits `"pl"` from `default_l
 }
 ```
 
-**Fields**
+**Format B (recommended) — per-instance credentials with default fallback:**
+
+```json
+{
+  "default": {
+    "username": "user@example.com",
+    "api_token": "default-token"
+  },
+  "instances": {
+    "https://other.atlassian.net": {
+      "username": "other@example.com",
+      "api_token": "other-token"
+    }
+  }
+}
+```
+
+**Fields (Format B)**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `username` | string (email) | Yes | Jira account email address. |
-| `api_token` | string | Yes | Jira API token (non-empty). |
+| `default` | object | Yes | Default credential used for instances without a specific override. |
+| `default.username` | string (email) | Yes | Jira account email address. |
+| `default.api_token` | string | Yes | Jira API token (non-empty). |
+| `instances` | object | No | Map of Jira instance URL → credential override. |
+| `instances.<URL>.username` | string (email) | Yes | Instance-specific email. |
+| `instances.<URL>.api_token` | string | Yes | Instance-specific API token. |
 
-**Credentials apply to all configured projects by default.** For per-instance credentials, see the per-instance format below.
+**Credential resolution order:** `instances[project.url]` → `default`.
+
+**CLI commands:**
+
+```bash
+# Set default credentials (all instances without override)
+jira-mcp config set-credentials user@example.com --token TOKEN
+
+# Set credentials for a specific Jira instance
+jira-mcp config set-credentials other@example.com --token TOKEN --url https://other.atlassian.net
+```
+
+The CLI automatically migrates Format A → Format B on first use of `--url`.
 
 ---
 
@@ -141,7 +178,7 @@ Setting these variables overrides both local and global file discovery.
 
 ## Multi-Instance Configuration Example
 
-Multiple project keys can point to different Jira Cloud instances. Credentials are shared across all instances in a single deployment.
+Multiple project keys can point to different Jira Cloud instances. Use per-instance credentials (Format B) when instances require different accounts.
 
 ```json
 {

@@ -22,9 +22,19 @@ Jira MCP supports any number of projects across different Jira instances. Each p
 
 ### 1. Understand the credential model
 
-**Format A (global):** One `credentials.json` file applies to all instances. Works when all instances share the same Atlassian account or a service account.
+**Format A (legacy):** A flat `credentials.json` with `{ username, api_token }`. Applies the same credential to all instances. Works when all instances share the same Atlassian account.
 
-**Format B (per-instance):** Each project entry in `config.json` can include its own `username` and `api_token` fields, overriding the global credentials for that instance. Use this when different Jira instances require different API tokens.
+**Format B (recommended):** `credentials.json` with `{ default, instances }`. Each Jira instance URL can have its own credential, with a default fallback. Use this when different Jira instances require different API tokens.
+
+```bash
+# Set the default credential (used by all instances without an override)
+jira-mcp config set-credentials shared@example.com --token SHARED_TOKEN
+
+# Set a per-instance credential (overrides default for this URL only)
+jira-mcp config set-credentials other@example.com --token OTHER_TOKEN --url https://client-org.atlassian.net
+```
+
+The CLI automatically migrates Format A → Format B on first use of `--url`. Existing credentials are preserved as the `default`.
 
 ### 2. Add projects from different instances
 
@@ -138,7 +148,7 @@ If you receive a `ConfigValidationError: Project 'CLIENT' not found`, the projec
 | Problem | Solution |
 |---------|----------|
 | Wrong instance used for a task | Verify `config.json` — check the URL for the project key prefix |
-| `JiraAuthenticationError` on one instance only | That instance requires a different API token; use a separate server process with its own `credentials.json` |
+| `JiraAuthenticationError` on one instance only | That instance requires a different API token; set per-instance credentials: `jira-mcp config set-credentials email --token TOKEN --url https://instance.atlassian.net` |
 | Tasks from instance B missing after sync | Run `sync_tasks(project_key="CLIENT")` explicitly |
 | `ConfigValidationError: Project '...' not found` | Run `jira-mcp config add-project <KEY> <URL>` for the missing key |
 

@@ -2,17 +2,17 @@
 title: "SOP: Post-Release Testing"
 category: procedures
 service: jira-mcp
-tags: [sop, verification, release, smoke-test, install, qa, post-release]
-version: "1.0.0"
+tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api]
+version: "1.1.0"
 created: "2026-04-13"
 last_updated: "2026-04-14"
-description: "End-to-end smoke test after publishing a new @softspark/jira-mcp release — npm install verification, CLI smoke tests, MCP server verification, and cleanup."
+description: "End-to-end smoke test after publishing a new @softspark/jira-mcp release — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN project, and cleanup."
 ---
 
 # SOP: Post-Release Testing
 
 End-to-end smoke test after publishing a new `@softspark/jira-mcp` release.
-Verifies all critical paths from the user's perspective.
+Verifies all critical paths from the user's perspective — including live Jira API operations.
 
 **Run this SOP after:**
 - The [Release Creation SOP](sop-release.md) completes and CI publishes to npm
@@ -22,8 +22,16 @@ Verifies all critical paths from the user's perspective.
 - Node.js >= 18
 - npm CLI access
 - The target version has been published to npm
+- Access to the test Jira instance (see below)
 
-**Time:** 5-10 minutes
+**Test Jira Instance:**
+- **Project:** `KAN`
+- **URL:** `https://softspark.atlassian.net`
+- **Board:** `https://softspark.atlassian.net/jira/software/projects/KAN/boards/1`
+- **Language:** `pl`
+- **Purpose:** Dedicated sandbox for smoke tests. Safe to create/modify/delete tasks.
+
+**Time:** 10-15 minutes
 
 ---
 
@@ -31,23 +39,33 @@ Verifies all critical paths from the user's perspective.
 
 ```bash
 VERSION="X.Y.Z"
+
+# Phase 1: Install
 npm install -g @softspark/jira-mcp@$VERSION
 jira-mcp --version
 jira-mcp --help
-TMPDIR=$(mktemp -d) && cd $TMPDIR
-jira-mcp config init
-jira-mcp config add-project TEST https://test.atlassian.net
-jira-mcp config list-projects
-echo '{}' | timeout 5 jira-mcp serve || true
-cd - && rm -rf $TMPDIR
-npm uninstall -g @softspark/jira-mcp
+
+# Phase 2: CLI
+jira-mcp config list-projects  # KAN should be listed
+
+# Phase 3: MCP Server
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jira-mcp serve 2>/dev/null
+
+# Phase 4: Live Jira API (via MCP tools against KAN project)
+# → create_task → get_task_details → update_task → add_task_comment
+# → add_templated_comment → get_task_statuses → update_task_status
+# → reassign_task → log_task_time → get_task_time_tracking
+# → sync_tasks → read_cached_tasks → search_tasks
+# → get_project_language → list_comment_templates
+
+# Phase 5: Cleanup (delete test task from KAN, keep jira-mcp installed)
 ```
 
 ---
 
 ## Phase 1: npm Install Verification
 
-### Step 1.1: Install the Published Version
+### Step 1.1: Install/Update the Published Version
 
 ```bash
 npm install -g @softspark/jira-mcp@X.Y.Z
@@ -56,6 +74,8 @@ npm install -g @softspark/jira-mcp@X.Y.Z
 - [ ] Installation completes without errors
 - [ ] No `WARN` messages about peer dependencies
 - [ ] No `ERR!` messages
+
+> **Note:** The global install is kept permanently for ad-hoc CLI usage. Do NOT uninstall after testing.
 
 ### Step 1.2: Verify Installed Version
 
@@ -93,40 +113,18 @@ jira-mcp --help
 ```
 
 - [ ] Help text is displayed without errors
-- [ ] All subcommands are listed (serve, config, etc.)
+- [ ] All subcommands are listed (serve, config, create, create-monthly, cache)
 - [ ] No stack traces or unhandled errors
 
-### Step 2.2: Config Init (Temp Directory)
-
-Create a temporary directory to avoid polluting the real config:
-
-```bash
-TMPDIR=$(mktemp -d)
-cd $TMPDIR
-jira-mcp config init
-```
-
-- [ ] Command exits with code 0
-- [ ] Configuration directory structure is created
-- [ ] Confirmation message is displayed
-
-### Step 2.3: Add Test Project
-
-```bash
-jira-mcp config add-project TEST https://test.atlassian.net
-```
-
-- [ ] Command exits with code 0
-- [ ] Project `TEST` is registered with the given URL
-
-### Step 2.4: List Projects
+### Step 2.2: Verify KAN Project Configuration
 
 ```bash
 jira-mcp config list-projects
 ```
 
-- [ ] Output includes the `TEST` project
-- [ ] URL `https://test.atlassian.net` is shown
+- [ ] Output includes the `KAN` project
+- [ ] URL shows `https://softspark.atlassian.net`
+- [ ] Language shows `pl`
 - [ ] No errors or stack traces
 
 ---
@@ -159,34 +157,218 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jira-mcp serve 2>/dev/nu
 
 ---
 
-## Phase 4: Cleanup
+## Phase 4: Live Jira API Tests
 
-### Step 4.1: Remove Test Config
+All tests run against the **KAN** project (`https://softspark.atlassian.net`).
+Use MCP tools (via Claude or direct JSON-RPC). A single test task is created and used throughout.
 
-```bash
-cd -
-rm -rf $TMPDIR
+### Step 4.1: Get Project Language
+
+```
+get_project_language({ project_key: "KAN" })
 ```
 
-- [ ] Temporary directory removed
-- [ ] No leftover test configuration files
+- [ ] Returns `language: "pl"`
+- [ ] No errors
 
-### Step 4.2: Uninstall Global Package
+### Step 4.2: List Comment Templates
 
-```bash
-npm uninstall -g @softspark/jira-mcp
+```
+list_comment_templates()
 ```
 
-- [ ] Uninstall completes without errors
-- [ ] `jira-mcp` command is no longer available
+- [ ] Returns template list with IDs: `status-update`, `blocker-notification`, `handoff-transition`, etc.
+- [ ] Each template shows required variables
 
-**Verify removal:**
+### Step 4.3: Create Test Task
 
-```bash
-which jira-mcp 2>/dev/null && echo "FAIL: still installed" || echo "OK: removed"
+```
+create_task({
+  project_key: "KAN",
+  summary: "[SMOKE TEST] Test task vX.Y.Z — do usunięcia",
+  description: "Automatyczny test po wydaniu wersji X.Y.Z.\n\nMożna bezpiecznie usunąć.",
+  type: "Task",
+  priority: "Low",
+  labels: ["smoke-test"]
+})
 ```
 
-- [ ] Output shows `OK: removed`
+- [ ] Task created successfully, returns task key (e.g. `KAN-42`)
+- [ ] No errors
+
+> **Save the returned `task_key`** — it is used in all subsequent steps as `KAN-XX`.
+
+### Step 4.4: Get Task Details
+
+```
+get_task_details({ task_key: "KAN-XX" })
+```
+
+- [ ] Returns full task with summary, description (as markdown), status, priority, labels
+- [ ] Description matches what was set in Step 4.3
+- [ ] Language field shows `pl`
+
+### Step 4.5: Update Task Fields
+
+```
+update_task({
+  task_key: "KAN-XX",
+  summary: "[SMOKE TEST] Zaktualizowany task vX.Y.Z",
+  priority: "Medium",
+  labels: ["smoke-test", "updated"]
+})
+```
+
+- [ ] Returns success with `updated_fields` listing changed fields
+- [ ] No errors
+
+### Step 4.6: Add Markdown Comment
+
+```
+add_task_comment({
+  task_key: "KAN-XX",
+  comment: "## Smoke test\n\nKomentarz testowy z **markdown**.\n\n- Punkt 1\n- Punkt 2"
+})
+```
+
+- [ ] Comment added, returns comment ID
+- [ ] No ADF conversion errors
+
+### Step 4.7: Add Templated Comment
+
+```
+add_templated_comment({
+  task_key: "KAN-XX",
+  template_id: "status-update",
+  variables: {
+    "completed": "Smoke test faz 1-3",
+    "next_steps": "Weryfikacja API",
+    "blockers": "Brak"
+  }
+})
+```
+
+- [ ] Templated comment added successfully
+- [ ] No missing variable errors
+
+### Step 4.8: Get Available Statuses
+
+```
+get_task_statuses({ task_key: "KAN-XX" })
+```
+
+- [ ] Returns list of valid transitions from current status
+- [ ] At least one transition is available (e.g. "In Progress")
+
+### Step 4.9: Change Task Status
+
+Using a valid transition from Step 4.8:
+
+```
+update_task_status({ task_key: "KAN-XX", status: "In Progress" })
+```
+
+- [ ] Status changed successfully
+- [ ] No "invalid transition" error
+
+### Step 4.10: Reassign Task
+
+```
+reassign_task({ task_key: "KAN-XX", assignee_email: "<your-email>" })
+```
+
+- [ ] Task reassigned successfully
+- [ ] No "user not found" error
+
+Then unassign:
+
+```
+reassign_task({ task_key: "KAN-XX" })
+```
+
+- [ ] Task unassigned successfully
+
+### Step 4.11: Log Time
+
+```
+log_task_time({
+  task_key: "KAN-XX",
+  time_spent: "15m",
+  comment: "Smoke test po wydaniu"
+})
+```
+
+- [ ] Time logged, returns worklog ID
+- [ ] No errors
+
+### Step 4.12: Get Time Tracking
+
+```
+get_task_time_tracking({ task_key: "KAN-XX" })
+```
+
+- [ ] Returns time tracking info with `time_spent` showing at least `15m`
+- [ ] No errors
+
+### Step 4.13: Sync Tasks
+
+```
+sync_tasks({ project_key: "KAN" })
+```
+
+- [ ] Sync completes, reports number of synced tasks
+- [ ] No authentication or connection errors
+
+### Step 4.14: Read Cached Tasks
+
+```
+read_cached_tasks({ task_key: "KAN-XX" })
+```
+
+- [ ] Returns the test task from cache
+- [ ] Status reflects the change from Step 4.9
+
+### Step 4.15: Search Tasks
+
+```
+search_tasks({
+  jql: "project = KAN AND labels = smoke-test ORDER BY created DESC",
+  max_results: 5,
+  project_key: "KAN"
+})
+```
+
+- [ ] Returns results including the test task
+- [ ] No errors
+
+---
+
+## Phase 5: Cleanup
+
+### Step 5.1: Move Test Task to Done
+
+```
+update_task_status({ task_key: "KAN-XX", status: "Done" })
+```
+
+- [ ] Task moved to Done
+
+### Step 5.2: Delete Test Task from Jira
+
+Go to `https://softspark.atlassian.net/browse/KAN-XX` and delete the task manually, or leave it in Done with the `smoke-test` label for audit trail.
+
+- [ ] Test task cleaned up or marked as Done with `smoke-test` label
+
+### Step 5.3: Verify No Side Effects
+
+```
+jira-mcp config list-projects
+```
+
+- [ ] KAN project still configured
+- [ ] No other projects affected
+
+> **Do NOT uninstall `jira-mcp`** — the global install is kept for ad-hoc usage.
 
 ---
 
@@ -207,7 +389,7 @@ which jira-mcp 2>/dev/null && echo "FAIL: still installed" || echo "OK: removed"
 |---------|-------------|--------|
 | `jira-mcp: command not found` | Binary not in PATH | Check `npm config get prefix` and add `bin/` to PATH |
 | `--help` shows error | Missing `commander` dependency | Check `package.json` files array includes `dist/` |
-| `config init` fails | Missing CLI handler | Check `dist/cli.js` was included in the published package |
+| KAN not in project list | Config was reset or removed | Re-add: `jira-mcp config add-project KAN https://softspark.atlassian.net` |
 
 ### Phase 3 Failures (MCP Server)
 
@@ -216,6 +398,17 @@ which jira-mcp 2>/dev/null && echo "FAIL: still installed" || echo "OK: removed"
 | Immediate crash on `serve` | Missing dependency at runtime | Run `npm ls` in install path to check for missing deps |
 | No tool list in response | MCP SDK initialization error | Check `@modelcontextprotocol/sdk` version compatibility |
 | Timeout with no response | Server hangs on stdin | Check stdio transport configuration |
+
+### Phase 4 Failures (Live Jira API)
+
+| Symptom | Likely Cause | Action |
+|---------|-------------|--------|
+| `JIRA_AUTH` error | Invalid or expired credentials | Run `jira-mcp config set-credentials` and re-enter API token |
+| `JIRA_PERMISSION` on create | No create permission in KAN | Check project permissions in Jira admin |
+| `JIRA_CONNECTION` error | Network issue or wrong URL | Verify `https://softspark.atlassian.net` is reachable |
+| Invalid transition error | Workflow changed in KAN | Run `jira-mcp cache sync-workflows` and check available transitions |
+| User not found on reassign | User cache stale | Run `jira-mcp cache sync-users` |
+| Task not in cache after sync | Sync filtered it out | Check JQL filter in `sync_tasks` call |
 
 ### Escalation
 
@@ -233,8 +426,9 @@ If any phase fails and the cause is not listed above:
 | Phase | Criterion |
 |-------|-----------|
 | Install | `npm install -g` succeeds, `--version` shows correct version |
-| CLI | `--help` displays commands, `config init` creates structure, `config list-projects` shows data |
-| MCP Server | `serve` starts without crash, tool list is returned |
-| Cleanup | Global package uninstalled, temp config removed |
+| CLI | `--help` displays commands, `config list-projects` shows KAN |
+| MCP Server | `serve` starts without crash, 15 tools returned |
+| Live Jira API | All 15 MCP tools execute successfully against KAN project |
+| Cleanup | Test task in Done/deleted, `jira-mcp` still installed globally |
 
-All four phases must pass for the release to be considered verified.
+All five phases must pass for the release to be considered verified.
