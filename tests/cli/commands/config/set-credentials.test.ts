@@ -20,7 +20,7 @@ afterEach(async () => {
 });
 
 describe('handleSetCredentials', () => {
-  it('writes credentials.json with correct structure', async () => {
+  it('writes credentials.json with Format B structure', async () => {
     const configDir = join(tempDir, 'jira-mcp');
     await mkdir(configDir, { recursive: true });
 
@@ -30,12 +30,14 @@ describe('handleSetCredentials', () => {
     const parsed: unknown = JSON.parse(raw);
 
     expect(parsed).toEqual({
-      username: 'user@example.com',
-      api_token: 'secret-token-123',
+      default: {
+        username: 'user@example.com',
+        api_token: 'secret-token-123',
+      },
     });
   });
 
-  it('overwrites existing credentials', async () => {
+  it('overwrites default credentials', async () => {
     const configDir = join(tempDir, 'jira-mcp');
     await mkdir(configDir, { recursive: true });
 
@@ -43,10 +45,10 @@ describe('handleSetCredentials', () => {
     await handleSetCredentials(configDir, 'new@example.com', 'new-token');
 
     const raw = await readFile(join(configDir, 'credentials.json'), 'utf-8');
-    const parsed = JSON.parse(raw) as { username: string; api_token: string };
+    const parsed = JSON.parse(raw) as { default: { username: string; api_token: string } };
 
-    expect(parsed.username).toBe('new@example.com');
-    expect(parsed.api_token).toBe('new-token');
+    expect(parsed.default.username).toBe('new@example.com');
+    expect(parsed.default.api_token).toBe('new-token');
   });
 
   it('produces valid JSON with proper formatting', async () => {

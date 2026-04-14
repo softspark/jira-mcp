@@ -618,7 +618,7 @@ describe('JiraConnector', () => {
       const [urlStr] = mockFetch.mock.calls[0] as [string, RequestInit];
       const url = new URL(urlStr);
       expect(url.origin).toBe('https://test.atlassian.net');
-      expect(url.pathname).toBe('/rest/api/3/search');
+      expect(url.pathname).toBe('/rest/api/3/search/jql');
       expect(url.searchParams.get('jql')).toBe('project = PROJ');
       expect(url.searchParams.get('maxResults')).toBe('1000');
     });

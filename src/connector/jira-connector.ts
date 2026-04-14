@@ -276,7 +276,7 @@ export class JiraConnector {
   ): Promise<JiraIssue[]> {
     const result = await this.request<RawJiraSearchResult>(
       'GET',
-      '/rest/api/3/search',
+      '/rest/api/3/search/jql',
       undefined,
       {
         jql,
