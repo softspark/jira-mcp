@@ -9,14 +9,12 @@
 
 ---
 
-## What's New in v1.1.0
+## What's New in v1.2.0
 
-- **Hardening & market readiness** -- boundary tests, retry/backoff, security fixes, server refactor.
-- **518 tests** across 52 test files -- boundary tests for `server.ts`, CLI bootstrap, and `JiraConnector`.
-- **Retry/backoff** -- transient Jira API failures (429, 503) retried up to 3x with exponential backoff.
-- **server.ts refactored** -- 719 → 324 lines. Tool definitions and argument helpers extracted to dedicated modules.
-- **Major dep upgrades** -- TypeScript 6, ESLint 10, zod 4, vitest 4.
-- **Security hardened** -- cache 0o600, CWD config warning, error truncation, count validation in CI.
+- **Per-instance credentials** -- `set-credentials --url` allows different API tokens per Jira instance. Auto-migrates legacy format.
+- **Jira Cloud API migration** -- search endpoint updated to `/rest/api/3/search/jql` (old endpoint returns 410).
+- **Live Jira smoke tests** -- post-release SOP tests all 15 MCP tools against a sandbox project.
+- **518 tests** across 52 test files.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 

@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.2.0 -- Per-Instance Credentials & Jira API Migration (2026-04-14)
+
+### Added
+- **Per-instance credentials** -- `set-credentials --url` flag allows different API tokens per Jira instance. Auto-migrates legacy Format A to Format B on first use.
+- **Live Jira API smoke tests** -- post-release SOP now includes Phase 4 with 15 steps testing all MCP tools against the KAN sandbox project.
+- **`validate_counts.py` in pre-commit SOP** -- added as Step 5 to catch README count drift before commit.
+
+### Changed
+- **Search endpoint migrated** -- `/rest/api/3/search` → `/rest/api/3/search/jql` (Jira Cloud deprecated the old endpoint with HTTP 410).
+- **`set-credentials` CLI** -- read-modify-write instead of overwrite. Preserves existing credentials when adding instance overrides.
+
+### Fixed
+- **Jira Cloud 410 on sync/search** -- `sync_tasks` and `search_tasks` failed on instances where Jira had removed the legacy search endpoint.
+
+---
+
 ## v1.1.0 -- Hardening & Market Readiness (2026-04-14)
 
 ### Added
