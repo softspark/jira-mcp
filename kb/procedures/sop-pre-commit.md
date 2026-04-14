@@ -21,7 +21,7 @@ Mirrors the CI pipeline (`.github/workflows/ci.yml`) so failures are caught loca
 ## Quick Run (One-Liner)
 
 ```bash
-npm run typecheck && npm run lint && npm test && npm run build
+npm run typecheck && npm run lint && npm test && npm run build && python3 scripts/validate_counts.py
 ```
 
 Copy-paste this before every commit. If any step fails, do not commit.
@@ -105,7 +105,23 @@ npm run build
 
 ---
 
-### Step 5: Secret Scan
+### Step 5: Validate README Counts
+
+```bash
+python3 scripts/validate_counts.py
+```
+
+- [ ] Command exits with code 0
+- [ ] All counts match (MCP tools, CLI commands, templates, error classes, test files, bundle size)
+
+**If it fails:** Update the relevant counts in `README.md` to match the actual source code. Common causes:
+- Added or removed a test file without updating test file count
+- Added a new MCP tool, CLI command, or error class
+- Bundle size changed significantly after dependency updates
+
+---
+
+### Step 6: Secret scan
 
 Manually verify that no secrets are staged for commit.
 
@@ -128,7 +144,7 @@ git diff --cached -S "token" -S "password" -S "secret" -S "api_key" --name-only
 
 ---
 
-### Step 6: Conventional Commit Message
+### Step 7: Conventional Commit Message
 
 Verify your commit message follows [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -162,7 +178,7 @@ test: add integration tests for sync_tasks
 
 ---
 
-### Step 7: Branch Naming
+### Step 8: Branch Naming
 
 Verify your branch name follows the project convention:
 
@@ -197,6 +213,7 @@ This checklist mirrors the CI jobs defined in `.github/workflows/ci.yml`:
 | ESLint | `npm run lint` | Linting of `src/` and `tests/` |
 | Tests (ubuntu + macOS) | `npm test` | Vitest test suite |
 | Build | `npm run build` | tsup compilation to `dist/` |
+| Validate counts | `python3 scripts/validate_counts.py` | README.md counts match source code |
 | Required files check | Manual | LICENSE, CHANGELOG.md, SECURITY.md, CODE_OF_CONDUCT.md, README.md exist |
 
 ---
@@ -209,6 +226,7 @@ This checklist mirrors the CI jobs defined in `.github/workflows/ci.yml`:
 | 2 | ESLint | `npm run lint` | 0 errors, 0 warnings |
 | 3 | Tests | `npm test` | All pass |
 | 4 | Build | `npm run build` | Clean build |
-| 5 | Secret scan | `git diff --cached` | No secrets staged |
-| 6 | Commit message | Manual review | Conventional commit format |
-| 7 | Branch naming | `git branch --show-current` | Valid prefix |
+| 5 | Validate README counts | `python3 scripts/validate_counts.py` | All counts match |
+| 6 | Secret scan | `git diff --cached` | No secrets staged |
+| 7 | Commit message | Manual review | Conventional commit format |
+| 8 | Branch naming | `git branch --show-current` | Valid prefix |
