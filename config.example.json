@@ -1,0 +1,11 @@
+{
+  "projects": {
+    "PROJ": {
+      "url": "https://your-org.atlassian.net"
+    },
+    "TEAM": {
+      "url": "https://another-org.atlassian.net"
+    }
+  },
+  "default_project": "PROJ"
+}
