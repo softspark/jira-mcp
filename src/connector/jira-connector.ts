@@ -35,6 +35,20 @@ import {
 /** Default max results for JQL search. */
 const DEFAULT_MAX_RESULTS = 1000;
 
+/** Maximum number of retry attempts for transient failures. */
+const MAX_RETRIES = 3;
+
+/** Base delay in ms for exponential backoff (1s, 2s, 4s). */
+const BASE_DELAY_MS = 1000;
+
+/** HTTP status codes eligible for retry. */
+const RETRYABLE_STATUSES = new Set([429, 503]);
+
+/** Promise-based sleep for backoff delays. */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Fields requested during JQL search (lightweight). */
 const SEARCH_FIELDS = [
   'summary',
@@ -165,6 +179,9 @@ export class JiraConnector {
   /**
    * Send an authenticated request to the Jira REST API v3.
    *
+   * Retries transient failures (429, 503) up to {@link MAX_RETRIES} times
+   * with exponential backoff. Respects the `Retry-After` header for 429.
+   *
    * Maps HTTP error statuses to typed error classes and returns the
    * parsed JSON body (or undefined for 204 No Content responses).
    */
@@ -189,18 +206,29 @@ export class JiraConnector {
       headers['Content-Type'] = 'application/json';
     }
 
-    const response = await fetch(url.toString(), {
+    const fetchOptions: RequestInit = {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+    };
 
-    if (!response.ok) {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const response = await fetch(url.toString(), fetchOptions);
+
+      if (response.ok) {
+        if (response.status === 204) {
+          return undefined as T;
+        }
+        return (await response.json()) as T;
+      }
+
       const text = await response.text();
       const raw = text || response.statusText;
-      // Truncate to avoid leaking internal Jira API details in MCP responses
       const detail = raw.length > 200 ? `${raw.slice(0, 200)}...` : raw;
 
+      // Non-retryable errors — throw immediately
       if (response.status === 401) {
         throw new JiraAuthenticationError(
           `Authentication failed: ${detail}`,
@@ -212,16 +240,25 @@ export class JiraConnector {
         );
       }
 
+      // Retryable errors — backoff and retry
+      if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_RETRIES) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delayMs = retryAfter
+          ? Math.min(parseInt(retryAfter, 10) * 1000, 30_000)
+          : BASE_DELAY_MS * Math.pow(2, attempt);
+        await sleep(delayMs);
+        lastError = new JiraConnectionError(
+          `Jira API error (${response.status}): ${detail}`,
+        );
+        continue;
+      }
+
       throw new JiraConnectionError(
         `Jira API error (${response.status}): ${detail}`,
       );
     }
 
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return (await response.json()) as T;
+    throw lastError ?? new JiraConnectionError('Request failed after retries');
   }
 
   // -----------------------------------------------------------------------

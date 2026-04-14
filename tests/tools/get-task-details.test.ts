@@ -15,9 +15,9 @@ import {
 import { createMergedConfig } from '../fixtures/config';
 
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    getTaskDetails: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.getTaskDetails = vi.fn();
+  }),
 }));
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
@@ -57,12 +57,9 @@ describe('handleGetTaskDetails', () => {
     };
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          getTaskDetails: vi.fn().mockResolvedValue(taskDetail),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.getTaskDetails = vi.fn().mockResolvedValue(taskDetail);
+    });
 
     const result = await handleGetTaskDetails(
       { task_key: 'PROJ-1' },
@@ -83,12 +80,9 @@ describe('handleGetTaskDetails', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          getTaskDetails: vi.fn().mockRejectedValue(new Error('Not found')),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.getTaskDetails = vi.fn().mockRejectedValue(new Error('Not found'));
+    });
 
     const result = await handleGetTaskDetails(
       { task_key: 'PROJ-999' },

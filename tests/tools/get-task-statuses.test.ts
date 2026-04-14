@@ -14,9 +14,9 @@ import {
 } from '../fixtures/mocks';
 
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    getAvailableStatuses: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.getAvailableStatuses = vi.fn();
+  }),
 }));
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
@@ -36,15 +36,12 @@ describe('handleGetTaskStatuses', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          getAvailableStatuses: vi.fn().mockResolvedValue([
-            { id: '11', name: 'Start Progress', toStatus: 'In Progress' },
-            { id: '21', name: 'Done', toStatus: 'Done' },
-          ]),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.getAvailableStatuses = vi.fn().mockResolvedValue([
+        { id: '11', name: 'Start Progress', toStatus: 'In Progress' },
+        { id: '21', name: 'Done', toStatus: 'Done' },
+      ]);
+    });
 
     const result = await handleGetTaskStatuses(
       { task_key: 'PROJ-1' },
@@ -66,14 +63,11 @@ describe('handleGetTaskStatuses', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          getAvailableStatuses: vi.fn().mockRejectedValue(
-            new Error('Connection refused'),
-          ),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.getAvailableStatuses = vi.fn().mockRejectedValue(
+        new Error('Connection refused'),
+      );
+    });
 
     const result = await handleGetTaskStatuses(
       { task_key: 'PROJ-1' },

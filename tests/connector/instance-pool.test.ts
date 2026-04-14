@@ -10,11 +10,11 @@ import { createMergedConfig, createInstanceConfig } from '../fixtures/config';
 
 // Mock JiraConnector so we don't create real HTTP clients
 vi.mock('../../src/connector/jira-connector', () => ({
-  JiraConnector: vi.fn().mockImplementation((config: { url: string }) => ({
-    instanceUrl: config.url,
-    searchIssues: vi.fn(),
-    getIssue: vi.fn(),
-  })),
+  JiraConnector: vi.fn().mockImplementation(function (this: Record<string, unknown>, config: { url: string }) {
+    this.instanceUrl = config.url;
+    this.searchIssues = vi.fn();
+    this.getIssue = vi.fn();
+  }),
 }));
 
 describe('InstancePool', () => {

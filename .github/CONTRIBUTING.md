@@ -44,14 +44,21 @@ Your PR must pass **all** CI jobs before review. Run them locally:
 
 ```bash
 # All of these must pass with zero errors:
-npm run build        # TypeScript compilation
+npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint (zero warnings)
-npm run test         # Vitest test suite
+npm test             # Vitest test suite
+npm run build        # TypeScript compilation (tsup)
 ```
 
-Additionally, CI runs:
-- **TypeScript compile check** (`npx tsc --noEmit`)
+CI runs these in parallel on every push/PR to `main`:
+- **TypeScript compile check** (`tsc --noEmit`)
+- **ESLint** (zero errors, zero warnings)
+- **Tests** (ubuntu + macOS matrix)
+- **Build** (tsup)
+- **Validate README counts** (`scripts/validate_counts.py`) — maintained by the project owner
 - **Required files check** (LICENSE, CHANGELOG, SECURITY, etc.)
+
+> **Note:** README count validation (`validate:counts`) is enforced by CI but managed by the maintainer. You do not need to update counts in README yourself.
 
 ## What to Contribute
 

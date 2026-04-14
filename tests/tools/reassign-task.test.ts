@@ -15,9 +15,9 @@ import {
 import { createTaskData } from '../fixtures/tasks';
 
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    reassign: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.reassign = vi.fn();
+  }),
 }));
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
@@ -41,15 +41,12 @@ describe('handleReassignTask', () => {
     });
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          reassign: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            updatedTask,
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.reassign = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        updatedTask,
+      });
+    });
 
     const result = await handleReassignTask(
       { task_key: 'PROJ-1', assignee_email: 'new@example.com' },
@@ -70,15 +67,12 @@ describe('handleReassignTask', () => {
     });
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          reassign: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            updatedTask,
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.reassign = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        updatedTask,
+      });
+    });
 
     const result = await handleReassignTask(
       { task_key: 'PROJ-1', assignee_email: '' },
@@ -95,15 +89,12 @@ describe('handleReassignTask', () => {
     const updatedTask = createTaskData({ key: 'PROJ-1', assignee: null });
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          reassign: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            updatedTask,
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.reassign = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        updatedTask,
+      });
+    });
 
     const result = await handleReassignTask(
       { task_key: 'PROJ-1' },
@@ -118,12 +109,9 @@ describe('handleReassignTask', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          reassign: vi.fn().mockRejectedValue(new Error('User not found')),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.reassign = vi.fn().mockRejectedValue(new Error('User not found'));
+    });
 
     const result = await handleReassignTask(
       { task_key: 'PROJ-1', assignee_email: 'bad@example.com' },

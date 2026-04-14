@@ -10,8 +10,6 @@ export default defineConfig({
       exclude: [
         'src/index.ts',
         'src/cli.ts',
-        'src/server.ts',
-        'src/connector/jira-connector.ts',
       ],
       thresholds: {
         lines: 70,

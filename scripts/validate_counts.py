@@ -63,11 +63,12 @@ def check(label: str, readme_val: str | None, actual_val: int) -> None:
 
 
 def count_tools() -> int:
-    """Count MCP tool files in src/tools/ (excluding helpers.ts, index.ts)."""
+    """Count MCP tool files in src/tools/ (excluding non-handler modules)."""
     tools_dir = ROOT / "src" / "tools"
+    exclude = {"helpers.ts", "index.ts", "definitions.ts", "args.ts"}
     return len([
         f for f in tools_dir.glob("*.ts")
-        if f.name not in ("helpers.ts", "index.ts")
+        if f.name not in exclude
     ])
 
 

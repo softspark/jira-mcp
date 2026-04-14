@@ -17,9 +17,9 @@ import { createTaskData } from '../fixtures/tasks';
 
 // Mock the TaskOperations class so we control its behaviour
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    changeStatus: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.changeStatus = vi.fn();
+  }),
 }));
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
@@ -42,15 +42,12 @@ describe('handleUpdateTaskStatus', () => {
 
     // Since we mock TaskOperations, we need to override the constructed instance
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          changeStatus: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            updatedTask,
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.changeStatus = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        updatedTask,
+      });
+    });
 
     const result = await handleUpdateTaskStatus(
       { task_key: 'PROJ-1', status: 'In Progress' },
@@ -66,14 +63,11 @@ describe('handleUpdateTaskStatus', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          changeStatus: vi.fn().mockRejectedValue(
-            new JiraConnectionError("Status 'Done' not available"),
-          ),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.changeStatus = vi.fn().mockRejectedValue(
+        new JiraConnectionError("Status 'Done' not available"),
+      );
+    });
 
     const result = await handleUpdateTaskStatus(
       { task_key: 'PROJ-1', status: 'Done' },

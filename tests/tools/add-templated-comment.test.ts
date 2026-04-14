@@ -17,9 +17,9 @@ import {
 } from '../fixtures/mocks';
 
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    addComment: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.addComment = vi.fn();
+  }),
 }));
 
 // We must also mock renderTemplate to control its output
@@ -110,18 +110,15 @@ describe('handleAddTemplatedComment', () => {
     });
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          addComment: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            commentId: 'c-1',
-            author: 'user@example.com',
-            bodyMarkdown: 'Status: In Progress',
-            created: '2026-01-01T00:00:00.000Z',
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.addComment = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        commentId: 'c-1',
+        author: 'user@example.com',
+        bodyMarkdown: 'Status: In Progress',
+        created: '2026-01-01T00:00:00.000Z',
+      });
+    });
 
     const result = await handleAddTemplatedComment(
       {
@@ -177,18 +174,15 @@ describe('handleAddTemplatedComment', () => {
     const { pool, cache, registry } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          addComment: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            commentId: 'c-2',
-            author: 'user@example.com',
-            bodyMarkdown: '# Raw markdown',
-            created: '2026-01-01T00:00:00.000Z',
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.addComment = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        commentId: 'c-2',
+        author: 'user@example.com',
+        bodyMarkdown: '# Raw markdown',
+        created: '2026-01-01T00:00:00.000Z',
+      });
+    });
 
     const result = await handleAddTemplatedComment(
       { task_key: 'PROJ-1', markdown: '# Raw markdown' },
@@ -210,12 +204,9 @@ describe('handleAddTemplatedComment', () => {
     const { pool, cache, registry } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          addComment: vi.fn().mockRejectedValue(new Error('API error')),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.addComment = vi.fn().mockRejectedValue(new Error('API error'));
+    });
 
     const result = await handleAddTemplatedComment(
       { task_key: 'PROJ-1', markdown: 'Test' },

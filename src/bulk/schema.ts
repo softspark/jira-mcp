@@ -48,7 +48,15 @@ export const BulkConfigSchema = z.object({
   tasks: z
     .array(TaskConfigSchema)
     .min(1, 'At least one task is required'),
-  options: BulkOptionsSchema.default({}),
+  options: BulkOptionsSchema.default(() => ({
+    dry_run: true,
+    update_existing: false,
+    match_field: 'summary',
+    rate_limit_ms: 500,
+    force_reassign: false,
+    reassign_delay_ms: 0,
+    language: DEFAULT_LANGUAGE,
+  })),
 });
 
 /** Inferred type after parsing through BulkConfigSchema. */

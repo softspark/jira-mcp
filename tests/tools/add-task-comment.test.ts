@@ -14,9 +14,9 @@ import {
 } from '../fixtures/mocks';
 
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    addComment: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.addComment = vi.fn();
+  }),
 }));
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
@@ -37,18 +37,15 @@ describe('handleAddTaskComment', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          addComment: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            commentId: 'c-123',
-            author: 'user@example.com',
-            bodyMarkdown: 'Hello world',
-            created: '2026-01-01T00:00:00.000Z',
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.addComment = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        commentId: 'c-123',
+        author: 'user@example.com',
+        bodyMarkdown: 'Hello world',
+        created: '2026-01-01T00:00:00.000Z',
+      });
+    });
 
     const result = await handleAddTaskComment(
       { task_key: 'PROJ-1', comment: 'Hello world' },
@@ -67,12 +64,9 @@ describe('handleAddTaskComment', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          addComment: vi.fn().mockRejectedValue(new Error('Permission denied')),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.addComment = vi.fn().mockRejectedValue(new Error('Permission denied'));
+    });
 
     const result = await handleAddTaskComment(
       { task_key: 'PROJ-1', comment: 'test' },

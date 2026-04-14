@@ -14,9 +14,9 @@ import {
 } from '../fixtures/mocks';
 
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    logTime: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.logTime = vi.fn();
+  }),
 }));
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
@@ -36,17 +36,14 @@ describe('handleLogTaskTime', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          logTime: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            worklogId: 'wl-100',
-            timeSpent: '2h 30m',
-            timeSpentSeconds: 9000,
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.logTime = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        worklogId: 'wl-100',
+        timeSpent: '2h 30m',
+        timeSpentSeconds: 9000,
+      });
+    });
 
     const result = await handleLogTaskTime(
       { task_key: 'PROJ-1', time_spent: '2h 30m', comment: 'Did some work' },
@@ -65,17 +62,14 @@ describe('handleLogTaskTime', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          logTime: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            worklogId: 'wl-200',
-            timeSpent: '1h',
-            timeSpentSeconds: 3600,
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.logTime = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        worklogId: 'wl-200',
+        timeSpent: '1h',
+        timeSpentSeconds: 3600,
+      });
+    });
 
     const result = await handleLogTaskTime(
       { task_key: 'PROJ-1', time_spent: '1h' },
@@ -91,14 +85,11 @@ describe('handleLogTaskTime', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          logTime: vi.fn().mockRejectedValue(
-            new Error("Invalid time format: 'abc'"),
-          ),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.logTime = vi.fn().mockRejectedValue(
+        new Error("Invalid time format: 'abc'"),
+      );
+    });
 
     const result = await handleLogTaskTime(
       { task_key: 'PROJ-1', time_spent: 'abc' },
@@ -114,12 +105,9 @@ describe('handleLogTaskTime', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          logTime: vi.fn().mockRejectedValue(new Error('API timeout')),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.logTime = vi.fn().mockRejectedValue(new Error('API timeout'));
+    });
 
     const result = await handleLogTaskTime(
       { task_key: 'PROJ-1', time_spent: '2h' },

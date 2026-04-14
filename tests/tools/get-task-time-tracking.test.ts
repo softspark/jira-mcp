@@ -14,9 +14,9 @@ import {
 } from '../fixtures/mocks';
 
 vi.mock('../../src/operations/task-operations', () => ({
-  TaskOperations: vi.fn().mockImplementation(() => ({
-    getTimeTracking: vi.fn(),
-  })),
+  TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.getTimeTracking = vi.fn();
+  }),
 }));
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
@@ -36,17 +36,14 @@ describe('handleGetTaskTimeTracking', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          getTimeTracking: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            originalEstimate: '8h',
-            timeSpent: '2h 30m',
-            remainingEstimate: '5h 30m',
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.getTimeTracking = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        originalEstimate: '8h',
+        timeSpent: '2h 30m',
+        remainingEstimate: '5h 30m',
+      });
+    });
 
     const result = await handleGetTaskTimeTracking(
       { task_key: 'PROJ-1' },
@@ -67,17 +64,14 @@ describe('handleGetTaskTimeTracking', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          getTimeTracking: vi.fn().mockResolvedValue({
-            taskKey: 'PROJ-1',
-            originalEstimate: null,
-            timeSpent: null,
-            remainingEstimate: null,
-          }),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.getTimeTracking = vi.fn().mockResolvedValue({
+        taskKey: 'PROJ-1',
+        originalEstimate: null,
+        timeSpent: null,
+        remainingEstimate: null,
+      });
+    });
 
     const result = await handleGetTaskTimeTracking(
       { task_key: 'PROJ-1' },
@@ -95,12 +89,9 @@ describe('handleGetTaskTimeTracking', () => {
     const { pool, cache } = setupDeps();
 
     const { TaskOperations } = await import('../../src/operations/task-operations');
-    vi.mocked(TaskOperations).mockImplementation(
-      () =>
-        ({
-          getTimeTracking: vi.fn().mockRejectedValue(new Error('API error')),
-        }) as ReturnType<typeof vi.fn>,
-    );
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.getTimeTracking = vi.fn().mockRejectedValue(new Error('API error'));
+    });
 
     const result = await handleGetTaskTimeTracking(
       { task_key: 'PROJ-1' },

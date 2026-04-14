@@ -14,10 +14,10 @@
 - **15 MCP tools** -- `update_task` for editing issues, `get_project_language` for AI language awareness.
 - **Language configuration** -- global `default_language` + per-project override. Supports: pl, en, de, es, fr, pt, it, nl.
 - **16 CLI commands** -- `config set-default`, `config set-language`, `config set-project-language` added.
-- **Zero runtime dependencies** -- built-in `fetch` client (Jira REST API v3), built-in ADF parsers. Self-contained 325KB bundle.
+- **Minimal runtime dependencies** -- 1 runtime dep (`commander` for CLI), built-in `fetch` client (Jira REST API v3), built-in ADF parsers. Self-contained 520KB bundle.
 - **Per-instance credentials** -- different username/token per Jira instance URL (Format A + Format B).
 - **Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires.
-- **413 tests** across 47 test files with strict TypeScript.
+- **509 tests** across 51 test files with strict TypeScript.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -219,11 +219,11 @@ src/
 
 **Per-instance credentials** -- different API tokens per Jira instance URL. Single-credential format still works (backward compatible). See [Configuration](kb/reference/configuration.md).
 
-**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 325KB bundle, 1 runtime dep (commander).
+**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 520KB bundle, 1 runtime dep (commander).
 
 **Typed error hierarchy** -- 15 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 413 tests across 47 test files. Self-contained 325KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 509 tests across 51 test files. Self-contained 520KB package.
 
 ## Documentation
 
