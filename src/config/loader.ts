@@ -84,6 +84,10 @@ async function resolveConfigPath(options?: LoadConfigOptions): Promise<string> {
 
   const localPath = resolve(process.cwd(), 'config.json');
   if (await fileExists(localPath)) {
+    console.warn(
+      `[jira-mcp] WARNING: Loading config.json from working directory (${localPath}) instead of global config. ` +
+        'This may be a security risk if running from an untrusted directory.',
+    );
     return localPath;
   }
 
@@ -104,6 +108,10 @@ async function resolveCredentialsPath(
 
   const localPath = resolve(process.cwd(), 'credentials.json');
   if (await fileExists(localPath)) {
+    console.warn(
+      `[jira-mcp] WARNING: Loading credentials.json from working directory (${localPath}) instead of global config. ` +
+        'This may be a security risk if running from an untrusted directory.',
+    );
     return localPath;
   }
 

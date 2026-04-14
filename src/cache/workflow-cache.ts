@@ -105,7 +105,7 @@ export class WorkflowCacheManager {
     const tmpPath = `${this.cachePath}.tmp`;
     const json = JSON.stringify(result.data, null, 2);
 
-    await writeFile(tmpPath, json, 'utf-8');
+    await writeFile(tmpPath, json, { encoding: 'utf-8', mode: 0o600 });
     await rename(tmpPath, this.cachePath);
 
     this.data = result.data;

@@ -172,10 +172,10 @@ Multiple project keys may share the same Jira URL. `InstancePool` creates exactl
 
 ### Atomic Cache Writes
 
-All cache writes use a write-then-rename pattern to prevent readers from seeing partially written files:
+All cache writes use a write-then-rename pattern with restrictive permissions to prevent readers from seeing partially written files and to protect cached data on shared machines:
 
 ```
-writeFile(path + ".tmp", json)
+writeFile(path + ".tmp", json, { encoding: "utf-8", mode: 0o600 })
 rename(path + ".tmp", path)
 ```
 

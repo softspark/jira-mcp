@@ -85,6 +85,8 @@ The loader checks locations in the following priority order (first match wins):
 
 The local file check is presence-based: if the file does not exist at `cwd`, resolution falls through to the global path.
 
+**Security note:** When a config or credentials file is loaded from `cwd` instead of the global directory, a warning is logged to stderr. This guards against running the server from an untrusted directory (e.g., a cloned repository) where a malicious `config.json` or `credentials.json` could redirect requests to an attacker-controlled Jira instance.
+
 ---
 
 ## Global Configuration Directory

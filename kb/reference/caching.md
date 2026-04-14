@@ -98,11 +98,13 @@ user@example.com  ->  tasks_user_at_example_com.json
 ### Atomic Write Pattern
 
 ```
-writeFile(cachePath + ".tmp", json)
+writeFile(cachePath + ".tmp", json, { encoding: "utf-8", mode: 0o600 })
 rename(cachePath + ".tmp", cachePath)
 ```
 
 This ensures readers always see a complete file. If the process is interrupted mid-write, the `.tmp` file is left behind but the main cache file is intact.
+
+All cache files are written with **restrictive permissions (0o600)** — owner read/write only. This prevents other users on a shared machine from reading cached Jira data (task summaries, assignee emails, project keys).
 
 ### Validation on Load
 

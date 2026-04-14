@@ -37,6 +37,8 @@ ls -la $JIRA_CONFIG_PATH
 
 **Prevention:** Run `config init` once after installation and do not delete the config directory.
 
+**Security note:** If a `config.json` or `credentials.json` is loaded from the current working directory instead of the global config, a warning is logged to stderr. This is intentional — running the server from an untrusted directory (e.g., a cloned repository) could redirect requests to a malicious Jira instance.
+
 ---
 
 ## JiraAuthenticationError (HTTP 401)
@@ -240,6 +242,23 @@ jira-mcp config add-project CLIENT https://client-org.atlassian.net
 Task routing is based solely on the project key prefix of the task key (the part before the `-`). A task key of `CLIENT-42` will always route to the connector registered for the `CLIENT` project key. If `CLIENT` is not in `config.json`, the lookup fails.
 
 See [multi-instance setup guide](../howto/multi-instance.md) for full configuration details.
+
+---
+
+## Truncated API Error Messages
+
+**Symptoms:**
+Error messages from Jira API end with `...`:
+```
+JiraConnectionError: Jira API error (400): {"errorMessages":["The value 'invalid' does not exist for the field...
+```
+
+**Cause:** Jira API error responses are truncated to 200 characters to prevent internal server details from leaking through MCP tool responses.
+
+**Resolution:** If you need the full error response for debugging, check the Jira API directly:
+```bash
+curl -u "user@example.com:API_TOKEN" "https://your-org.atlassian.net/rest/api/3/issue/PROJ-123"
+```
 
 ---
 

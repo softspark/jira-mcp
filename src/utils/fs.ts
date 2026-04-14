@@ -39,6 +39,9 @@ export async function loadJsonFile<T>(filePath: string): Promise<T> {
 
 /**
  * Save a JSON file with pretty formatting.
+ *
+ * @security Uses default file permissions (0o644). Do NOT use for sensitive
+ * data such as credentials or API tokens — use {@link writeSecureFile} instead.
  */
 export async function saveJsonFile(
   filePath: string,

@@ -197,7 +197,9 @@ export class JiraConnector {
 
     if (!response.ok) {
       const text = await response.text();
-      const detail = text || response.statusText;
+      const raw = text || response.statusText;
+      // Truncate to avoid leaking internal Jira API details in MCP responses
+      const detail = raw.length > 200 ? `${raw.slice(0, 200)}...` : raw;
 
       if (response.status === 401) {
         throw new JiraAuthenticationError(
