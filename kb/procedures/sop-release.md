@@ -32,6 +32,8 @@ Release Creation (this SOP) --> git tag --> CI publish --> Post-Release Testing 
 # 3. Write CHANGELOG.md entry
 # 4. Run quality gates
 npm run typecheck && npm run lint && npm test && npm run build
+# 4.5. Validate README counts match source
+python3 scripts/validate_counts.py
 # 5. Commit
 git add package.json CHANGELOG.md
 git commit -m "chore: release vX.Y.Z"
@@ -160,6 +162,32 @@ npm run typecheck && npm run lint && npm test && npm run build
 ```
 
 - [ ] All four commands pass with zero errors
+
+### Step 4.5: Validate Counts
+
+Verify that README.md counts (MCP tools, CLI commands, templates, error classes,
+test files, bundle size) match the actual source code. This prevents count drift
+that erodes trust in documentation.
+
+```bash
+python3 scripts/validate_counts.py
+```
+
+- [ ] Exit code 0
+- [ ] All counts match source code
+
+For a full check including live test count verification:
+
+```bash
+python3 scripts/validate_counts.py --full
+```
+
+> **Pattern:** Same approach as ai-toolkit `validate.py`. Counts are allowed
+> ONLY in `README.md` (single source of truth). All other docs use relative
+> language ("all tools", "built-in templates"). See `scripts/validate_counts.py`.
+
+**If counts are out of sync:** Update `README.md` to match actual values.
+Do NOT update source code to match README — source is always authoritative.
 
 **If any step fails:** Fix the issue. Do NOT proceed with the release.
 
@@ -314,6 +342,7 @@ gh release delete vX.Y.Z --repo softspark/jira-mcp --yes
 | 4b | Lint | `npm run lint` | 0 errors, 0 warnings |
 | 4c | Test | `npm test` | All pass |
 | 4d | Build | `npm run build` | Clean build |
+| 4e | Validate counts | `python3 scripts/validate_counts.py` | All counts match |
 | 5 | Commit | `git commit` | Clean working tree |
 | 6 | Tag and push | `git tag` + `git push` | CI triggered |
 | 7 | Verify | `npm view` + GitHub | Correct version published |

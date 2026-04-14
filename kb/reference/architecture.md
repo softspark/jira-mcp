@@ -19,7 +19,7 @@ The Jira MCP server exposes Jira operations as MCP (Model Context Protocol) tool
 
 | Entry Point | Purpose |
 |-------------|---------|
-| `src/server.ts` | MCP server — registers 15 tools, communicates over stdio |
+| `src/server.ts` | MCP server — registers all MCP tools, communicates over stdio |
 | `src/cli.ts` | CLI — `config`, `cache` subcommand groups |
 
 ## Technology Stack
@@ -73,7 +73,7 @@ src/
 │   └── task-operations.ts # TaskOperations: status, comment, assign, time log
 │
 ├── templates/
-│   ├── built-in.ts        # 8 built-in CommentTemplates
+│   ├── built-in.ts        # Built-in CommentTemplates
 │   ├── registry.ts        # TemplateRegistry: get, list, override built-ins
 │   ├── renderer.ts        # renderTemplate(): {{var}}, {{#var}}...{{/var}}
 │   └── types.ts           # CommentTemplate, TemplateVariable interfaces
@@ -85,7 +85,7 @@ src/
 │   └── types.ts              # BulkConfig, TaskConfig, BulkResult interfaces
 │
 ├── errors/
-│   └── index.ts           # JiraMcpError hierarchy (13 error classes)
+│   └── index.ts           # JiraMcpError hierarchy
 │
 └── tools/
     ├── sync-tasks.ts
@@ -120,7 +120,7 @@ src/
        │                          │
 ┌──────▼───────┐          ┌───────▼──────────┐
 │    tools/    │          │    templates/    │
-│  (15 handlers)│         │   registry.ts    │
+│  (handlers)   │         │   registry.ts    │
 └──────┬───────┘          └───────┬──────────┘
        │                          │
 ┌──────▼───────────────────────────▼──────────┐

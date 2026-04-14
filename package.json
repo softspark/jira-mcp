@@ -60,6 +60,7 @@
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
     "typecheck": "tsc --noEmit",
+    "validate:counts": "python3 scripts/validate_counts.py",
     "prepublishOnly": "npm run build && npm run lint && npm run test"
   },
   "dependencies": {

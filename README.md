@@ -13,7 +13,7 @@
 
 - **15 MCP tools** -- `update_task` for editing issues, `get_project_language` for AI language awareness.
 - **Language configuration** -- global `default_language` + per-project override. Supports: pl, en, de, es, fr, pt, it, nl.
-- **17 CLI commands** -- `config set-default`, `config set-language`, `config set-project-language` added.
+- **16 CLI commands** -- `config set-default`, `config set-language`, `config set-project-language` added.
 - **Zero runtime dependencies** -- built-in `fetch` client (Jira REST API v3), built-in ADF parsers. Self-contained 325KB bundle.
 - **Per-instance credentials** -- different username/token per Jira instance URL (Format A + Format B).
 - **Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires.
@@ -163,7 +163,7 @@ Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rul
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 15 MCP tools** and **17 CLI commands** reference
+- **All 15 MCP tools** and **16 CLI commands** reference
 
 ## Usage with Other MCP Clients
 

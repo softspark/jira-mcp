@@ -52,7 +52,7 @@ npm run test:coverage # Coverage report
 - Global config in `~/.softspark/jira-mcp/` (never commit credentials)
 
 ## MCP Tools
-15 tools: sync_tasks, read_cached_tasks, update_task_status, update_task, add_task_comment, reassign_task, get_task_statuses, get_task_details, get_project_language, log_task_time, get_task_time_tracking, list_comment_templates, add_templated_comment, create_task, search_tasks
+Tools: sync_tasks, read_cached_tasks, update_task_status, update_task, add_task_comment, reassign_task, get_task_statuses, get_task_details, get_project_language, log_task_time, get_task_time_tracking, list_comment_templates, add_templated_comment, create_task, search_tasks
 
 ## Bulk Task Creation
 Use `jira-mcp create <path>` to create tasks from a YAML/JSON config file. Always run with `--dry-run` first to verify output. Supports rate limiting and bilingual task titles. Monthly admin tasks via `jira-mcp create-monthly`.

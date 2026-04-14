@@ -6,7 +6,7 @@ tags: [templates, comments, variables, bulk, placeholders]
 version: "1.0.0"
 created: "2026-04-13"
 last_updated: "2026-04-14"
-description: "Reference for the comment template system: template format, variable interpolation, all 8 built-in templates, custom templates, and bulk task creation templates."
+description: "Reference for the comment template system: template format, variable interpolation, all built-in templates, custom templates, and bulk task creation templates."
 ---
 
 # Jira MCP Server - Comment Templates Reference

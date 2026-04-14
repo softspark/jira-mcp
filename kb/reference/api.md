@@ -6,7 +6,7 @@ tags: [api, mcp, tools, jira]
 version: "1.0.0"
 created: "2026-04-13"
 last_updated: "2026-04-14"
-description: "Complete reference for all 15 MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
+description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
 # Jira MCP Server - API Reference
