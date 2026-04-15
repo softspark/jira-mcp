@@ -145,6 +145,9 @@ Testing expert. Use for writing tests (unit, integration, e2e), TDD workflow, te
 
 The following skills are available as slash commands or knowledge sources:
 
+### a11y-validate
+Validate code against accessibility standards: WCAG 2.1 Level AA, EN 301 549, and the European Accessibility Act (EAA / Directive EU 2019/882). Covers semantics, text alternatives, keyboard/focus, color/contrast, forms, media, ARIA, motion, mobile, and EAA documentation requirements. Framework-aware (React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/React Native/Flutter/static HTML).
+
 ### agent-creator
 Creates new specialized agents with frontmatter, tool selection, and delegation guidance
 
@@ -375,6 +378,9 @@ Search the knowledge base with semantic and hybrid modes
 
 ### security-patterns
 Loaded when user asks about security, OWASP, or auth patterns
+
+### seo-validate
+Validate code against SEO best practices: W3C semantics, meta/OG tags, Schema.org, hreflang, Core Web Vitals (LCP/INP/CLS), resource hints, GEO, SPA/SSG/CSR crawlability, technical SEO, accessibility-for-SEO. Supports React/Next/Nuxt/Astro/Gatsby/SvelteKit/Remix/Angular/Vue/static HTML.
 
 ### skill-audit
 Scan skills and agents for security risks: dangerous patterns, secrets, excessive permissions
