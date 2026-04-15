@@ -7,6 +7,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.1 -- Template Loading Fix (2026-04-15)
+
+### Fixed
+- **File-backed templates missing after install** -- `PACKAGE_ROOT_DIR` used a hardcoded `../..` relative depth that resolved correctly in the source layout but overshot by one level after tsup bundling. Replaced with `findPackageRoot()` that walks up looking for `package.json`. All 8 built-in comment templates now load correctly from global installs.
+
 ## v1.4.0 -- Delete Tools & Error Hardening (2026-04-15)
 
 ### Added

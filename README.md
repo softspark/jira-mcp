@@ -9,11 +9,11 @@
 
 ---
 
-## What's New in v1.4.0
+## What's New in v1.4.1
 
+- **Fixed file-backed templates** -- built-in comment templates now load correctly from global npm installs (broken path resolution after bundling).
 - **`delete_task` and `delete_comment` tools** -- guarded destructive operations with ownership enforcement and explicit approval.
 - **Markdown table support** -- `markdownToAdf()` converts tables to native ADF table nodes.
-- **Hardened error handling** -- cache cleanup no longer swallows unexpected I/O errors.
 - **561 tests** across 58 test files.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
