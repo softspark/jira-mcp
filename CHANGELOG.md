@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.0 -- Delete Tools & Error Hardening (2026-04-15)
+
+### Added
+- **`delete_task` tool** -- delete a Jira issue with ownership enforcement (creator only) and explicit user approval guard.
+- **`delete_comment` tool** -- delete a comment with ownership enforcement (author only) and explicit user approval guard.
+- **Markdown table support in ADF** -- `markdownToAdf()` now converts markdown tables to ADF table nodes.
+
+### Changed
+- **Narrowed cache cleanup catch blocks** -- `deleteTask()` and `logTime()` now catch only `TaskNotFoundError` and `CacheNotFoundError` instead of swallowing all exceptions. Unexpected I/O or corruption errors propagate.
+
+### Fixed
+- **Silent cache errors** -- cache I/O failures during post-delete and post-worklog cleanup were silently ignored, leaving stale entries without any signal.
+
 ## v1.3.0 -- File-Backed Templates & Approval Hooks (2026-04-15)
 
 ### Added

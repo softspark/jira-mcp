@@ -9,13 +9,12 @@
 
 ---
 
-## What's New in v1.3.0
+## What's New in v1.4.0
 
-- **File-backed templates** -- built-in comment and task templates now live as physical markdown files and support global user overrides.
-- **Template CLI + `create_task` templates** -- add install/list/show/remove flows and first-class task template rendering.
-- **Comment approval hooks** -- ship a repo-owned ai-toolkit hook manifest that previews Jira comments before the write executes.
-- **Runtime approval enforcement** -- block comment mutations unless the retry includes `user_approved=true`.
-- **558 tests** across 58 test files.
+- **`delete_task` and `delete_comment` tools** -- guarded destructive operations with ownership enforcement and explicit approval.
+- **Markdown table support** -- `markdownToAdf()` converts tables to native ADF table nodes.
+- **Hardened error handling** -- cache cleanup no longer swallows unexpected I/O errors.
+- **561 tests** across 58 test files.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
