@@ -36,6 +36,8 @@ export interface JiraIssueDetail {
   readonly key: string;
   readonly summary: string;
   readonly description: AdfDocument | null;
+  readonly creator: string;
+  readonly creatorAccountId: string | null;
   readonly status: string;
   readonly assignee: string | null;
   readonly priority: string;
@@ -55,6 +57,7 @@ export interface JiraIssueDetail {
 export interface JiraComment {
   readonly id: string;
   readonly author: string;
+  readonly authorAccountId: string | null;
   readonly body: AdfDocument | null;
   readonly created: string;
 }

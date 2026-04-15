@@ -3,7 +3,7 @@
  *
  * Tests cover:
  *  - createServer() factory returns a correctly configured Server instance
- *  - TOOL_DEFINITIONS structure and completeness (16 tools)
+ *  - TOOL_DEFINITIONS structure and completeness (18 tools)
  *
  * Handler dispatch tests (unknown tool, requireString, asOptionalString)
  * live in server-dispatch.test.ts because they need a different mock for
@@ -28,6 +28,8 @@ const EXPECTED_TOOL_NAMES: readonly string[] = [
   'add_task_comment',
   'add_templated_comment',
   'create_task',
+  'delete_comment',
+  'delete_task',
   'get_project_language',
   'get_task_details',
   'get_task_statuses',
@@ -65,8 +67,8 @@ describe('createServer', () => {
 // ---------------------------------------------------------------------------
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has exactly 16 tool definitions', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(16);
+  it('has exactly 18 tool definitions', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(18);
   });
 
   it('contains all expected tool names', () => {
@@ -97,6 +99,8 @@ describe('TOOL_DEFINITIONS', () => {
     const expected: Record<string, readonly string[]> = {
       update_task_status: ['task_key', 'status'],
       add_task_comment: ['task_key', 'comment'],
+      delete_task: ['task_key'],
+      delete_comment: ['task_key', 'comment_id'],
       reassign_task: ['task_key'],
       get_task_statuses: ['task_key'],
       get_task_details: ['task_key'],

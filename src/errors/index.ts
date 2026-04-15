@@ -21,7 +21,10 @@
  *   |   +-- TemplateMissingVariableError
  *   +-- ApprovalError
  *   |   +-- CommentApprovalRequiredError
+ *   |   +-- DeletionApprovalRequiredError
  *   +-- AdfConversionError
+ *   +-- OwnershipError
+ *   +-- CommentNotFoundError
  */
 
 // ---------------------------------------------------------------------------
@@ -221,6 +224,40 @@ export class CommentApprovalRequiredError extends ApprovalError {
   constructor(message: string) {
     super(message, 'COMMENT_APPROVAL_REQUIRED');
     this.name = 'CommentApprovalRequiredError';
+  }
+}
+
+/**
+ * Raised when a destructive delete tool is called without explicit approval.
+ */
+export class DeletionApprovalRequiredError extends ApprovalError {
+  constructor(message: string) {
+    super(message, 'DELETION_APPROVAL_REQUIRED');
+    this.name = 'DeletionApprovalRequiredError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Ownership / authorization policy errors
+// ---------------------------------------------------------------------------
+
+/**
+ * Raised when a delete action is attempted by someone other than the author.
+ */
+export class OwnershipError extends JiraMcpError {
+  constructor(message: string) {
+    super(message, 'OWNERSHIP_REQUIRED');
+    this.name = 'OwnershipError';
+  }
+}
+
+/**
+ * Raised when a requested comment cannot be found on the issue.
+ */
+export class CommentNotFoundError extends JiraMcpError {
+  constructor(message: string) {
+    super(message, 'COMMENT_NOT_FOUND');
+    this.name = 'CommentNotFoundError';
   }
 }
 

@@ -91,6 +91,7 @@ const ORDERED_LIST_RE = /^(\s*)\d+\.\s+(.*)$/;
 const CODE_FENCE_RE = /^```(\w*)$/;
 const BLOCKQUOTE_RE = /^>\s?(.*)$/;
 const HORIZONTAL_RULE_RE = /^(?:---+|\*\*\*+|___+)\s*$/;
+const TABLE_DELIMITER_CELL_RE = /^:?-{3,}:?$/;
 
 function parseBlocks(markdown: string): readonly AdfNode[] {
   const reader = createReader(markdown);
@@ -149,6 +150,12 @@ function parseBlocks(markdown: string): readonly AdfNode[] {
     // Ordered list
     if (ORDERED_LIST_RE.test(line)) {
       nodes.push(parseOrderedList(reader));
+      continue;
+    }
+
+    // Markdown table
+    if (isTableStart(reader)) {
+      nodes.push(parseTable(reader));
       continue;
     }
 
@@ -260,6 +267,7 @@ function parseParagraph(reader: LineReader): AdfNode {
     if (BLOCKQUOTE_RE.test(line)) break;
     if (UNORDERED_LIST_RE.test(line)) break;
     if (ORDERED_LIST_RE.test(line)) break;
+    if (isTableStart(reader)) break;
 
     const consumed = consume(reader);
 
@@ -284,6 +292,146 @@ function buildParagraph(content: readonly AdfNode[]): AdfNode {
     type: 'paragraph',
     content: content.length > 0 ? content : [{ type: 'text', text: ' ' }],
   };
+}
+
+function isTableStart(reader: LineReader): boolean {
+  const headerLine = reader.lines[reader.pos];
+  const delimiterLine = reader.lines[reader.pos + 1];
+
+  if (headerLine === undefined || delimiterLine === undefined) {
+    return false;
+  }
+
+  const headerCells = splitTableRow(headerLine);
+  if (headerCells.length === 0) {
+    return false;
+  }
+
+  const delimiterCells = splitTableDelimiter(delimiterLine);
+  return delimiterCells.length === headerCells.length;
+}
+
+function parseTable(reader: LineReader): AdfNode {
+  const headerLine = consume(reader);
+  consume(reader); // delimiter row
+
+  const headerCells = splitTableRow(headerLine);
+  const width = headerCells.length;
+  const rows: AdfNode[] = [buildTableRow(headerCells, 'tableHeader', width)];
+
+  while (hasMore(reader)) {
+    const line = peek(reader);
+    if (line === undefined || line.trim() === '') {
+      break;
+    }
+
+    const rowCells = splitTableRow(line);
+    if (rowCells.length === 0) {
+      break;
+    }
+
+    consume(reader);
+    rows.push(buildTableRow(rowCells, 'tableCell', width));
+  }
+
+  return {
+    type: 'table',
+    attrs: {
+      isNumberColumnEnabled: false,
+      layout: 'default',
+    },
+    content: rows,
+  };
+}
+
+function buildTableRow(
+  cells: readonly string[],
+  cellType: 'tableHeader' | 'tableCell',
+  width: number,
+): AdfNode {
+  const normalizedCells = normalizeTableCells(cells, width);
+
+  return {
+    type: 'tableRow',
+    content: normalizedCells.map((cell) => ({
+      type: cellType,
+      content: [buildParagraph(parseInlineWithBreaks(cell))],
+    })),
+  };
+}
+
+function normalizeTableCells(
+  cells: readonly string[],
+  width: number,
+): readonly string[] {
+  if (cells.length === width) {
+    return cells;
+  }
+
+  if (cells.length > width) {
+    return cells.slice(0, width);
+  }
+
+  return [...cells, ...Array.from({ length: width - cells.length }, () => '')];
+}
+
+function splitTableDelimiter(line: string): readonly string[] {
+  const cells = splitTableRow(line);
+  if (cells.length === 0) {
+    return [];
+  }
+
+  return cells.every((cell) => TABLE_DELIMITER_CELL_RE.test(cell)) ? cells : [];
+}
+
+function splitTableRow(line: string): readonly string[] {
+  if (!line.includes('|')) {
+    return [];
+  }
+
+  let normalized = line.trim();
+  if (normalized.startsWith('|')) {
+    normalized = normalized.slice(1);
+  }
+  if (normalized.endsWith('|')) {
+    normalized = normalized.slice(0, -1);
+  }
+
+  if (normalized.trim().length === 0) {
+    return [];
+  }
+
+  const cells: string[] = [];
+  let current = '';
+  let inCode = false;
+
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i];
+    const next = normalized[i + 1];
+
+    if (ch === '\\' && next === '|') {
+      current += '|';
+      i++;
+      continue;
+    }
+
+    if (ch === '`') {
+      inCode = !inCode;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '|' && !inCode) {
+      cells.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += ch;
+  }
+
+  cells.push(current.trim());
+  return cells.some((cell) => cell.length > 0) ? cells : [];
 }
 
 /* ------------------------------------------------------------------ */

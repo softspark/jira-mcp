@@ -813,6 +813,7 @@ describe('JiraConnector', () => {
       const apiResponse = {
         id: '10100',
         author: {
+          accountId: 'author-1',
           emailAddress: 'author@example.com',
           displayName: 'Author',
         },
@@ -827,7 +828,82 @@ describe('JiraConnector', () => {
       // Assert
       expect(comment.id).toBe('10100');
       expect(comment.author).toBe('author@example.com');
+      expect(comment.authorAccountId).toBe('author-1');
       expect(comment.body).toEqual(adfBody);
+    });
+  });
+
+  describe('getIssue', () => {
+    it('maps creator accountId and comment author accountIds', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          key: 'PROJ-1',
+          id: '10001',
+          fields: {
+            summary: 'Test issue',
+            description: null,
+            creator: {
+              accountId: 'creator-1',
+              emailAddress: 'creator@example.com',
+              displayName: 'Creator',
+            },
+            status: { name: 'To Do' },
+            priority: { name: 'Medium' },
+            issuetype: { name: 'Task' },
+            created: '2024-01-01T00:00:00.000Z',
+            updated: '2024-01-02T00:00:00.000Z',
+            project: { key: 'PROJ' },
+            comment: {
+              comments: [
+                {
+                  id: 'c-1',
+                  author: {
+                    accountId: 'commenter-1',
+                    emailAddress: 'commenter@example.com',
+                    displayName: 'Commenter',
+                  },
+                  body: null,
+                  created: '2024-01-03T00:00:00.000Z',
+                },
+              ],
+            },
+            timetracking: {},
+          },
+        }),
+      );
+
+      const issue = await connector.getIssue('PROJ-1');
+
+      expect(issue.creator).toBe('creator@example.com');
+      expect(issue.creatorAccountId).toBe('creator-1');
+      expect(issue.comments[0]?.author).toBe('commenter@example.com');
+      expect(issue.comments[0]?.authorAccountId).toBe('commenter-1');
+    });
+  });
+
+  describe('deleteIssue', () => {
+    it('sends DELETE to the issue endpoint', async () => {
+      mockFetch.mockResolvedValue(mockResponse(undefined, 204, 'No Content'));
+
+      const result = await connector.deleteIssue('PROJ-1');
+
+      expect(result).toBeUndefined();
+      const [urlStr, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(urlStr).toContain('/rest/api/3/issue/PROJ-1');
+      expect(options.method).toBe('DELETE');
+    });
+  });
+
+  describe('deleteComment', () => {
+    it('sends DELETE to the comment endpoint', async () => {
+      mockFetch.mockResolvedValue(mockResponse(undefined, 204, 'No Content'));
+
+      const result = await connector.deleteComment('PROJ-1', 'c-1');
+
+      expect(result).toBeUndefined();
+      const [urlStr, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(urlStr).toContain('/rest/api/3/issue/PROJ-1/comment/c-1');
+      expect(options.method).toBe('DELETE');
     });
   });
 
@@ -884,6 +960,28 @@ describe('JiraConnector', () => {
       await expect(
         connector.findUser('nonexistent@example.com'),
       ).rejects.toThrow(/User not found/);
+    });
+  });
+
+  describe('getCurrentUser', () => {
+    it('returns the authenticated Jira user', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          accountId: 'self-1',
+          emailAddress: 'user@example.com',
+          displayName: 'Authenticated User',
+          active: true,
+        }),
+      );
+
+      const user = await connector.getCurrentUser();
+
+      expect(user).toEqual({
+        accountId: 'self-1',
+        emailAddress: 'user@example.com',
+        displayName: 'Authenticated User',
+        active: true,
+      });
     });
   });
 

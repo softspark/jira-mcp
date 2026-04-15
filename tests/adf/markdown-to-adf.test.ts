@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { markdownToAdf } from '../../src/adf/markdown-to-adf';
+import { adfToMarkdown } from '../../src/adf/adf-to-markdown';
 
 describe('markdownToAdf', () => {
   it('converts a simple paragraph', () => {
@@ -55,6 +56,34 @@ describe('markdownToAdf', () => {
 
     const list = result.content.find((n) => n.type === 'bulletList');
     expect(list).toBeDefined();
+  });
+
+  it('converts a markdown table into ADF table nodes', () => {
+    const result = markdownToAdf(
+      '| Name | Status |\n| --- | --- |\n| API | Done |\n| UI | In Progress |',
+    );
+
+    const table = result.content.find((n) => n.type === 'table');
+    expect(table).toBeDefined();
+    expect(table?.content).toHaveLength(3);
+    expect(table?.content?.[0]?.type).toBe('tableRow');
+    expect(table?.content?.[0]?.content?.[0]?.type).toBe('tableHeader');
+    expect(
+      table?.content?.[1]?.content?.[0]?.content?.[0]?.content?.[0]?.text,
+    ).toBe('API');
+  });
+
+  it('round-trips markdown tables through ADF without flattening rows', () => {
+    const markdown =
+      '| Name | Notes |\n| --- | --- |\n| Parser | **Done** |\n| Docs | `Pending` |';
+
+    const adf = markdownToAdf(markdown);
+    const roundTrip = adfToMarkdown(adf);
+
+    expect(roundTrip).toContain('| Name | Notes |');
+    expect(roundTrip).toContain('| --- | --- |');
+    expect(roundTrip).toContain('| Parser | **Done** |');
+    expect(roundTrip).toContain('| Docs | `Pending` |');
   });
 
   it('returns fallback ADF for empty string', () => {

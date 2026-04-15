@@ -15,7 +15,7 @@
 - **Template CLI + `create_task` templates** -- add install/list/show/remove flows and first-class task template rendering.
 - **Comment approval hooks** -- ship a repo-owned ai-toolkit hook manifest that previews Jira comments before the write executes.
 - **Runtime approval enforcement** -- block comment mutations unless the retry includes `user_approved=true`.
-- **541 tests** across 56 test files.
+- **558 tests** across 58 test files.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -101,6 +101,8 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `update_task_status` | Change task status via workflow transition | `task_key`, `status` |
 | `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?` |
 | `add_task_comment` | Add a markdown comment (auto-converted to ADF) | `task_key`, `comment`, `user_approved` |
+| `delete_task` | Delete a task, only when the authenticated user is the task creator | `task_key`, `user_approved` |
+| `delete_comment` | Delete a comment, only when the authenticated user is the comment author | `task_key`, `comment_id`, `user_approved` |
 | `reassign_task` | Reassign or unassign a task | `task_key`, `assignee_email?` |
 | `get_task_statuses` | Get valid workflow transitions for a task | `task_key` |
 | `get_task_details` | Get full details with description, comments, and language | `task_key` |
@@ -183,7 +185,7 @@ Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rul
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 16 MCP tools** and **20 CLI commands** reference
+- **All 18 MCP tools** and **20 CLI commands** reference
 
 ### AI Toolkit Hooks
 
@@ -230,7 +232,7 @@ src/
   errors/         Typed error hierarchy
   operations/     Business logic (status, comments, time tracking)
   templates/      File-backed comment/task template loading and registries
-  tools/          MCP tool handlers (16 tools, one file per tool)
+  tools/          MCP tool handlers (18 tools, one file per tool)
   types/          Shared TypeScript types
   server.ts       MCP server setup and tool registration
   cli.ts          CLI entry point
@@ -254,16 +256,16 @@ src/
 
 **Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 520KB bundle, 1 runtime dep (commander).
 
-**Typed error hierarchy** -- 17 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+**Typed error hierarchy** -- 20 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 541 tests across 56 test files. Self-contained 520KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 558 tests across 58 test files. Self-contained 520KB package.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Architecture](kb/reference/architecture.md) | System design and module overview |
-| [API Reference](kb/reference/api.md) | All 16 MCP tools with schemas |
+| [API Reference](kb/reference/api.md) | All 18 MCP tools with schemas |
 | [Configuration](kb/reference/configuration.md) | Config files, env vars, multi-instance |
 | [ADF Format](kb/reference/adf.md) | Atlassian Document Format conversion |
 | [Caching](kb/reference/caching.md) | Task, workflow, and user caching |

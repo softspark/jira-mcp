@@ -5,7 +5,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { TaskOperations } from '../../src/operations/task-operations';
-import { JiraConnectionError } from '../../src/errors/index';
+import {
+  JiraConnectionError,
+  OwnershipError,
+  CommentNotFoundError,
+} from '../../src/errors/index';
 import {
   createMockConnector,
   createMockCacheManager,
@@ -143,6 +147,7 @@ describe('TaskOperations', () => {
       connector.addComment.mockResolvedValue({
         id: 'c-1',
         author: 'user@example.com',
+        authorAccountId: 'user-account-1',
         body: adfBody,
         created: '2026-01-01T00:00:00.000Z',
       });
@@ -218,6 +223,8 @@ describe('TaskOperations', () => {
         key: 'PROJ-1',
         summary: 'Test task',
         description: adfDescription,
+        creator: 'creator@example.com',
+        creatorAccountId: 'creator-1',
         status: 'To Do',
         assignee: 'user@example.com',
         priority: 'Medium',
@@ -229,6 +236,7 @@ describe('TaskOperations', () => {
           {
             id: 'c-1',
             author: 'commenter@example.com',
+            authorAccountId: 'commenter-1',
             body: adfComment,
             created: '2026-01-02T00:00:00.000Z',
           },
@@ -251,6 +259,227 @@ describe('TaskOperations', () => {
       expect(details.comments).toHaveLength(1);
       expect(details.comments[0]!.author).toBe('commenter@example.com');
       expect(details.comments[0]!.body).toBe('# Mocked markdown');
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // deleteComment
+  // -----------------------------------------------------------------------
+
+  describe('deleteComment', () => {
+    it('deletes a comment when current user is the author', async () => {
+      const { ops, connector } = createOps();
+
+      connector.getCurrentUser.mockResolvedValue({
+        accountId: 'user-account-1',
+        emailAddress: 'user@example.com',
+        displayName: 'User',
+        active: true,
+      });
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Test task',
+        description: null,
+        creator: 'creator@example.com',
+        creatorAccountId: 'creator-1',
+        status: 'To Do',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [
+          {
+            id: 'c-1',
+            author: 'user@example.com',
+            authorAccountId: 'user-account-1',
+            body: null,
+            created: '2026-01-02T00:00:00.000Z',
+          },
+        ],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+      connector.deleteComment.mockResolvedValue(undefined);
+
+      const result = await ops.deleteComment('PROJ-1', 'c-1');
+
+      expect(connector.getCurrentUser).toHaveBeenCalled();
+      expect(connector.deleteComment).toHaveBeenCalledWith('PROJ-1', 'c-1');
+      expect(result).toEqual({ taskKey: 'PROJ-1', commentId: 'c-1' });
+    });
+
+    it('throws OwnershipError when current user is not the comment author', async () => {
+      const { ops, connector } = createOps();
+
+      connector.getCurrentUser.mockResolvedValue({
+        accountId: 'user-account-1',
+        emailAddress: 'user@example.com',
+        displayName: 'User',
+        active: true,
+      });
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Test task',
+        description: null,
+        creator: 'creator@example.com',
+        creatorAccountId: 'creator-1',
+        status: 'To Do',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [
+          {
+            id: 'c-1',
+            author: 'other@example.com',
+            authorAccountId: 'other-account',
+            body: null,
+            created: '2026-01-02T00:00:00.000Z',
+          },
+        ],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+
+      await expect(ops.deleteComment('PROJ-1', 'c-1')).rejects.toThrow(OwnershipError);
+      expect(connector.deleteComment).not.toHaveBeenCalled();
+    });
+
+    it('throws CommentNotFoundError when comment does not exist on the issue', async () => {
+      const { ops, connector } = createOps();
+
+      connector.getCurrentUser.mockResolvedValue({
+        accountId: 'user-account-1',
+        emailAddress: 'user@example.com',
+        displayName: 'User',
+        active: true,
+      });
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Test task',
+        description: null,
+        creator: 'creator@example.com',
+        creatorAccountId: 'creator-1',
+        status: 'To Do',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+
+      await expect(ops.deleteComment('PROJ-1', 'c-404')).rejects.toThrow(CommentNotFoundError);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // deleteTask
+  // -----------------------------------------------------------------------
+
+  describe('deleteTask', () => {
+    it('deletes a task when current user is the creator and invalidates cache', async () => {
+      const { ops, connector, cache } = createOps();
+
+      connector.getCurrentUser.mockResolvedValue({
+        accountId: 'user-account-1',
+        emailAddress: 'user@example.com',
+        displayName: 'User',
+        active: true,
+      });
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Test task',
+        description: null,
+        creator: 'user@example.com',
+        creatorAccountId: 'user-account-1',
+        status: 'To Do',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+      connector.deleteIssue.mockResolvedValue(undefined);
+      cache.deleteTask.mockResolvedValue(undefined);
+
+      const result = await ops.deleteTask('PROJ-1');
+
+      expect(connector.deleteIssue).toHaveBeenCalledWith('PROJ-1');
+      expect(cache.deleteTask).toHaveBeenCalledWith('PROJ-1');
+      expect(result).toEqual({ taskKey: 'PROJ-1' });
+    });
+
+    it('throws OwnershipError when current user did not create the task', async () => {
+      const { ops, connector } = createOps();
+
+      connector.getCurrentUser.mockResolvedValue({
+        accountId: 'user-account-1',
+        emailAddress: 'user@example.com',
+        displayName: 'User',
+        active: true,
+      });
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Test task',
+        description: null,
+        creator: 'other@example.com',
+        creatorAccountId: 'other-account',
+        status: 'To Do',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+
+      await expect(ops.deleteTask('PROJ-1')).rejects.toThrow(OwnershipError);
+      expect(connector.deleteIssue).not.toHaveBeenCalled();
     });
   });
 

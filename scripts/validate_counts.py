@@ -71,6 +71,7 @@ def count_tools() -> int:
         "definitions.ts",
         "args.ts",
         "comment-approval.ts",
+        "deletion-approval.ts",
     }
     return len([
         f for f in tools_dir.glob("*.ts")

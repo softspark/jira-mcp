@@ -171,6 +171,16 @@ vi.mock('../../src/tools/add-task-comment.js', () => ({
     content: [{ type: 'text', text: '{"success":true}' }],
   }),
 }));
+vi.mock('../../src/tools/delete-task.js', () => ({
+  handleDeleteTask: vi.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"success":true}' }],
+  }),
+}));
+vi.mock('../../src/tools/delete-comment.js', () => ({
+  handleDeleteComment: vi.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"success":true}' }],
+  }),
+}));
 vi.mock('../../src/tools/reassign-task.js', () => ({
   handleReassignTask: vi.fn().mockResolvedValue({
     content: [{ type: 'text', text: '{"success":true}' }],

@@ -40,6 +40,8 @@ import { handleSyncTasks } from './tools/sync-tasks.js';
 import { handleReadCachedTasks } from './tools/read-cached-tasks.js';
 import { handleUpdateTaskStatus } from './tools/update-task-status.js';
 import { handleAddTaskComment } from './tools/add-task-comment.js';
+import { handleDeleteTask } from './tools/delete-task.js';
+import { handleDeleteComment } from './tools/delete-comment.js';
 import { handleReassignTask } from './tools/reassign-task.js';
 import { handleGetTaskStatuses } from './tools/get-task-statuses.js';
 import { handleGetTaskDetails } from './tools/get-task-details.js';
@@ -198,6 +200,25 @@ export async function startServer(): Promise<void> {
           {
             task_key: requireString(args['task_key'], 'task_key'),
             comment: requireString(args['comment'], 'comment'),
+            user_approved: asOptionalBoolean(args['user_approved']),
+          },
+          { pool, cacheManager },
+        );
+
+      case 'delete_task':
+        return handleDeleteTask(
+          {
+            task_key: requireString(args['task_key'], 'task_key'),
+            user_approved: asOptionalBoolean(args['user_approved']),
+          },
+          { pool, cacheManager },
+        );
+
+      case 'delete_comment':
+        return handleDeleteComment(
+          {
+            task_key: requireString(args['task_key'], 'task_key'),
+            comment_id: requireString(args['comment_id'], 'comment_id'),
             user_approved: asOptionalBoolean(args['user_approved']),
           },
           { pool, cacheManager },

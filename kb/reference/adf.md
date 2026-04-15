@@ -62,6 +62,7 @@ The built-in parser handles the following elements:
 - Blockquotes (`> `)
 - Horizontal rules (`---`)
 - Links (`[text](url)`)
+- Tables with a header row and delimiter row
 
 ### Fallback Behavior
 

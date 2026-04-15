@@ -16,6 +16,8 @@ import type { CacheManager } from '../cache/manager.js';
 import type {
   TaskUpdateResult,
   CommentResult,
+  DeleteCommentResult,
+  DeleteTaskResult,
   StatusTransition,
   TaskDetail,
   MarkdownComment,
@@ -25,7 +27,11 @@ import type {
 import { markdownToAdf } from '../adf/markdown-to-adf.js';
 import { adfToMarkdown } from '../adf/adf-to-markdown.js';
 import { parseTimeSpent } from '../connector/time-parser.js';
-import { JiraConnectionError } from '../errors/index.js';
+import {
+  JiraConnectionError,
+  OwnershipError,
+  CommentNotFoundError,
+} from '../errors/index.js';
 
 // ---------------------------------------------------------------------------
 // TaskOperations
@@ -123,6 +129,33 @@ export class TaskOperations {
     };
   }
 
+  /**
+   * Delete a comment, but only if the authenticated user authored it.
+   */
+  async deleteComment(
+    taskKey: string,
+    commentId: string,
+  ): Promise<DeleteCommentResult> {
+    const currentUser = await this.connector.getCurrentUser();
+    const issue = await this.connector.getIssue(taskKey);
+    const comment = issue.comments.find((c) => c.id === commentId);
+
+    if (!comment) {
+      throw new CommentNotFoundError(
+        `Comment ${commentId} not found on ${taskKey}.`,
+      );
+    }
+
+    if (comment.authorAccountId == null || comment.authorAccountId !== currentUser.accountId) {
+      throw new OwnershipError(
+        `Comment ${commentId} on ${taskKey} can only be deleted by its author.`,
+      );
+    }
+
+    await this.connector.deleteComment(taskKey, commentId);
+    return { taskKey, commentId };
+  }
+
   // -----------------------------------------------------------------------
   // Assignment
   // -----------------------------------------------------------------------
@@ -185,6 +218,30 @@ export class TaskOperations {
       updated: issue.updated,
       comments: markdownComments,
     };
+  }
+
+  /**
+   * Delete a task, but only if the authenticated user created it.
+   */
+  async deleteTask(taskKey: string): Promise<DeleteTaskResult> {
+    const currentUser = await this.connector.getCurrentUser();
+    const issue = await this.connector.getIssue(taskKey);
+
+    if (issue.creatorAccountId == null || issue.creatorAccountId !== currentUser.accountId) {
+      throw new OwnershipError(
+        `Task ${taskKey} can only be deleted by its creator.`,
+      );
+    }
+
+    await this.connector.deleteIssue(taskKey);
+
+    try {
+      await this.cacheManager.deleteTask(taskKey);
+    } catch {
+      // Task may not be present in cache; that is fine.
+    }
+
+    return { taskKey };
   }
 
   // -----------------------------------------------------------------------

@@ -67,6 +67,8 @@ function stubConnectorDefaults(
     summary: 'Epic',
     status: 'Open',
     description: null,
+    creator: 'user@example.com',
+    creatorAccountId: 'user-account-1',
     assignee: null,
     priority: 'Medium',
     issueType: 'Epic',

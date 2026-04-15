@@ -40,6 +40,12 @@ export interface CommentResult {
   readonly created: string;
 }
 
+/** Result of deleting a comment. */
+export interface DeleteCommentResult {
+  readonly taskKey: string;
+  readonly commentId: string;
+}
+
 // ---------------------------------------------------------------------------
 // Task details
 // ---------------------------------------------------------------------------
@@ -64,6 +70,11 @@ export interface TaskDetail {
   readonly created: string;
   readonly updated: string;
   readonly comments: readonly MarkdownComment[];
+}
+
+/** Result of deleting a task. */
+export interface DeleteTaskResult {
+  readonly taskKey: string;
 }
 
 // ---------------------------------------------------------------------------

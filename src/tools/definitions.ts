@@ -106,6 +106,50 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     },
   },
   {
+    name: 'delete_task',
+    description:
+      'Delete a Jira task, but only when the authenticated user is the task creator.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_key: {
+          type: 'string',
+          description: 'Task key (e.g. "PROJ-123").',
+        },
+        user_approved: {
+          type: 'boolean',
+          description:
+            'Must be true only after the user explicitly approves deleting this task.',
+        },
+      },
+      required: ['task_key'],
+    },
+  },
+  {
+    name: 'delete_comment',
+    description:
+      'Delete a Jira comment, but only when the authenticated user is the comment author.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_key: {
+          type: 'string',
+          description: 'Task key (e.g. "PROJ-123").',
+        },
+        comment_id: {
+          type: 'string',
+          description: 'Comment ID to delete.',
+        },
+        user_approved: {
+          type: 'boolean',
+          description:
+            'Must be true only after the user explicitly approves deleting this comment.',
+        },
+      },
+      required: ['task_key', 'comment_id'],
+    },
+  },
+  {
     name: 'reassign_task',
     description:
       'Reassign a task to a different user by email, or unassign by providing an empty string or omitting assignee_email.',

@@ -25,6 +25,18 @@ export type {
   AddTaskCommentDeps,
 } from './add-task-comment.js';
 
+export { handleDeleteTask } from './delete-task.js';
+export type {
+  DeleteTaskArgs,
+  DeleteTaskDeps,
+} from './delete-task.js';
+
+export { handleDeleteComment } from './delete-comment.js';
+export type {
+  DeleteCommentArgs,
+  DeleteCommentDeps,
+} from './delete-comment.js';
+
 export { handleReassignTask } from './reassign-task.js';
 export type {
   ReassignTaskArgs,

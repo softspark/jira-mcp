@@ -71,6 +71,11 @@ interface RawJiraIssueFields {
   readonly summary: string;
   readonly status?: { readonly name?: string };
   readonly assignee?: { readonly emailAddress?: string; readonly displayName?: string };
+  readonly creator?: {
+    readonly accountId?: string;
+    readonly emailAddress?: string;
+    readonly displayName?: string;
+  };
   readonly priority?: { readonly name?: string };
   readonly issuetype?: { readonly name?: string };
   readonly issueType?: { readonly name?: string };
@@ -101,6 +106,7 @@ interface RawJiraIssue {
 interface RawJiraComment {
   readonly id?: string;
   readonly author?: {
+    readonly accountId?: string;
     readonly emailAddress?: string;
     readonly displayName?: string;
   };
@@ -317,6 +323,7 @@ export class JiraConnector {
     const detailFields = [
       'summary',
       'description',
+      'creator',
       'status',
       'assignee',
       'priority',
@@ -343,6 +350,7 @@ export class JiraConnector {
           c.author?.emailAddress ??
           c.author?.displayName ??
           'Unknown',
+        authorAccountId: c.author?.accountId ?? null,
         body: c.body ?? null,
         created: c.created ?? '',
       }),
@@ -352,6 +360,11 @@ export class JiraConnector {
       key: issue.key,
       summary: f.summary,
       description: f.description ?? null,
+      creator:
+        f.creator?.emailAddress ??
+        f.creator?.displayName ??
+        'Unknown',
+      creatorAccountId: f.creator?.accountId ?? null,
       status: f.status?.name ?? 'Unknown',
       assignee: f.assignee?.emailAddress ?? null,
       priority: f.priority?.name ?? 'None',
@@ -400,9 +413,33 @@ export class JiraConnector {
         result.author?.emailAddress ??
         result.author?.displayName ??
         'Unknown',
+      authorAccountId: result.author?.accountId ?? null,
       body: result.body ?? null,
       created: result.created ?? '',
     };
+  }
+
+  /**
+   * Delete a Jira issue permanently.
+   */
+  async deleteIssue(issueKey: string): Promise<void> {
+    await this.request<undefined>(
+      'DELETE',
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
+    );
+  }
+
+  /**
+   * Delete a comment from a Jira issue.
+   */
+  async deleteComment(
+    issueKey: string,
+    commentId: string,
+  ): Promise<void> {
+    await this.request<undefined>(
+      'DELETE',
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment/${encodeURIComponent(commentId)}`,
+    );
   }
 
   // -----------------------------------------------------------------------
@@ -480,6 +517,23 @@ export class JiraConnector {
     }
 
     return firstUser.accountId;
+  }
+
+  /**
+   * Return the currently authenticated Jira user.
+   */
+  async getCurrentUser(): Promise<JiraUser> {
+    const user = await this.request<RawJiraUser>(
+      'GET',
+      '/rest/api/3/myself',
+    );
+
+    return {
+      accountId: user.accountId,
+      emailAddress: user.emailAddress ?? null,
+      displayName: user.displayName ?? 'Unknown',
+      active: user.active,
+    };
   }
 
   // -----------------------------------------------------------------------

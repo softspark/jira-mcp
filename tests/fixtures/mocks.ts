@@ -24,10 +24,13 @@ interface MockJiraConnector {
   searchIssues: ReturnType<typeof vi.fn>;
   getIssue: ReturnType<typeof vi.fn>;
   addComment: ReturnType<typeof vi.fn>;
+  deleteIssue: ReturnType<typeof vi.fn>;
+  deleteComment: ReturnType<typeof vi.fn>;
   getTransitions: ReturnType<typeof vi.fn>;
   doTransition: ReturnType<typeof vi.fn>;
   assignIssue: ReturnType<typeof vi.fn>;
   findUser: ReturnType<typeof vi.fn>;
+  getCurrentUser: ReturnType<typeof vi.fn>;
   addWorklog: ReturnType<typeof vi.fn>;
   getTimeTracking: ReturnType<typeof vi.fn>;
   createIssue: ReturnType<typeof vi.fn>;
@@ -45,10 +48,13 @@ export function createMockConnector(
     searchIssues: vi.fn(),
     getIssue: vi.fn(),
     addComment: vi.fn(),
+    deleteIssue: vi.fn(),
+    deleteComment: vi.fn(),
     getTransitions: vi.fn(),
     doTransition: vi.fn(),
     assignIssue: vi.fn(),
     findUser: vi.fn(),
+    getCurrentUser: vi.fn(),
     addWorklog: vi.fn(),
     getTimeTracking: vi.fn(),
     createIssue: vi.fn(),
