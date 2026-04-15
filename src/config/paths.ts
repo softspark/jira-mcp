@@ -10,9 +10,10 @@
  * @module
  */
 
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** Root directory for all Jira MCP global state. */
@@ -22,9 +23,36 @@ export const GLOBAL_CONFIG_DIR: string = join(
   'jira-mcp',
 );
 
+/**
+ * Find the package root by walking up from a starting directory until we
+ * find a directory containing `package.json`.
+ *
+ * This is necessary because tsup bundles all source files into flat output
+ * files (`dist/index.js`), so the depth relative to the package root differs
+ * between source layout (`src/config/paths.ts` -- 2 levels) and bundled
+ * layout (`dist/index.js` -- 1 level).  A static `../..` only works for
+ * the source layout and silently resolves to the wrong directory after
+ * bundling, causing file-backed templates to go missing.
+ */
+function findPackageRoot(startDir: string): string {
+  let current = startDir;
+  for (;;) {
+    if (existsSync(join(current, 'package.json'))) {
+      return current;
+    }
+    const parent = dirname(current);
+    if (parent === current) {
+      // Reached filesystem root without finding package.json -- fall back to
+      // the old heuristic so the server still starts (templates will be empty).
+      return fileURLToPath(new URL('../..', import.meta.url));
+    }
+    current = parent;
+  }
+}
+
 /** Package root directory (works in both src/ and dist/ layouts). */
-export const PACKAGE_ROOT_DIR: string = fileURLToPath(
-  new URL('../..', import.meta.url),
+export const PACKAGE_ROOT_DIR: string = findPackageRoot(
+  dirname(fileURLToPath(import.meta.url)),
 );
 
 /** Global config.json path. */
