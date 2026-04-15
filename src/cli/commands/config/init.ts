@@ -85,6 +85,8 @@ export async function handleInit(configDir: string): Promise<readonly InitResult
   // Directories
   await ensureDirectory(configDir, results);
   await ensureDirectory(join(configDir, 'cache'), results);
+  await ensureDirectory(join(configDir, 'templates', 'comments'), results);
+  await ensureDirectory(join(configDir, 'templates', 'task-templates'), results);
   await ensureDirectory(join(configDir, 'templates', 'tasks'), results);
 
   // Skeleton files

@@ -62,6 +62,8 @@ export async function handleListCommentTemplates(
         name: t.name,
         description: t.description,
         category: t.category,
+        source: t.source ?? 'system',
+        file_path: t.filePath,
         variables: t.variables.map((v) => ({
           name: v.name,
           description: v.description,

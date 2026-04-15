@@ -106,11 +106,27 @@ describe('top-level commands', () => {
     expect(createMonthly!.description()).toContain('monthly_admin.json');
   });
 
-  it('has exactly 5 top-level commands', () => {
+  it('registers the template command group', () => {
+    const program = createProgram();
+    const template = findCommand(program, 'template');
+
+    expect(template).toBeDefined();
+    expect(template!.description()).toBe('Manage file-backed comment and task templates');
+  });
+
+  it('registers the internal hook command group', () => {
+    const program = createProgram();
+    const hook = findCommand(program, 'hook');
+
+    expect(hook).toBeDefined();
+    expect(hook!.description()).toBe('Internal hook runners');
+  });
+
+  it('has exactly 7 top-level commands', () => {
     const program = createProgram();
     const names = subcommandNames(program);
 
-    expect(names).toHaveLength(5);
+    expect(names).toHaveLength(7);
     expect(names).toEqual(
       expect.arrayContaining([
         'serve',
@@ -118,6 +134,8 @@ describe('top-level commands', () => {
         'cache',
         'create',
         'create-monthly',
+        'template',
+        'hook',
       ]),
     );
   });
@@ -216,19 +234,62 @@ describe('cache subcommands', () => {
 // ---------------------------------------------------------------------------
 
 describe('total command count', () => {
-  it('has 17 total commands (5 top-level + 8 config + 4 cache)', () => {
+  it('has 24 total commands (7 top-level + 8 config + 4 cache + 4 template + 1 hook)', () => {
     const program = createProgram();
     const config = findCommand(program, 'config')!;
     const cache = findCommand(program, 'cache')!;
+    const template = findCommand(program, 'template')!;
+    const hook = findCommand(program, 'hook')!;
 
     const topLevel = program.commands.length;
     const configSubs = config.commands.length;
     const cacheSubs = cache.commands.length;
-    const total = topLevel + configSubs + cacheSubs;
+    const templateSubs = template.commands.length;
+    const hookSubs = hook.commands.length;
+    const total = topLevel + configSubs + cacheSubs + templateSubs + hookSubs;
 
-    expect(topLevel).toBe(5);
+    expect(topLevel).toBe(7);
     expect(configSubs).toBe(8);
     expect(cacheSubs).toBe(4);
-    expect(total).toBe(17);
+    expect(templateSubs).toBe(4);
+    expect(hookSubs).toBe(1);
+    expect(total).toBe(24);
+  });
+});
+describe('template subcommands', () => {
+  const EXPECTED_TEMPLATE_SUBCOMMANDS = [
+    'add',
+    'list',
+    'show',
+    'remove',
+  ] as const;
+
+  it('has exactly 4 template subcommands', () => {
+    const program = createProgram();
+    const template = findCommand(program, 'template')!;
+
+    expect(template.commands).toHaveLength(4);
+  });
+
+  it.each(EXPECTED_TEMPLATE_SUBCOMMANDS)(
+    'registers the "%s" template subcommand',
+    (name) => {
+      const program = createProgram();
+      const template = findCommand(program, 'template')!;
+      const sub = template.commands.find((c) => c.name() === name);
+
+      expect(sub).toBeDefined();
+      expect(sub!.description()).toBeTruthy();
+    },
+  );
+});
+
+describe('hook subcommands', () => {
+  it('has exactly 1 hook subcommand', () => {
+    const program = createProgram();
+    const hook = findCommand(program, 'hook')!;
+
+    expect(hook.commands).toHaveLength(1);
+    expect(subcommandNames(hook)).toEqual(['comment-approval']);
   });
 });

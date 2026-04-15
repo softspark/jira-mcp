@@ -123,6 +123,14 @@ For Claude Code, add to `~/.claude/claude_desktop_config.json` or a project-leve
 
 No `env` block is needed. Configuration is loaded automatically from `~/.softspark/jira-mcp/` after running `jira-mcp config init`.
 
+Optional: if you use `@softspark/ai-toolkit`, install the repo-owned hook manifest so comment-posting tools require explicit user approval:
+
+```bash
+ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/hooks/jira-mcp-hooks.json
+```
+
+This hook intercepts `add_task_comment` and `add_templated_comment`, renders the exact outgoing comment preview, and blocks the write until the tool is retried with `user_approved=true`.
+
 ### 8. First use
 
 In your MCP client, run the tools in this order:

@@ -12,6 +12,8 @@ import type { CacheManager } from '../cache/manager.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure } from './helpers.js';
 import { markdownToAdf } from '../adf/markdown-to-adf.js';
+import { renderTemplate } from '../templates/renderer.js';
+import type { TaskTemplateRegistry } from '../templates/task-registry.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,6 +23,8 @@ export interface CreateTaskArgs {
   readonly project_key: string;
   readonly summary: string;
   readonly description?: string;
+  readonly template_id?: string;
+  readonly variables?: Readonly<Record<string, string>>;
   readonly type?: string;
   readonly priority?: string;
   readonly assignee_email?: string;
@@ -31,6 +35,7 @@ export interface CreateTaskArgs {
 export interface CreateTaskDeps {
   readonly pool: InstancePool;
   readonly cacheManager: CacheManager;
+  readonly taskTemplateRegistry: TaskTemplateRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,24 +74,95 @@ export async function handleCreateTask(
   deps: CreateTaskDeps,
 ): Promise<ToolResult> {
   try {
+    const usingTemplate = args.template_id !== undefined;
+    if (usingTemplate && (args.summary !== '' || args.description !== undefined)) {
+      return failure(
+        new Error(
+          'When template_id is provided, do not also provide summary or description.',
+        ),
+      );
+    }
+    if (!usingTemplate && args.summary.trim() === '') {
+      return failure(
+        new Error(
+          'Provide either template_id (with variables) or a non-empty summary.',
+        ),
+      );
+    }
+
     const connector = deps.pool.getConnector(args.project_key);
+
+    let effectiveSummary = args.summary;
+    let effectiveDescription = args.description;
+    let effectiveType = args.type;
+    let effectivePriority = args.priority;
+    let effectiveLabels = args.labels;
+    let effectiveEpicKey = args.epic_key;
+    let templateInfo: Record<string, unknown> | undefined;
+
+    if (usingTemplate) {
+      const template = deps.taskTemplateRegistry.getTemplate(args.template_id ?? '');
+
+      const renderedSummary = renderTemplate(
+        {
+          id: template.id,
+          name: `${template.name} Summary`,
+          description: template.description,
+          category: 'workflow',
+          variables: template.variables,
+          body: template.summary,
+        },
+        args.variables ?? {},
+      );
+      if (!renderedSummary.success) {
+        return failure(new Error(renderedSummary.error));
+      }
+
+      const renderedDescription = renderTemplate(
+        {
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          category: 'workflow',
+          variables: template.variables,
+          body: template.body,
+        },
+        args.variables ?? {},
+      );
+      if (!renderedDescription.success) {
+        return failure(new Error(renderedDescription.error));
+      }
+
+      effectiveSummary = renderedSummary.markdown;
+      effectiveDescription =
+        renderedDescription.markdown === '' ? undefined : renderedDescription.markdown;
+      effectiveType = args.type ?? template.issueType;
+      effectivePriority = args.priority ?? template.priority;
+      effectiveLabels = args.labels ?? template.labels;
+      effectiveEpicKey = args.epic_key ?? template.epicKey;
+      templateInfo = {
+        template_id: template.id,
+        template_name: template.name,
+        source: template.source ?? 'system',
+      };
+    }
 
     // Build core fields
     const fields: Record<string, unknown> = {
       project: { key: args.project_key },
-      summary: args.summary,
-      issuetype: { name: args.type ?? 'Task' },
-      priority: { name: args.priority ?? 'Medium' },
+      summary: effectiveSummary,
+      issuetype: { name: effectiveType ?? 'Task' },
+      priority: { name: effectivePriority ?? 'Medium' },
     };
 
     // Optional description (markdown -> ADF)
-    if (args.description) {
-      fields['description'] = markdownToAdf(args.description);
+    if (effectiveDescription) {
+      fields['description'] = markdownToAdf(effectiveDescription);
     }
 
     // Optional labels
-    if (args.labels && args.labels.length > 0) {
-      fields['labels'] = args.labels;
+    if (effectiveLabels && effectiveLabels.length > 0) {
+      fields['labels'] = effectiveLabels;
     }
 
     // Optional assignee (email -> accountId)
@@ -96,10 +172,10 @@ export async function handleCreateTask(
     }
 
     // Optional epic link
-    if (args.epic_key) {
+    if (effectiveEpicKey) {
       const epicFieldId = await resolveEpicLinkFieldId(connector);
       if (epicFieldId) {
-        fields[epicFieldId] = args.epic_key;
+        fields[epicFieldId] = effectiveEpicKey;
       }
     }
 
@@ -109,8 +185,9 @@ export async function handleCreateTask(
     return success({
       issue_key: result.key,
       url: result.url,
-      summary: args.summary,
-      message: `Created ${result.key}: ${args.summary}`,
+      summary: effectiveSummary,
+      ...(templateInfo ? { template: templateInfo } : {}),
+      message: `Created ${result.key}: ${effectiveSummary}`,
     });
   } catch (error: unknown) {
     return failure(error);

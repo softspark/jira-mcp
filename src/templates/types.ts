@@ -12,15 +12,22 @@ export const TEMPLATE_CATEGORIES = {
   DEVELOPMENT: 'development',
 } as const;
 
+export const TEMPLATE_SOURCES = {
+  SYSTEM: 'system',
+  USER: 'user',
+} as const;
+
 export type TemplateCategory =
   (typeof TEMPLATE_CATEGORIES)[keyof typeof TEMPLATE_CATEGORIES];
+export type TemplateSource =
+  (typeof TEMPLATE_SOURCES)[keyof typeof TEMPLATE_SOURCES];
 
 export interface TemplateVariable {
   readonly name: string;
   readonly description: string;
   readonly required: boolean;
   readonly defaultValue?: string;
-  readonly example: string;
+  readonly example?: string;
 }
 
 export interface CommentTemplate {
@@ -31,6 +38,8 @@ export interface CommentTemplate {
   readonly variables: readonly TemplateVariable[];
   /** Markdown body with {{variable}} placeholders and {{#var}}...{{/var}} conditionals. */
   readonly body: string;
+  readonly source?: TemplateSource;
+  readonly filePath?: string;
 }
 
 export interface RenderResult {

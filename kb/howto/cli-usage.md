@@ -49,6 +49,8 @@ Creates:
   credentials.json
   state.json
   cache/
+  templates/comments/
+  templates/task-templates/
   templates/tasks/
 ```
 
@@ -221,6 +223,47 @@ Print cached users.
 
 ```bash
 jira-mcp cache list-users
+```
+
+---
+
+## Template commands
+
+### `template add`
+
+Install a comment or task template override from a local markdown file. The file is validated and copied into the global template directory under its declared `id`.
+
+```bash
+jira-mcp template add <comment|task> <source-file>
+```
+
+```bash
+jira-mcp template add comment ./my-status-update.md
+jira-mcp template add task ./bug-task.md
+```
+
+### `template list`
+
+List active templates. User overrides replace system templates with the same `id`.
+
+```bash
+jira-mcp template list [comment|task]
+```
+
+### `template show`
+
+Show the active template file content.
+
+```bash
+jira-mcp template show <comment|task> <id>
+```
+
+### `template remove`
+
+Remove a user-installed override. If a system template with the same `id` exists, it becomes active again automatically.
+
+```bash
+jira-mcp template remove <comment|task> <id>
 ```
 
 ---

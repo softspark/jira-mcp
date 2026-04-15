@@ -4,7 +4,7 @@
 Counts checked:
   - MCP tools (src/tools/*.ts minus helpers.ts, index.ts)
   - CLI commands (README table rows in "## CLI Commands" section)
-  - Comment templates (id: entries in src/templates/built-in.ts)
+  - Comment templates (markdown files in templates-system/comments/)
   - Error classes (export class in src/errors/index.ts)
   - Test files (tests/**/*.test.ts)
   - Bundle size (dist/index.js in KiB)
@@ -65,7 +65,13 @@ def check(label: str, readme_val: str | None, actual_val: int) -> None:
 def count_tools() -> int:
     """Count MCP tool files in src/tools/ (excluding non-handler modules)."""
     tools_dir = ROOT / "src" / "tools"
-    exclude = {"helpers.ts", "index.ts", "definitions.ts", "args.ts"}
+    exclude = {
+        "helpers.ts",
+        "index.ts",
+        "definitions.ts",
+        "args.ts",
+        "comment-approval.ts",
+    }
     return len([
         f for f in tools_dir.glob("*.ts")
         if f.name not in exclude
@@ -88,9 +94,9 @@ def count_cli_commands(readme_text: str) -> int:
 
 
 def count_templates() -> int:
-    """Count built-in comment templates by id: entries."""
-    built_in = ROOT / "src" / "templates" / "built-in.ts"
-    return len(re.findall(r"^\s+id:", built_in.read_text(), re.MULTILINE))
+    """Count built-in comment templates from markdown files."""
+    built_in_dir = ROOT / "templates-system" / "comments"
+    return len(list(built_in_dir.glob("*.md")))
 
 
 def count_error_classes() -> int:
@@ -120,7 +126,7 @@ def run_vitest_count() -> int | None:
             capture_output=True, text=True, cwd=ROOT, timeout=120,
         )
         output = result.stdout + result.stderr
-        m = re.search(r"(\d+)\s+passed\s+\(\d+\)", output)
+        m = re.search(r"Tests\s+(\d+)\s+passed", output)
         return int(m.group(1)) if m else None
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None

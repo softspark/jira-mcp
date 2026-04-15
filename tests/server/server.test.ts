@@ -3,7 +3,7 @@
  *
  * Tests cover:
  *  - createServer() factory returns a correctly configured Server instance
- *  - TOOL_DEFINITIONS structure and completeness (15 tools)
+ *  - TOOL_DEFINITIONS structure and completeness (16 tools)
  *
  * Handler dispatch tests (unknown tool, requireString, asOptionalString)
  * live in server-dispatch.test.ts because they need a different mock for
@@ -33,6 +33,7 @@ const EXPECTED_TOOL_NAMES: readonly string[] = [
   'get_task_statuses',
   'get_task_time_tracking',
   'list_comment_templates',
+  'list_task_templates',
   'log_task_time',
   'read_cached_tasks',
   'reassign_task',
@@ -64,8 +65,8 @@ describe('createServer', () => {
 // ---------------------------------------------------------------------------
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has exactly 15 tool definitions', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(15);
+  it('has exactly 16 tool definitions', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(16);
   });
 
   it('contains all expected tool names', () => {
@@ -102,7 +103,7 @@ describe('TOOL_DEFINITIONS', () => {
       log_task_time: ['task_key', 'time_spent'],
       get_task_time_tracking: ['task_key'],
       add_templated_comment: ['task_key'],
-      create_task: ['project_key', 'summary'],
+      create_task: ['project_key'],
       get_project_language: ['project_key'],
       update_task: ['task_key'],
       search_tasks: ['jql'],
@@ -120,7 +121,7 @@ describe('TOOL_DEFINITIONS', () => {
   });
 
   it('tools without required params omit the required field', () => {
-    const optional = ['sync_tasks', 'read_cached_tasks', 'list_comment_templates'];
+    const optional = ['sync_tasks', 'read_cached_tasks', 'list_comment_templates', 'list_task_templates'];
     for (const name of optional) {
       const tool = TOOL_DEFINITIONS.find((t) => t.name === name);
       expect(tool, `${name} should exist`).toBeDefined();

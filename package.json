@@ -40,6 +40,8 @@
   "files": [
     "dist/*.js",
     "dist/*.d.ts",
+    "hooks/**/*.json",
+    "templates-system/**/*.md",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"

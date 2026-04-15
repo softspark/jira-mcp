@@ -33,6 +33,13 @@ export function asOptionalNumber(value: unknown): number | undefined {
 }
 
 /**
+ * Extract an optional boolean value or return undefined.
+ */
+export function asOptionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+/**
  * Extract an optional string array from an unknown value.
  */
 export function asOptionalStringArray(value: unknown): readonly string[] | undefined {

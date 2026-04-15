@@ -11,6 +11,7 @@ import type { JiraConnector } from '../../src/connector/jira-connector';
 import type { CacheManager } from '../../src/cache/manager';
 import type { InstancePool } from '../../src/connector/instance-pool';
 import type { TemplateRegistry } from '../../src/templates/registry';
+import type { TaskTemplateRegistry } from '../../src/templates/task-registry';
 import type { TaskSyncer } from '../../src/cache/syncer';
 import type { WorkflowCacheManager } from '../../src/cache/workflow-cache';
 import type { UserCacheManager } from '../../src/cache/user-cache';
@@ -129,6 +130,18 @@ export function createMockTemplateRegistry(): MockTemplateRegistry {
   };
 }
 
+interface MockTaskTemplateRegistry {
+  getTemplate: ReturnType<typeof vi.fn>;
+  listTemplates: ReturnType<typeof vi.fn>;
+}
+
+export function createMockTaskTemplateRegistry(): MockTaskTemplateRegistry {
+  return {
+    getTemplate: vi.fn(),
+    listTemplates: vi.fn(),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // TaskSyncer
 // ---------------------------------------------------------------------------
@@ -207,6 +220,12 @@ export function asPool(mock: MockInstancePool): InstancePool {
 
 export function asRegistry(mock: MockTemplateRegistry): TemplateRegistry {
   return mock as unknown as TemplateRegistry;
+}
+
+export function asTaskRegistry(
+  mock: MockTaskTemplateRegistry,
+): TaskTemplateRegistry {
+  return mock as unknown as TaskTemplateRegistry;
 }
 
 export function asSyncer(mock: MockTaskSyncer): TaskSyncer {

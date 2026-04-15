@@ -97,6 +97,8 @@ vi.mock('../../src/config/paths.js', () => ({
   GLOBAL_CONFIG_DIR: '/tmp/test-jira-mcp-config',
   GLOBAL_CONFIG_PATH: '/tmp/test-jira-mcp-config/config.json',
   GLOBAL_CREDENTIALS_PATH: '/tmp/test-jira-mcp-config/credentials.json',
+  GLOBAL_COMMENT_TEMPLATES_DIR: '/tmp/test-jira-mcp-config/templates/comments',
+  GLOBAL_TASK_TEMPLATE_DEFINITIONS_DIR: '/tmp/test-jira-mcp-config/templates/task-templates',
 }));
 
 vi.mock('../../src/cache/manager.js', () => ({
@@ -134,15 +136,21 @@ vi.mock('../../src/cache/syncer.js', () => ({
   }),
 }));
 
-vi.mock('../../src/templates/registry.js', () => ({
-  TemplateRegistry: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
-    this.getTemplate = vi.fn();
-    this.listTemplates = vi.fn().mockReturnValue([]);
-    this.listCategories = vi.fn().mockReturnValue([]);
+vi.mock('../../src/templates/catalog.js', () => ({
+  loadTemplateCatalog: vi.fn().mockReturnValue({
+    commentRegistry: {
+      getTemplate: vi.fn(),
+      listTemplates: vi.fn().mockReturnValue([]),
+      listCategories: vi.fn().mockReturnValue([]),
+    },
+    taskRegistry: {
+      getTemplate: vi.fn(),
+      listTemplates: vi.fn().mockReturnValue([]),
+    },
   }),
 }));
 
-// Stub all 15 tool handlers with minimal success response
+// Stub all tool handlers with minimal success response
 vi.mock('../../src/tools/sync-tasks.js', () => ({
   handleSyncTasks: vi.fn().mockResolvedValue({
     content: [{ type: 'text', text: '{"success":true}' }],
@@ -195,6 +203,11 @@ vi.mock('../../src/tools/get-task-time-tracking.js', () => ({
 }));
 vi.mock('../../src/tools/list-comment-templates.js', () => ({
   handleListCommentTemplates: vi.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"success":true}' }],
+  }),
+}));
+vi.mock('../../src/tools/list-task-templates.js', () => ({
+  handleListTaskTemplates: vi.fn().mockResolvedValue({
     content: [{ type: 'text', text: '{"success":true}' }],
   }),
 }));

@@ -19,6 +19,8 @@
  *   +-- TemplateError
  *   |   +-- TemplateNotFoundError
  *   |   +-- TemplateMissingVariableError
+ *   +-- ApprovalError
+ *   |   +-- CommentApprovalRequiredError
  *   +-- AdfConversionError
  */
 
@@ -197,6 +199,28 @@ export class TemplateMissingVariableError extends TemplateError {
   constructor(message: string) {
     super(message, 'TEMPLATE_MISSING_VAR');
     this.name = 'TemplateMissingVariableError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Approval errors
+// ---------------------------------------------------------------------------
+
+/** Base class for approval / confirmation policy errors. */
+export class ApprovalError extends JiraMcpError {
+  constructor(message: string, code = 'APPROVAL_ERROR') {
+    super(message, code);
+    this.name = 'ApprovalError';
+  }
+}
+
+/**
+ * Raised when a comment-mutating tool is called without explicit user approval.
+ */
+export class CommentApprovalRequiredError extends ApprovalError {
+  constructor(message: string) {
+    super(message, 'COMMENT_APPROVAL_REQUIRED');
+    this.name = 'CommentApprovalRequiredError';
   }
 }
 

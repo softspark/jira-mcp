@@ -24,7 +24,7 @@ import { InstancePool } from './connector/instance-pool.js';
 import { CacheManager } from './cache/manager.js';
 import { TaskSyncer } from './cache/syncer.js';
 import type { JiraFetcher, JiraIssue as SyncerJiraIssue } from './cache/syncer.js';
-import { TemplateRegistry } from './templates/registry.js';
+import { loadTemplateCatalog } from './templates/catalog.js';
 import { failure } from './tools/helpers.js';
 import { TOOL_DEFINITIONS } from './tools/definitions.js';
 import {
@@ -32,6 +32,7 @@ import {
   requireString,
   asOptionalNumber,
   asOptionalStringArray,
+  asOptionalBoolean,
   asOptionalRecord,
 } from './tools/args.js';
 
@@ -46,6 +47,7 @@ import { handleGetProjectLanguage } from './tools/get-project-language.js';
 import { handleLogTaskTime } from './tools/log-task-time.js';
 import { handleGetTaskTimeTracking } from './tools/get-task-time-tracking.js';
 import { handleListCommentTemplates } from './tools/list-comment-templates.js';
+import { handleListTaskTemplates } from './tools/list-task-templates.js';
 import { handleAddTemplatedComment } from './tools/add-templated-comment.js';
 import { handleCreateTask } from './tools/create-task.js';
 import { handleUpdateTask } from './tools/update-task.js';
@@ -138,7 +140,10 @@ export async function startServer(): Promise<void> {
   const cacheManager = new CacheManager(GLOBAL_CACHE_DIR, config.credentials.username);
   await cacheManager.initialize();
 
-  const templateRegistry = new TemplateRegistry();
+  const {
+    commentRegistry: templateRegistry,
+    taskRegistry,
+  } = loadTemplateCatalog();
 
   // 3. Create task syncer with connector-to-fetcher adapter
   const syncer = new TaskSyncer(
@@ -193,6 +198,7 @@ export async function startServer(): Promise<void> {
           {
             task_key: requireString(args['task_key'], 'task_key'),
             comment: requireString(args['comment'], 'comment'),
+            user_approved: asOptionalBoolean(args['user_approved']),
           },
           { pool, cacheManager },
         );
@@ -247,6 +253,7 @@ export async function startServer(): Promise<void> {
             template_id: asOptionalString(args['template_id']),
             variables: asOptionalRecord(args['variables']),
             markdown: asOptionalString(args['markdown']),
+            user_approved: asOptionalBoolean(args['user_approved']),
           },
           { pool, cacheManager, templateRegistry },
         );
@@ -255,15 +262,23 @@ export async function startServer(): Promise<void> {
         return handleCreateTask(
           {
             project_key: requireString(args['project_key'], 'project_key'),
-            summary: requireString(args['summary'], 'summary'),
+            summary: asOptionalString(args['summary']) ?? '',
             description: asOptionalString(args['description']),
+            template_id: asOptionalString(args['template_id']),
+            variables: asOptionalRecord(args['variables']),
             type: asOptionalString(args['type']),
             priority: asOptionalString(args['priority']),
             assignee_email: asOptionalString(args['assignee_email']),
             labels: asOptionalStringArray(args['labels']),
             epic_key: asOptionalString(args['epic_key']),
           },
-          { pool, cacheManager },
+          { pool, cacheManager, taskTemplateRegistry: taskRegistry },
+        );
+
+      case 'list_task_templates':
+        return handleListTaskTemplates(
+          {},
+          { taskTemplateRegistry: taskRegistry },
         );
 
       case 'get_project_language':

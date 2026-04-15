@@ -96,6 +96,11 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           type: 'string',
           description: 'Comment text in markdown format.',
         },
+        user_approved: {
+          type: 'boolean',
+          description:
+            'Must be true only after the user explicitly approves posting this comment.',
+        },
       },
       required: ['task_key', 'comment'],
     },
@@ -232,6 +237,11 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           description:
             'Raw markdown comment. Use instead of template_id for freeform comments.',
         },
+        user_approved: {
+          type: 'boolean',
+          description:
+            'Must be true only after the user explicitly approves posting this comment.',
+        },
       },
       required: ['task_key'],
     },
@@ -239,7 +249,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'create_task',
     description:
-      'Create a new Jira issue with optional description, assignee, labels, and epic link.',
+      'Create a new Jira issue with either explicit fields or a registered task template, plus optional assignee, labels, and epic link.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -249,12 +259,23 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         },
         summary: {
           type: 'string',
-          description: 'Issue title / summary.',
+          description: 'Issue title / summary. Do not provide when using template_id.',
         },
         description: {
           type: 'string',
           description:
-            'Optional issue description in markdown format. Automatically converted to ADF.',
+            'Optional issue description in markdown format. Automatically converted to ADF. Do not provide when using template_id.',
+        },
+        template_id: {
+          type: 'string',
+          description:
+            'Task template identifier. Use list_task_templates to see available templates.',
+        },
+        variables: {
+          type: 'object',
+          description:
+            'Key-value map of template variables. Required when using template_id.',
+          additionalProperties: { type: 'string' },
         },
         type: {
           type: 'string',
@@ -279,7 +300,16 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
             'Epic issue key to link this issue under (e.g. "PROJ-100").',
         },
       },
-      required: ['project_key', 'summary'],
+      required: ['project_key'],
+    },
+  },
+  {
+    name: 'list_task_templates',
+    description:
+      'List all available single-task templates used by create_task. Returns template metadata including required variables.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
     },
   },
   {

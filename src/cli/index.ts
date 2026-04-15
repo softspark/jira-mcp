@@ -15,6 +15,8 @@ import { registerConfigCommands } from './commands/config/index.js';
 import { registerCacheCommands } from './commands/cache/index.js';
 import { registerCreateCommand } from './commands/create.js';
 import { registerCreateMonthlyCommand } from './commands/create-monthly.js';
+import { registerHookCommands } from './commands/hook/index.js';
+import { registerTemplateCommands } from './commands/template/index.js';
 
 /**
  * Create and configure the top-level Commander program.
@@ -54,12 +56,22 @@ export function createProgram(): Command {
   registerCreateCommand(program);
   registerCreateMonthlyCommand(program);
 
+  // Template management commands
+  registerTemplateCommands(program);
+
+  // Internal hook runner commands
+  registerHookCommands(program);
+
   // Expand subcommands in --help
   program.addHelpText('after', `
 All commands:
   serve                          Start the MCP server (default behavior)
   create <config-path>           Create tasks from a bulk config file (dry-run by default)
   create-monthly                 Run all monthly_admin.json configs from templates
+  template add <type> <path>     Install a template override from a local markdown file
+  template list [type]           List active comment/task templates
+  template show <type> <id>      Show the active template file content
+  template remove <type> <id>    Remove a user-installed template override
 
   config init                    Initialize global config at ~/.softspark/jira-mcp/
   config add-project <key> <url> Add a Jira project

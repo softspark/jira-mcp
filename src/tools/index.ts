@@ -61,6 +61,9 @@ export type {
   ListCommentTemplatesDeps,
 } from './list-comment-templates.js';
 
+export { handleListTaskTemplates } from './list-task-templates.js';
+export type { ListTaskTemplatesDeps } from './list-task-templates.js';
+
 export { handleAddTemplatedComment } from './add-templated-comment.js';
 export type {
   AddTemplatedCommentArgs,

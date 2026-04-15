@@ -139,7 +139,9 @@ All persistent server state lives under `~/.softspark/jira-mcp/`:
 │   ├── workflows.json       # Cached workflow statuses per project
 │   └── users.json           # Cached user directory per instance
 └── templates/
-    └── tasks/               # User-defined task templates (BulkConfig JSON)
+    ├── comments/            # User-defined comment template overrides (.md)
+    ├── task-templates/      # User-defined create_task template overrides (.md)
+    └── tasks/               # User-defined bulk task templates (BulkConfig JSON)
 ```
 
 The directory tree is created automatically on first use via `ensureGlobalDirs()`.

@@ -13,7 +13,7 @@ description: "Complete reference for all MCP tools exposed by the Jira MCP serve
 
 All tools communicate over stdio using the MCP JSON-RPC protocol. Every tool returns `{ content: [{ type: "text", text: "..." }] }`.
 
-## Task Management Tools (15)
+## Task Management Tools (16)
 
 ### sync_tasks
 
@@ -113,12 +113,15 @@ Updated PROJ-123 status to "In Progress".
 
 Add a markdown comment to a Jira task. The markdown is automatically converted to ADF format before submission.
 
+If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to block this tool before execution until the user explicitly approves the exact comment preview.
+
 **Parameters**
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
 | `comment` | string | Yes | — | Comment text in markdown format. |
+| `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves posting the comment. |
 
 **Input example**
 
@@ -362,7 +365,7 @@ Time Tracking for PROJ-123:
 
 ---
 
-## Comment Template Tools (2)
+## Template Tools (3)
 
 ### list_comment_templates
 
@@ -399,6 +402,8 @@ handoff-transition: Task Handoff
 
 Add a comment using a registered template (with variable substitution) or raw markdown. Provide exactly one of `template_id` or `markdown`.
 
+If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to render the final comment preview and require explicit user approval before this tool executes.
+
 **Parameters**
 
 | Parameter | Type | Required | Default | Description |
@@ -407,6 +412,7 @@ Add a comment using a registered template (with variable substitution) or raw ma
 | `template_id` | string | No | — | Template identifier (from `list_comment_templates`). |
 | `variables` | object | No | — | Key-value map of template variables. Required when using `template_id`. |
 | `markdown` | string | No | — | Raw markdown. Use instead of `template_id` for freeform comments. |
+| `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves posting the comment. |
 
 **Input example (template)**
 
@@ -438,6 +444,96 @@ Added templated comment to PROJ-123 using template "status-update".
 ```
 
 **Error:** If `template_id` is used without all required variables, returns the list of missing variable names.
+
+---
+
+### list_task_templates
+
+List all available single-task templates used by `create_task`.
+
+**Parameters**
+
+None.
+
+**Output example**
+
+```json
+{
+  "templates": [
+    {
+      "id": "bug-task",
+      "name": "Bug Task",
+      "description": "Bug issue template with structured reproduction details",
+      "summary": "Bug: {{title}}",
+      "issue_type": "Bug",
+      "priority": "High",
+      "labels": ["bug"],
+      "source": "system",
+      "variables": [
+        { "name": "title", "required": true }
+      ]
+    }
+  ],
+  "count": 3
+}
+```
+
+---
+
+### create_task
+
+Create a new Jira issue with either explicit fields or a registered task template, plus optional assignee, labels, priority, and epic link.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_key` | string | Yes | — | Project key (e.g. `"PROJ"`). |
+| `summary` | string | No | — | Issue title / summary. Required when `template_id` is omitted. |
+| `description` | string | No | — | Optional issue description in markdown format. Automatically converted to ADF. Do not combine with `template_id`. |
+| `template_id` | string | No | — | Task template identifier from `list_task_templates`. |
+| `variables` | object | No | — | Template variables used when `template_id` is provided. |
+| `type` | string | No | `"Task"` | Issue type name. |
+| `priority` | string | No | `"Medium"` | Priority name. |
+| `assignee_email` | string | No | — | Email of the assignee. |
+| `labels` | array of string | No | — | Labels to apply to the issue. |
+| `epic_key` | string | No | — | Epic issue key. |
+
+**Input example (explicit fields)**
+
+```json
+{
+  "project_key": "PROJ",
+  "summary": "Implement login page",
+  "description": "Build the first version of the login page",
+  "priority": "High"
+}
+```
+
+**Input example (task template)**
+
+```json
+{
+  "project_key": "PROJ",
+  "template_id": "bug-task",
+  "variables": {
+    "title": "Save button fails",
+    "steps": "1. Open settings\n2. Click Save",
+    "expected": "Settings should be saved",
+    "actual": "Request fails with HTTP 500"
+  }
+}
+```
+
+**Output example**
+
+```json
+{
+  "issue_key": "PROJ-42",
+  "summary": "Bug: Save button fails",
+  "message": "Created PROJ-42: Bug: Save button fails"
+}
+```
 
 ---
 

@@ -67,6 +67,7 @@ describe('handleAddTemplatedComment', () => {
         task_key: 'PROJ-1',
         template_id: 'status-update',
         markdown: '# Hello',
+        user_approved: true,
       },
       {
         pool: asPool(pool),
@@ -84,7 +85,7 @@ describe('handleAddTemplatedComment', () => {
     const { pool, cache, registry } = setupDeps();
 
     const result = await handleAddTemplatedComment(
-      { task_key: 'PROJ-1' },
+      { task_key: 'PROJ-1', user_approved: true },
       {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
@@ -125,6 +126,7 @@ describe('handleAddTemplatedComment', () => {
         task_key: 'PROJ-1',
         template_id: 'status-update',
         variables: { status: 'In Progress' },
+        user_approved: true,
       },
       {
         pool: asPool(pool),
@@ -157,6 +159,7 @@ describe('handleAddTemplatedComment', () => {
         task_key: 'PROJ-1',
         template_id: 'status-update',
         variables: {},
+        user_approved: true,
       },
       {
         pool: asPool(pool),
@@ -185,7 +188,7 @@ describe('handleAddTemplatedComment', () => {
     });
 
     const result = await handleAddTemplatedComment(
-      { task_key: 'PROJ-1', markdown: '# Raw markdown' },
+      { task_key: 'PROJ-1', markdown: '# Raw markdown', user_approved: true },
       {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
@@ -209,7 +212,7 @@ describe('handleAddTemplatedComment', () => {
     });
 
     const result = await handleAddTemplatedComment(
-      { task_key: 'PROJ-1', markdown: 'Test' },
+      { task_key: 'PROJ-1', markdown: 'Test', user_approved: true },
       {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
@@ -218,5 +221,22 @@ describe('handleAddTemplatedComment', () => {
     );
 
     expect(result.isError).toBe(true);
+  });
+
+  it('blocks templated comment add when user approval is missing', async () => {
+    const { pool, cache, registry } = setupDeps();
+
+    const result = await handleAddTemplatedComment(
+      { task_key: 'PROJ-1', markdown: '# Raw markdown' },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        templateRegistry: asRegistry(registry),
+      },
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = parseResult(result);
+    expect(parsed['code']).toBe('COMMENT_APPROVAL_REQUIRED');
   });
 });

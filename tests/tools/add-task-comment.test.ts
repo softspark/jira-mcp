@@ -48,7 +48,7 @@ describe('handleAddTaskComment', () => {
     });
 
     const result = await handleAddTaskComment(
-      { task_key: 'PROJ-1', comment: 'Hello world' },
+      { task_key: 'PROJ-1', comment: 'Hello world', user_approved: true },
       { pool: asPool(pool), cacheManager: asCacheManager(cache) },
     );
 
@@ -69,12 +69,25 @@ describe('handleAddTaskComment', () => {
     });
 
     const result = await handleAddTaskComment(
-      { task_key: 'PROJ-1', comment: 'test' },
+      { task_key: 'PROJ-1', comment: 'test', user_approved: true },
       { pool: asPool(pool), cacheManager: asCacheManager(cache) },
     );
 
     expect(result.isError).toBe(true);
     const parsed = parseResult(result);
     expect(parsed['error']).toBe('Permission denied');
+  });
+
+  it('blocks comment add when user approval is missing', async () => {
+    const { pool, cache } = setupDeps();
+
+    const result = await handleAddTaskComment(
+      { task_key: 'PROJ-1', comment: 'Hello world' },
+      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+    );
+
+    expect(result.isError).toBe(true);
+    const parsed = parseResult(result);
+    expect(parsed['code']).toBe('COMMENT_APPROVAL_REQUIRED');
   });
 });

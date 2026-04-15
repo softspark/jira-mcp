@@ -13,12 +13,18 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 /** Root directory for all Jira MCP global state. */
 export const GLOBAL_CONFIG_DIR: string = join(
   homedir(),
   '.softspark',
   'jira-mcp',
+);
+
+/** Package root directory (works in both src/ and dist/ layouts). */
+export const PACKAGE_ROOT_DIR: string = fileURLToPath(
+  new URL('../..', import.meta.url),
 );
 
 /** Global config.json path. */
@@ -51,10 +57,40 @@ export const GLOBAL_TEMPLATES_DIR: string = join(
   'templates',
 );
 
+/** User-defined comment templates directory. */
+export const GLOBAL_COMMENT_TEMPLATES_DIR: string = join(
+  GLOBAL_TEMPLATES_DIR,
+  'comments',
+);
+
+/** User-defined single-task templates directory. */
+export const GLOBAL_TASK_TEMPLATE_DEFINITIONS_DIR: string = join(
+  GLOBAL_TEMPLATES_DIR,
+  'task-templates',
+);
+
 /** Task-specific templates directory. */
 export const GLOBAL_TASK_TEMPLATES_DIR: string = join(
   GLOBAL_TEMPLATES_DIR,
   'tasks',
+);
+
+/** Package-shipped system templates root directory. */
+export const SYSTEM_TEMPLATES_DIR: string = join(
+  PACKAGE_ROOT_DIR,
+  'templates-system',
+);
+
+/** Package-shipped comment templates directory. */
+export const SYSTEM_COMMENT_TEMPLATES_DIR: string = join(
+  SYSTEM_TEMPLATES_DIR,
+  'comments',
+);
+
+/** Package-shipped single-task templates directory. */
+export const SYSTEM_TASK_TEMPLATES_DIR: string = join(
+  SYSTEM_TEMPLATES_DIR,
+  'task-templates',
 );
 
 /**
@@ -63,10 +99,14 @@ export const GLOBAL_TASK_TEMPLATES_DIR: string = join(
  * Creates the full hierarchy if any part is missing:
  *  - ~/.softspark/jira-mcp/
  *  - ~/.softspark/jira-mcp/cache/
+ *  - ~/.softspark/jira-mcp/templates/comments/
+ *  - ~/.softspark/jira-mcp/templates/task-templates/
  *  - ~/.softspark/jira-mcp/templates/tasks/
  */
 export async function ensureGlobalDirs(): Promise<void> {
   await mkdir(GLOBAL_CONFIG_DIR, { recursive: true });
   await mkdir(GLOBAL_CACHE_DIR, { recursive: true });
+  await mkdir(GLOBAL_COMMENT_TEMPLATES_DIR, { recursive: true });
+  await mkdir(GLOBAL_TASK_TEMPLATE_DEFINITIONS_DIR, { recursive: true });
   await mkdir(GLOBAL_TASK_TEMPLATES_DIR, { recursive: true });
 }

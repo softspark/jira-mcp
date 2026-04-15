@@ -9,9 +9,12 @@ import {
   createMockInstancePool,
   createMockCacheManager,
   createMockConnector,
+  createMockTaskTemplateRegistry,
   asPool,
   asCacheManager,
+  asTaskRegistry,
 } from '../fixtures/mocks';
+import type { TaskTemplate } from '../../src/templates/task-types';
 
 function parseResult(
   result: { content: Array<{ type: string; text?: string }> },
@@ -25,12 +28,13 @@ describe('handleCreateTask', () => {
     const pool = createMockInstancePool();
     const cache = createMockCacheManager();
     const connector = createMockConnector();
+    const taskRegistry = createMockTaskTemplateRegistry();
     pool.getConnector.mockReturnValue(connector);
-    return { pool, cache, connector };
+    return { pool, cache, connector, taskRegistry };
   }
 
   it('creates a task with minimal args (project_key + summary)', async () => {
-    const { pool, cache, connector } = setupDeps();
+    const { pool, cache, connector, taskRegistry } = setupDeps();
     connector.createIssue.mockResolvedValue({
       key: 'PROJ-42',
       id: '10042',
@@ -39,7 +43,11 @@ describe('handleCreateTask', () => {
 
     const result = await handleCreateTask(
       { project_key: 'PROJ', summary: 'New task' },
-      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
     );
 
     const parsed = parseResult(result);
@@ -57,7 +65,7 @@ describe('handleCreateTask', () => {
   });
 
   it('creates a task with description (markdown converted to ADF)', async () => {
-    const { pool, cache, connector } = setupDeps();
+    const { pool, cache, connector, taskRegistry } = setupDeps();
     connector.createIssue.mockResolvedValue({
       key: 'PROJ-43',
       id: '10043',
@@ -70,7 +78,11 @@ describe('handleCreateTask', () => {
         summary: 'Task with description',
         description: '# Heading\n\nSome **bold** text',
       },
-      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
     );
 
     const parsed = parseResult(result);
@@ -84,7 +96,7 @@ describe('handleCreateTask', () => {
   });
 
   it('creates a task with assignee (resolves email via findUser)', async () => {
-    const { pool, cache, connector } = setupDeps();
+    const { pool, cache, connector, taskRegistry } = setupDeps();
     connector.findUser.mockResolvedValue('account-id-123');
     connector.createIssue.mockResolvedValue({
       key: 'PROJ-44',
@@ -98,7 +110,11 @@ describe('handleCreateTask', () => {
         summary: 'Assigned task',
         assignee_email: 'dev@example.com',
       },
-      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
     );
 
     const parsed = parseResult(result);
@@ -110,7 +126,7 @@ describe('handleCreateTask', () => {
   });
 
   it('creates a task with epic_key (discovers epic link field)', async () => {
-    const { pool, cache, connector } = setupDeps();
+    const { pool, cache, connector, taskRegistry } = setupDeps();
     connector.getFields.mockResolvedValue([
       { id: 'summary', name: 'Summary', custom: false },
       { id: 'customfield_10014', name: 'Epic Link', custom: true },
@@ -127,7 +143,11 @@ describe('handleCreateTask', () => {
         summary: 'Epic child',
         epic_key: 'PROJ-10',
       },
-      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
     );
 
     const parsed = parseResult(result);
@@ -139,14 +159,18 @@ describe('handleCreateTask', () => {
   });
 
   it('returns error when project_key connector lookup fails', async () => {
-    const { pool, cache } = setupDeps();
+    const { pool, cache, taskRegistry } = setupDeps();
     pool.getConnector.mockImplementation(() => {
       throw new Error("Project 'UNKNOWN' not found in configuration");
     });
 
     const result = await handleCreateTask(
       { project_key: 'UNKNOWN', summary: 'Will fail' },
-      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
     );
 
     expect(result.isError).toBe(true);
@@ -156,16 +180,75 @@ describe('handleCreateTask', () => {
   });
 
   it('returns error when createIssue throws', async () => {
-    const { pool, cache, connector } = setupDeps();
+    const { pool, cache, connector, taskRegistry } = setupDeps();
     connector.createIssue.mockRejectedValue(new Error('Permission denied'));
 
     const result = await handleCreateTask(
       { project_key: 'PROJ', summary: 'Will fail' },
-      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
     );
 
     expect(result.isError).toBe(true);
     const parsed = parseResult(result);
     expect(parsed['error']).toBe('Permission denied');
+  });
+
+  it('creates a task from a task template', async () => {
+    const { pool, cache, connector, taskRegistry } = setupDeps();
+    const template: TaskTemplate = {
+      id: 'bug-task',
+      name: 'Bug Task',
+      description: 'Bug template',
+      summary: 'Bug: {{title}}',
+      issueType: 'Bug',
+      priority: 'High',
+      labels: ['bug'],
+      variables: [
+        { name: 'title', description: 'Bug title', required: true },
+        { name: 'steps', description: 'Steps', required: true },
+      ],
+      body: '## Steps\n{{steps}}',
+      source: 'user',
+      filePath: '/tmp/bug-task.md',
+    };
+    taskRegistry.getTemplate.mockReturnValue(template);
+    connector.createIssue.mockResolvedValue({
+      key: 'PROJ-46',
+      id: '10046',
+      url: 'https://test.atlassian.net/browse/PROJ-46',
+    });
+
+    const result = await handleCreateTask(
+      {
+        project_key: 'PROJ',
+        summary: '',
+        template_id: 'bug-task',
+        variables: {
+          title: 'Save button fails',
+          steps: '1. Open settings\n2. Click Save',
+        },
+      },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
+    );
+
+    const parsed = parseResult(result);
+    expect(parsed['success']).toBe(true);
+    expect(parsed['summary']).toBe('Bug: Save button fails');
+    expect((parsed['template'] as Record<string, unknown>)['template_id']).toBe('bug-task');
+
+    const fields = connector.createIssue.mock.calls[0][0] as Record<string, unknown>;
+    expect(fields['summary']).toBe('Bug: Save button fails');
+    expect(fields['issuetype']).toEqual({ name: 'Bug' });
+    expect(fields['priority']).toEqual({ name: 'High' });
+    expect(fields['labels']).toEqual(['bug']);
+    expect(fields['description']).toBeDefined();
   });
 });

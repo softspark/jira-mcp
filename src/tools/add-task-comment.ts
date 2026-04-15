@@ -11,10 +11,12 @@ import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure, getOperations } from './helpers.js';
+import { assertCommentApproved } from './comment-approval.js';
 
 export interface AddTaskCommentArgs {
   readonly task_key: string;
   readonly comment: string;
+  readonly user_approved?: boolean;
 }
 
 export interface AddTaskCommentDeps {
@@ -30,6 +32,8 @@ export async function handleAddTaskComment(
   deps: AddTaskCommentDeps,
 ): Promise<ToolResult> {
   try {
+    assertCommentApproved(args.user_approved);
+
     const ops = getOperations(deps.pool, deps.cacheManager, args.task_key);
     const result = await ops.addComment(args.task_key, args.comment);
 

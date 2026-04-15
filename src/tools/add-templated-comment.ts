@@ -14,12 +14,14 @@ import type { TemplateRegistry } from '../templates/registry.js';
 import { renderTemplate } from '../templates/renderer.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure, getOperations } from './helpers.js';
+import { assertCommentApproved } from './comment-approval.js';
 
 export interface AddTemplatedCommentArgs {
   readonly task_key: string;
   readonly template_id?: string;
   readonly variables?: Readonly<Record<string, string>>;
   readonly markdown?: string;
+  readonly user_approved?: boolean;
 }
 
 export interface AddTemplatedCommentDeps {
@@ -40,6 +42,8 @@ export async function handleAddTemplatedComment(
   deps: AddTemplatedCommentDeps,
 ): Promise<ToolResult> {
   try {
+    assertCommentApproved(args.user_approved);
+
     // Validate: exactly one source must be provided
     if (args.template_id && args.markdown) {
       return failure(

@@ -13,8 +13,9 @@
 
 - **Per-instance credentials** -- `set-credentials --url` allows different API tokens per Jira instance. Auto-migrates legacy format.
 - **Jira Cloud API migration** -- search endpoint updated to `/rest/api/3/search/jql` (old endpoint returns 410).
-- **Live Jira smoke tests** -- post-release SOP tests all 15 MCP tools against a sandbox project.
-- **518 tests** across 52 test files.
+- **File-backed templates** -- system templates ship as markdown files and can be globally overridden from `~/.softspark/jira-mcp/templates/`.
+- **Live Jira smoke tests** -- post-release SOP tests all 16 MCP tools against a sandbox project.
+- **541 tests** across 56 test files.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -74,6 +75,10 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `jira-mcp serve` | Start MCP server (explicit) |
 | `jira-mcp create <path>` | Create tasks from config file (dry-run by default) |
 | `jira-mcp create-monthly` | Create monthly admin tasks from built-in templates |
+| `jira-mcp template add <type> <path>` | Install a template override from a local markdown file |
+| `jira-mcp template list [type]` | List active comment/task templates |
+| `jira-mcp template show <type> <id>` | Show the active template file content |
+| `jira-mcp template remove <type> <id>` | Remove a user-installed template override |
 | `jira-mcp config init` | Initialize global config at `~/.softspark/jira-mcp/` |
 | `jira-mcp config add-project <key> <url>` | Add a Jira project to config |
 | `jira-mcp config remove-project <key>` | Remove a project from config |
@@ -95,7 +100,7 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `read_cached_tasks` | Read tasks from cache without hitting Jira | `task_key?` |
 | `update_task_status` | Change task status via workflow transition | `task_key`, `status` |
 | `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?` |
-| `add_task_comment` | Add a markdown comment (auto-converted to ADF) | `task_key`, `comment` |
+| `add_task_comment` | Add a markdown comment (auto-converted to ADF) | `task_key`, `comment`, `user_approved` |
 | `reassign_task` | Reassign or unassign a task | `task_key`, `assignee_email?` |
 | `get_task_statuses` | Get valid workflow transitions for a task | `task_key` |
 | `get_task_details` | Get full details with description, comments, and language | `task_key` |
@@ -103,8 +108,9 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `log_task_time` | Log work time (`"2h 30m"` format, no days) | `task_key`, `time_spent`, `comment?` |
 | `get_task_time_tracking` | Get time tracking info (estimate, spent, remaining) | `task_key` |
 | `list_comment_templates` | List available comment templates | `category?` |
-| `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?` |
-| `create_task` | Create a new Jira issue with ADF description | `project_key`, `summary`, `description?`, `assignee_email?`, `labels?`, `epic_key?` |
+| `list_task_templates` | List available task templates for `create_task` | — |
+| `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?`, `user_approved` |
+| `create_task` | Create a new Jira issue with explicit fields or a task template | `project_key`, `summary?`, `template_id?`, `variables?`, `description?`, `assignee_email?`, `labels?`, `epic_key?` |
 | `search_tasks` | Search Jira issues with JQL (no caching) | `jql`, `max_results?`, `project_key?` |
 
 ## Comment Templates
@@ -129,6 +135,23 @@ Example with Claude Code:
 > "Add a status update to PROJ-123: completed auth module, next steps are testing, no blockers"
 
 The AI will use `add_templated_comment` with `template_id: "status-update"` automatically.
+
+### File-Backed Overrides
+
+System templates are shipped as markdown files. User overrides are loaded from:
+
+```text
+~/.softspark/jira-mcp/templates/comments/
+~/.softspark/jira-mcp/templates/task-templates/
+```
+
+If a user file has the same `id` as a system template, the user file wins globally for all projects.
+
+```bash
+jira-mcp template add comment ./my-status-update.md
+jira-mcp template add task ./my-bug-task.md
+jira-mcp template list
+```
 
 ## Usage with Claude Code
 
@@ -160,7 +183,19 @@ Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rul
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 15 MCP tools** and **16 CLI commands** reference
+- **All 16 MCP tools** and **20 CLI commands** reference
+
+### AI Toolkit Hooks
+
+To require explicit user approval before Jira comment writes, inject the repo-owned hook manifest:
+
+```bash
+ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/hooks/jira-mcp-hooks.json
+```
+
+This installs a `PreToolUse` guard for `add_task_comment` and `add_templated_comment`. The hook blocks the tool call, shows the exact comment preview, and tells the agent to retry only after the user approves it with `user_approved=true`.
+
+The MCP server still enforces `user_approved=true` at runtime, so the hook is UX guidance plus an extra safety layer rather than the only check.
 
 ## Usage with Other MCP Clients
 
@@ -187,14 +222,15 @@ src/
     commands/
       cache/      Cache management subcommands
       config/     Config management subcommands
+      template/   File-backed template management subcommands
       create.ts   Bulk task creation command
       create-monthly.ts  Monthly admin task automation
   config/         Configuration loading and Zod validation
   connector/      Jira API client (built-in fetch, instance pool)
   errors/         Typed error hierarchy
   operations/     Business logic (status, comments, time tracking)
-  templates/      Comment template system (registry + built-in templates)
-  tools/          MCP tool handlers (15 tools, one file per tool)
+  templates/      File-backed comment/task template loading and registries
+  tools/          MCP tool handlers (16 tools, one file per tool)
   types/          Shared TypeScript types
   server.ts       MCP server setup and tool registration
   cli.ts          CLI entry point
@@ -208,7 +244,7 @@ src/
 
 **Local caching** -- tasks synced to `~/.softspark/jira-mcp/cache/` with atomic writes (tmp + rename). Work offline with `read_cached_tasks`, sync on demand. Workflow and user caches for status validation and assignee resolution.
 
-**Comment templates** -- 8 built-in templates with `{{variable}}` interpolation and `{{#var}}...{{/var}}` conditional blocks. Status updates, blockers, handoffs, reviews. See [Templates Reference](kb/reference/templates.md).
+**File-backed templates** -- 8 built-in comment templates and built-in task templates are stored as markdown files, with global user overrides loaded from `~/.softspark/jira-mcp/templates/`. Both support `{{variable}}` interpolation and `{{#var}}...{{/var}}` conditional blocks. See [Templates Reference](kb/reference/templates.md).
 
 **Language configuration** -- global `default_language` with per-project override. Supports: pl, en, de, es, fr, pt, it, nl. `get_project_language` tool and `language` field in `get_task_details` let AI assistants write content in the correct language. See [Configuration](kb/reference/configuration.md).
 
@@ -218,16 +254,16 @@ src/
 
 **Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 520KB bundle, 1 runtime dep (commander).
 
-**Typed error hierarchy** -- 15 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+**Typed error hierarchy** -- 17 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 518 tests across 52 test files. Self-contained 520KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 541 tests across 56 test files. Self-contained 520KB package.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Architecture](kb/reference/architecture.md) | System design and module overview |
-| [API Reference](kb/reference/api.md) | All 15 MCP tools with schemas |
+| [API Reference](kb/reference/api.md) | All 16 MCP tools with schemas |
 | [Configuration](kb/reference/configuration.md) | Config files, env vars, multi-instance |
 | [ADF Format](kb/reference/adf.md) | Atlassian Document Format conversion |
 | [Caching](kb/reference/caching.md) | Task, workflow, and user caching |
