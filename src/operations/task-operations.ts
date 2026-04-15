@@ -31,6 +31,8 @@ import {
   JiraConnectionError,
   OwnershipError,
   CommentNotFoundError,
+  TaskNotFoundError,
+  CacheNotFoundError,
 } from '../errors/index.js';
 
 // ---------------------------------------------------------------------------
@@ -237,8 +239,10 @@ export class TaskOperations {
 
     try {
       await this.cacheManager.deleteTask(taskKey);
-    } catch {
-      // Task may not be present in cache; that is fine.
+    } catch (err: unknown) {
+      if (!(err instanceof TaskNotFoundError || err instanceof CacheNotFoundError)) {
+        throw err;
+      }
     }
 
     return { taskKey };
@@ -276,8 +280,10 @@ export class TaskOperations {
     // Invalidate cache -- time tracking data changed
     try {
       await this.cacheManager.deleteTask(taskKey);
-    } catch {
-      // Task may not be in cache; that is fine
+    } catch (err: unknown) {
+      if (!(err instanceof TaskNotFoundError || err instanceof CacheNotFoundError)) {
+        throw err;
+      }
     }
 
     return {

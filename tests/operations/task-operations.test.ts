@@ -9,6 +9,7 @@ import {
   JiraConnectionError,
   OwnershipError,
   CommentNotFoundError,
+  TaskNotFoundError,
 } from '../../src/errors/index';
 import {
   createMockConnector,
@@ -481,6 +482,83 @@ describe('TaskOperations', () => {
       await expect(ops.deleteTask('PROJ-1')).rejects.toThrow(OwnershipError);
       expect(connector.deleteIssue).not.toHaveBeenCalled();
     });
+
+    it('tolerates missing cache entry on delete', async () => {
+      const { ops, connector, cache } = createOps();
+
+      connector.getCurrentUser.mockResolvedValue({
+        accountId: 'user-account-1',
+        emailAddress: 'user@example.com',
+        displayName: 'User',
+        active: true,
+      });
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Test task',
+        description: null,
+        creator: 'user@example.com',
+        creatorAccountId: 'user-account-1',
+        status: 'To Do',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+      connector.deleteIssue.mockResolvedValue(undefined);
+      cache.deleteTask.mockRejectedValue(new TaskNotFoundError('Not in cache'));
+
+      const result = await ops.deleteTask('PROJ-1');
+      expect(result).toEqual({ taskKey: 'PROJ-1' });
+    });
+
+    it('propagates unexpected cache errors on delete', async () => {
+      const { ops, connector, cache } = createOps();
+
+      connector.getCurrentUser.mockResolvedValue({
+        accountId: 'user-account-1',
+        emailAddress: 'user@example.com',
+        displayName: 'User',
+        active: true,
+      });
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Test task',
+        description: null,
+        creator: 'user@example.com',
+        creatorAccountId: 'user-account-1',
+        status: 'To Do',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+      connector.deleteIssue.mockResolvedValue(undefined);
+      cache.deleteTask.mockRejectedValue(new Error('Disk I/O failure'));
+
+      await expect(ops.deleteTask('PROJ-1')).rejects.toThrow('Disk I/O failure');
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -542,11 +620,25 @@ describe('TaskOperations', () => {
         timeSpentSeconds: 1800,
         created: '2026-01-01T00:00:00.000Z',
       });
-      cache.deleteTask.mockRejectedValue(new Error('Not in cache'));
+      cache.deleteTask.mockRejectedValue(new TaskNotFoundError('Not in cache'));
 
       // Should not throw
       const result = await ops.logTime('PROJ-1', '30m');
       expect(result.worklogId).toBe('wl-3');
+    });
+
+    it('propagates unexpected cache errors on delete', async () => {
+      const { ops, connector, cache } = createOps();
+
+      connector.addWorklog.mockResolvedValue({
+        id: 'wl-4',
+        timeSpent: '30m',
+        timeSpentSeconds: 1800,
+        created: '2026-01-01T00:00:00.000Z',
+      });
+      cache.deleteTask.mockRejectedValue(new Error('Disk I/O failure'));
+
+      await expect(ops.logTime('PROJ-1', '30m')).rejects.toThrow('Disk I/O failure');
     });
   });
 
