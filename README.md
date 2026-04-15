@@ -4,17 +4,17 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.1.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.3.0-blue)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## What's New in v1.2.0
+## What's New in v1.3.0
 
-- **Per-instance credentials** -- `set-credentials --url` allows different API tokens per Jira instance. Auto-migrates legacy format.
-- **Jira Cloud API migration** -- search endpoint updated to `/rest/api/3/search/jql` (old endpoint returns 410).
-- **File-backed templates** -- system templates ship as markdown files and can be globally overridden from `~/.softspark/jira-mcp/templates/`.
-- **Live Jira smoke tests** -- post-release SOP tests all 16 MCP tools against a sandbox project.
+- **File-backed templates** -- built-in comment and task templates now live as physical markdown files and support global user overrides.
+- **Template CLI + `create_task` templates** -- add install/list/show/remove flows and first-class task template rendering.
+- **Comment approval hooks** -- ship a repo-owned ai-toolkit hook manifest that previews Jira comments before the write executes.
+- **Runtime approval enforcement** -- block comment mutations unless the retry includes `user_approved=true`.
 - **541 tests** across 56 test files.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.

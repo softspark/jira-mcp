@@ -7,6 +7,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.3.0 -- File-Backed Templates & Approval Hooks (2026-04-15)
+
+### Added
+- **File-backed template catalog** -- ship built-in comment and single-task templates as physical markdown files under `templates-system/`.
+- **Template management CLI** -- add `jira-mcp template add/list/show/remove` for global user overrides in `~/.softspark/jira-mcp/templates/`.
+- **Task templates for `create_task`** -- add `list_task_templates` and template-based issue creation with variable rendering.
+- **Comment approval hook manifest** -- ship `hooks/jira-mcp-hooks.json` for ai-toolkit `inject-hook` flows that preview and gate Jira comment writes.
+
+### Changed
+- **Template loading model** -- resolve active templates from system files plus global user overrides, with user files winning on `id` collisions.
+- **Configuration init** -- create dedicated template directories for comments, single-task templates, and bulk task configs.
+- **README validation** -- exclude internal tool helpers from MCP tool counts and refresh counts to match the current source tree.
+
+### Fixed
+- **Comment write safety** -- require explicit `user_approved=true` before `add_task_comment` and `add_templated_comment` can mutate Jira.
+- **Comment preview flow** -- render templated comment previews before execution so approval can target the exact outgoing markdown.
+
 ## v1.2.0 -- Per-Instance Credentials & Jira API Migration (2026-04-14)
 
 ### Added
