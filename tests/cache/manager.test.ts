@@ -287,3 +287,42 @@ describe('CacheManager cache path', () => {
     expect(m.cachePath).toBe('/tmp/tasks_user_at_example_com.json');
   });
 });
+
+describe('CacheManager.upsertTask', () => {
+  it('inserts the task when the cache is empty (initialized)', async () => {
+    await manager.initialize();
+    const task = createTaskData({ key: 'PROJ-99' });
+
+    const result = await manager.upsertTask(task);
+
+    expect(result).toEqual(task);
+    const all = await manager.getAllTasks();
+    expect(all).toEqual([task]);
+  });
+
+  it('inserts the task when the cache file does not exist yet', async () => {
+    const task = createTaskData({ key: 'PROJ-100' });
+
+    const result = await manager.upsertTask(task);
+
+    expect(result).toEqual(task);
+    const all = await manager.getAllTasks();
+    expect(all).toEqual([task]);
+  });
+
+  it('replaces an existing task by key without duplicating', async () => {
+    await manager.initialize();
+    const original = createTaskData({ key: 'PROJ-1', status: 'To Do' });
+    const other = createTaskData({ key: 'PROJ-2' });
+    await manager.save([original, other]);
+
+    const replaced = createTaskData({ key: 'PROJ-1', status: 'Done' });
+    const result = await manager.upsertTask(replaced);
+
+    expect(result.status).toBe('Done');
+    const all = await manager.getAllTasks();
+    expect(all).toHaveLength(2);
+    expect(all.find((t) => t.key === 'PROJ-1')?.status).toBe('Done');
+    expect(all.find((t) => t.key === 'PROJ-2')).toEqual(other);
+  });
+});

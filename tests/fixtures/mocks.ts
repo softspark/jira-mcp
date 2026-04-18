@@ -77,6 +77,7 @@ interface MockCacheManager {
   getTask: ReturnType<typeof vi.fn>;
   getAllTasks: ReturnType<typeof vi.fn>;
   updateTask: ReturnType<typeof vi.fn>;
+  upsertTask: ReturnType<typeof vi.fn>;
   deleteTask: ReturnType<typeof vi.fn>;
   getMetadata: ReturnType<typeof vi.fn>;
   cacheDir: string;
@@ -92,6 +93,7 @@ export function createMockCacheManager(): MockCacheManager {
     getTask: vi.fn(),
     getAllTasks: vi.fn(),
     updateTask: vi.fn(),
+    upsertTask: vi.fn(),
     deleteTask: vi.fn(),
     getMetadata: vi.fn(),
     cacheDir: '/tmp/test-cache',

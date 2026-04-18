@@ -13,6 +13,7 @@
 
 import type { JiraConnector } from '../connector/jira-connector.js';
 import type { CacheManager } from '../cache/manager.js';
+import type { TaskData } from '../cache/types.js';
 import type {
   TaskUpdateResult,
   CommentResult,
@@ -80,8 +81,10 @@ export class TaskOperations {
 
     await this.connector.doTransition(taskKey, target.id);
 
-    // Update cache to reflect new status
-    const updatedTask = await this.cacheManager.updateTask(taskKey, {
+    // Update cache to reflect new status. If the task is not in the local
+    // cache (fresh create_task, or cache invalidated by log_time), refresh
+    // from Jira and upsert so the caller still gets a populated TaskData.
+    const updatedTask = await this.#updateOrRefreshCache(taskKey, {
       status: target.toStatus || statusName,
     });
 
@@ -179,7 +182,7 @@ export class TaskOperations {
       await this.connector.assignIssue(taskKey, null);
     }
 
-    const updatedTask = await this.cacheManager.updateTask(taskKey, {
+    const updatedTask = await this.#updateOrRefreshCache(taskKey, {
       assignee: assigneeEmail ?? null,
     });
 
@@ -306,5 +309,50 @@ export class TaskOperations {
       remainingEstimate: tracking.remainingEstimate,
       timeSpent: tracking.timeSpent,
     };
+  }
+
+  // -----------------------------------------------------------------------
+  // Cache recovery
+  // -----------------------------------------------------------------------
+
+  /**
+   * Update the cache entry for a task, recovering from a cache miss by
+   * refreshing the whole row from Jira.
+   *
+   * Mutation tools (`changeStatus`, `reassign`) call Jira first and then
+   * mirror the change into the local cache. When the task isn't cached
+   * (right after `create_task`, or after `logTime` invalidated it), a
+   * plain `updateTask` throws `TaskNotFoundError` / `CacheNotFoundError`
+   * even though the Jira mutation already succeeded. In that case we
+   * fetch the authoritative row from Jira and upsert it so the caller
+   * receives a fully populated TaskData.
+   */
+  async #updateOrRefreshCache(
+    taskKey: string,
+    updates: Partial<Omit<TaskData, 'key'>>,
+  ): Promise<TaskData> {
+    try {
+      return await this.cacheManager.updateTask(taskKey, updates);
+    } catch (err: unknown) {
+      if (!(err instanceof TaskNotFoundError || err instanceof CacheNotFoundError)) {
+        throw err;
+      }
+      const issue = await this.connector.getIssue(taskKey);
+      const fresh: TaskData = {
+        key: issue.key,
+        summary: issue.summary,
+        status: issue.status,
+        assignee: issue.assignee,
+        priority: issue.priority,
+        issue_type: issue.issueType,
+        created: issue.created,
+        updated: issue.updated,
+        project_key: issue.projectKey,
+        project_url: this.connector.instanceUrl,
+        epic_link: null,
+        ...updates,
+      };
+      return await this.cacheManager.upsertTask(fresh);
+    }
   }
 }

@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.3 -- JQL Escape & Cache Recovery (2026-04-18)
+
+### Fixed
+- **`sync_tasks` default JQL parse error** -- `escapeJql` was over-escaping JQL operators (`-`, `+`, `&`, `|`, etc.) inside double-quoted string literals. Jira rejected the resulting query with `'\-' jest niedozwoloną sekwencją modyfikacji JQL`. The escape now only handles `\` and `"` (the only sequences valid inside a quoted JQL string), so `sync_tasks` works without an explicit `jql` argument when the username contains a hyphen.
+- **`reassign_task` / `update_task_status` cache miss after Jira mutation** -- both operations now recover from a cache miss by fetching the task from Jira via `connector.getIssue` and upserting it into the local cache. Previously, calling either tool right after `create_task` (cache not populated) or `log_task_time` (cache invalidated) failed with `TASK_NOT_FOUND` even though the Jira mutation succeeded.
+
+### Added
+- **`CacheManager.upsertTask(task)`** -- inserts a task or replaces it by key, tolerating a missing cache file. Used by the new mutation-recovery path.
+
 ## v1.4.2 -- Supply-Chain Hardening (2026-04-18)
 
 ### Added

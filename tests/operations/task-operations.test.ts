@@ -114,6 +114,54 @@ describe('TaskOperations', () => {
         ops.changeStatus('PROJ-1', 'Invalid'),
       ).rejects.toThrow(/Start Progress -> In Progress/);
     });
+
+    it('recovers from cache miss by fetching from Jira and upserting', async () => {
+      const { ops, connector, cache } = createOps();
+
+      connector.getTransitions.mockResolvedValue([
+        { id: '11', name: 'Start Progress', toStatus: 'In Progress' },
+      ]);
+      connector.doTransition.mockResolvedValue(undefined);
+      cache.updateTask.mockRejectedValue(new TaskNotFoundError('Not in cache'));
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Fresh from Jira',
+        description: null,
+        creator: 'creator@example.com',
+        creatorAccountId: 'creator-1',
+        status: 'To Do',
+        assignee: 'user@example.com',
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+      cache.upsertTask.mockImplementation(async (t) => t);
+
+      const result = await ops.changeStatus('PROJ-1', 'Start Progress');
+
+      expect(connector.getIssue).toHaveBeenCalledWith('PROJ-1');
+      expect(cache.upsertTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'PROJ-1',
+          status: 'In Progress', // updates override the refreshed Jira state
+          summary: 'Fresh from Jira',
+          project_url: 'https://test.atlassian.net',
+          epic_link: null,
+        }),
+      );
+      expect(result.updatedTask.status).toBe('In Progress');
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -207,6 +255,51 @@ describe('TaskOperations', () => {
         assignee: null,
       });
       expect(result.updatedTask.assignee).toBeNull();
+    });
+
+    it('recovers from cache miss by fetching from Jira and upserting', async () => {
+      const { ops, connector, cache } = createOps();
+
+      connector.findUser.mockResolvedValue('account-id-123');
+      connector.assignIssue.mockResolvedValue(undefined);
+      cache.updateTask.mockRejectedValue(new TaskNotFoundError('Not in cache'));
+      connector.getIssue.mockResolvedValue({
+        key: 'PROJ-1',
+        summary: 'Fresh from Jira',
+        description: null,
+        creator: 'creator@example.com',
+        creatorAccountId: 'creator-1',
+        status: 'In Progress',
+        assignee: 'previous@example.com',
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-01T00:00:00.000Z',
+        projectKey: 'PROJ',
+        comments: [],
+        timeTracking: {
+          originalEstimate: null,
+          remainingEstimate: null,
+          timeSpent: null,
+          originalEstimateSeconds: null,
+          remainingEstimateSeconds: null,
+          timeSpentSeconds: null,
+        },
+      });
+      cache.upsertTask.mockImplementation(async (t) => t);
+
+      const result = await ops.reassign('PROJ-1', 'new@example.com');
+
+      expect(connector.getIssue).toHaveBeenCalledWith('PROJ-1');
+      expect(cache.upsertTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'PROJ-1',
+          assignee: 'new@example.com', // update overrides the prior Jira value
+          status: 'In Progress',
+          project_url: 'https://test.atlassian.net',
+        }),
+      );
+      expect(result.updatedTask.assignee).toBe('new@example.com');
     });
   });
 

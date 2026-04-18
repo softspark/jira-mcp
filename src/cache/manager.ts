@@ -279,6 +279,37 @@ export class CacheManager {
   }
 
   /**
+   * Insert a task, or replace it if the same key already exists.
+   *
+   * Used by mutation operations when the Jira mutation succeeded but the
+   * task was not yet in the local cache (e.g. right after `create_task`,
+   * or after `log_task_time` invalidated its entry). If the cache file
+   * does not exist yet it is treated as an empty cache.
+   *
+   * @returns The stored task.
+   */
+  async upsertTask(task: TaskData): Promise<TaskData> {
+    let existingTasks: readonly TaskData[] = [];
+    try {
+      const cache = await this.load();
+      existingTasks = cache.tasks;
+    } catch (err: unknown) {
+      if (!(err instanceof CacheNotFoundError)) {
+        throw err;
+      }
+    }
+
+    const index = existingTasks.findIndex((t) => t.key === task.key);
+    const nextTasks =
+      index === -1
+        ? [...existingTasks, task]
+        : existingTasks.map((t, i) => (i === index ? task : t));
+
+    await this.save(nextTasks);
+    return task;
+  }
+
+  /**
    * Get cache metadata (version, last_sync, jira_user).
    *
    * @throws {CacheNotFoundError} If the cache file does not exist.
