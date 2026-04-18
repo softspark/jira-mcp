@@ -4,17 +4,17 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.3.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.4.2-blue)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## What's New in v1.4.1
+## What's New in v1.4.2
 
-- **Fixed file-backed templates** -- built-in comment templates now load correctly from global npm installs (broken path resolution after bundling).
-- **`delete_task` and `delete_comment` tools** -- guarded destructive operations with ownership enforcement and explicit approval.
-- **Markdown table support** -- `markdownToAdf()` converts tables to native ADF table nodes.
-- **561 tests** across 58 test files.
+- **npm provenance attestation** -- releases now ship with SLSA v1 attestation via `npm publish --provenance`. Verify with `npm audit signatures` or the Provenance badge on npmjs.com.
+- **Release SOP hardening** -- supply-chain gates (`--provenance`, `id-token: write`) and a lockfile sync step are now part of the pre-tag checklist.
+- **Post-release verification** -- new phase asserts the SLSA provenance predicate and runs `npm audit signatures` before the release is considered shipped.
+- **Pre-commit version sync** -- new step catches `package.json` ↔ `package-lock.json` version drift before commit.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 

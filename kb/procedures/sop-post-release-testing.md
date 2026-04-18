@@ -2,11 +2,11 @@
 title: "SOP: Post-Release Testing"
 category: procedures
 service: jira-mcp
-tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api]
-version: "1.1.0"
+tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, provenance, supply-chain]
+version: "1.2.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
-description: "End-to-end smoke test after publishing a new @softspark/jira-mcp release — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN project, and cleanup."
+last_updated: "2026-04-18"
+description: "End-to-end smoke test after publishing a new @softspark/jira-mcp release — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN project, supply-chain verification (provenance, npm audit signatures), and cleanup."
 ---
 
 # SOP: Post-Release Testing
@@ -58,7 +58,11 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jira-mcp serve 2>/dev/nu
 # → sync_tasks → read_cached_tasks → search_tasks
 # → get_project_language → list_comment_templates
 
-# Phase 5: Cleanup (delete test task from KAN, keep jira-mcp installed)
+# Phase 5: Supply-chain verification (provenance + audit signatures)
+npm view "@softspark/jira-mcp@$VERSION" --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"
+npm audit signatures --registry https://registry.npmjs.org
+
+# Phase 6: Cleanup (delete test task from KAN, keep jira-mcp installed)
 ```
 
 ---
@@ -343,9 +347,54 @@ search_tasks({
 
 ---
 
-## Phase 5: Cleanup
+## Phase 5: Supply-Chain Verification (v2.8.0+)
 
-### Step 5.1: Move Test Task to Done
+Every public `@softspark/*` release MUST ship with a SLSA provenance attestation
+and pass npm signature verification. An unsigned release is a regression and
+MUST be deprecated + re-published.
+
+### Step 5.1: Provenance Attestation (SLSA v1)
+
+```bash
+npm view "@softspark/jira-mcp@X.Y.Z" --json \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"
+```
+
+- [ ] Output: `PROVENANCE OK`
+- [ ] Exit code 0
+- [ ] No `AssertionError` or `KeyError` (missing attestation block)
+
+### Step 5.2: npm Audit Signatures
+
+Verify the chain of trust from the npm registry signing keys:
+
+```bash
+npm audit signatures --registry https://registry.npmjs.org
+```
+
+- [ ] Exit code 0
+- [ ] Report lists `@softspark/jira-mcp@X.Y.Z` with `verified` status
+- [ ] No `invalid` or `missing` entries for the new release
+
+### Step 5.3: Provenance on npm Web UI (Optional Cross-Check)
+
+Open `https://www.npmjs.com/package/@softspark/jira-mcp` and verify the
+"Provenance" badge appears next to the new version.
+
+- [ ] "Provenance" badge visible for vX.Y.Z
+
+**If any step fails:** Deprecate the release, fix `.github/workflows/publish.yml`,
+bump the patch version, and re-run the [Release Creation SOP](sop-release.md).
+
+```bash
+npm deprecate "@softspark/jira-mcp@X.Y.Z" "Missing provenance attestation. Use vA.B.C instead."
+```
+
+---
+
+## Phase 6: Cleanup
+
+### Step 6.1: Move Test Task to Done
 
 ```
 update_task_status({ task_key: "KAN-XX", status: "Done" })
@@ -353,13 +402,13 @@ update_task_status({ task_key: "KAN-XX", status: "Done" })
 
 - [ ] Task moved to Done
 
-### Step 5.2: Delete Test Task from Jira
+### Step 6.2: Delete Test Task from Jira
 
 Go to `https://softspark.atlassian.net/browse/KAN-XX` and delete the task manually, or leave it in Done with the `smoke-test` label for audit trail.
 
 - [ ] Test task cleaned up or marked as Done with `smoke-test` label
 
-### Step 5.3: Verify No Side Effects
+### Step 6.3: Verify No Side Effects
 
 ```
 jira-mcp config list-projects
@@ -410,6 +459,16 @@ jira-mcp config list-projects
 | User not found on reassign | User cache stale | Run `jira-mcp cache sync-users` |
 | Task not in cache after sync | Sync filtered it out | Check JQL filter in `sync_tasks` call |
 
+### Phase 5 Failures (Supply-Chain)
+
+| Symptom | Likely Cause | Action |
+|---------|-------------|--------|
+| `KeyError: 'attestations'` | `--provenance` not passed in publish workflow | Fix `.github/workflows/publish.yml`, deprecate bad version, re-release |
+| `predicateType` mismatch | Non-SLSA attestation | Same as above — only SLSA v1 is accepted |
+| `id-token` permission error in CI logs | Missing `id-token: write` in `permissions:` block | Add permission, deprecate, re-release |
+| `npm audit signatures` reports `invalid` | Tampered payload or wrong registry | Investigate npm registry status, deprecate if compromised |
+| No Provenance badge on npmjs.com | Publishing account not enrolled or network delay | Wait 5 min, refresh; if still missing, check publisher trust settings |
+
 ### Escalation
 
 If any phase fails and the cause is not listed above:
@@ -429,6 +488,7 @@ If any phase fails and the cause is not listed above:
 | CLI | `--help` displays commands, `config list-projects` shows KAN |
 | MCP Server | `serve` starts without crash, 15 tools returned |
 | Live Jira API | All 15 MCP tools execute successfully against KAN project |
+| Supply-chain | Provenance attestation present (SLSA v1), `npm audit signatures` passes |
 | Cleanup | Test task in Done/deleted, `jira-mcp` still installed globally |
 
-All five phases must pass for the release to be considered verified.
+All six phases must pass for the release to be considered verified.

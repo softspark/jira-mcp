@@ -2,11 +2,11 @@
 title: "SOP: Release Creation"
 category: procedures
 service: jira-mcp
-tags: [sop, release, version, publish, changelog, semver, npm, tag]
-version: "1.0.0"
+tags: [sop, release, version, publish, changelog, semver, npm, tag, provenance, supply-chain]
+version: "1.1.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
-description: "Step-by-step release procedure for @softspark/jira-mcp — version bump, changelog, quality gates, tagging, npm publish via CI, and rollback instructions."
+last_updated: "2026-04-18"
+description: "Step-by-step release procedure for @softspark/jira-mcp — version bump, changelog, quality gates, supply-chain gates (provenance + id-token), tagging, npm publish via CI, and rollback instructions."
 ---
 
 # SOP: Release Creation
@@ -28,19 +28,23 @@ Release Creation (this SOP) --> git tag --> CI publish --> Post-Release Testing 
 
 ```bash
 # 1. Decide version bump (patch / minor / major)
-# 2. Edit package.json "version" field
+# 2. Edit package.json "version" field (and sync package-lock.json)
+npm install --package-lock-only
 # 3. Write CHANGELOG.md entry + update README "What's New" section
 # 4. Run quality gates
 npm run typecheck && npm run lint && npm test && npm run build
 # 4.5. Validate README counts match source
 python3 scripts/validate_counts.py
+# 4.6. Supply-chain gates (v2.8.0+)
+grep -q -- '--provenance' .github/workflows/publish.yml
+grep -q 'id-token: write' .github/workflows/publish.yml
 # 5. Commit
-git add package.json CHANGELOG.md
+git add package.json package-lock.json CHANGELOG.md README.md
 git commit -m "chore: release vX.Y.Z"
 # 6. Tag and push
 git tag vX.Y.Z
 git push origin main --tags
-# 7. Verify: npm view @softspark/jira-mcp version
+# 7. Verify: npm view @softspark/jira-mcp version + provenance attestation
 ```
 
 ---
@@ -64,22 +68,27 @@ Follow [Semantic Versioning](https://semver.org/):
 
 ## Phase 2: Update Version
 
-Edit `package.json` and set the `"version"` field to the new version:
+Edit `package.json` and set the `"version"` field to the new version, then
+re-sync `package-lock.json` so both files match. An out-of-sync lockfile breaks
+`npm ci` in the publish workflow and fails the pre-tag sync check.
 
 ```bash
-# Open package.json and update the version field
-# "version": "X.Y.Z"
+# 1. Edit package.json "version" field to "X.Y.Z"
+# 2. Re-sync package-lock.json
+npm install --package-lock-only
 ```
 
 - [ ] `package.json` `"version"` field updated to `X.Y.Z`
+- [ ] `package-lock.json` regenerated via `npm install --package-lock-only`
 
-**Verify:**
+**Verify both files match:**
 
 ```bash
-node -e "console.log(require('./package.json').version)"
+node -e "const a=require('./package.json').version, b=require('./package-lock.json').version; if (a!==b) { console.error('MISMATCH', a, b); process.exit(1) } console.log(a)"
 ```
 
 - [ ] Output matches target version `X.Y.Z`
+- [ ] No `MISMATCH` error
 
 ---
 
@@ -206,14 +215,33 @@ Do NOT update source code to match README — source is always authoritative.
 
 **If any step fails:** Fix the issue. Do NOT proceed with the release.
 
+### Step 4.6: Supply-Chain Gates (v2.8.0+)
+
+Every public npm release MUST ship with provenance attestation (SLSA v1).
+Unsigned releases are a regression and will be re-published. Verify the
+workflow file enforces both requirements before tagging:
+
+```bash
+grep -q -- '--provenance' .github/workflows/publish.yml && echo "OK: --provenance"
+grep -q 'id-token: write' .github/workflows/publish.yml && echo "OK: id-token: write"
+```
+
+- [ ] `.github/workflows/publish.yml` publish step uses `npm publish --access public --provenance`
+- [ ] Workflow `permissions:` block includes `id-token: write` (required for OIDC attestation)
+- [ ] Both grep checks exit 0
+
+**If either check fails:** Fix `.github/workflows/publish.yml` before tagging.
+A tag pushed with a broken workflow produces an unsigned release that must be
+deprecated and re-published.
+
 ---
 
 ## Phase 5: Commit Release
 
-Stage only the release files:
+Stage only the release files (lockfile included — see Phase 2):
 
 ```bash
-git add package.json CHANGELOG.md
+git add package.json package-lock.json CHANGELOG.md README.md
 ```
 
 Commit with the conventional commit format:
@@ -222,7 +250,7 @@ Commit with the conventional commit format:
 git commit -m "chore: release vX.Y.Z"
 ```
 
-- [ ] Only `package.json` and `CHANGELOG.md` are staged
+- [ ] `package.json`, `package-lock.json`, `CHANGELOG.md`, and `README.md` are staged
 - [ ] Commit message follows format: `chore: release vX.Y.Z`
 - [ ] Working tree is clean after commit
 
@@ -252,7 +280,7 @@ git push origin main --tags
 This triggers `.github/workflows/publish.yml` which:
 1. Checks out the tag
 2. Runs `npm ci` and `npm run build`
-3. Publishes to npm as `@softspark/jira-mcp@X.Y.Z` (public access)
+3. Publishes to npm as `@softspark/jira-mcp@X.Y.Z` (public access) with `--provenance`
 4. Creates a GitHub Release with auto-generated release notes
 
 ---
@@ -277,7 +305,24 @@ npm view @softspark/jira-mcp dist.tarball
 
 - [ ] Tarball URL is accessible
 
-### Step 7.3: GitHub Release
+### Step 7.3: Provenance Attestation (v2.8.0+)
+
+Verify that the release landed with a SLSA provenance attestation. Any public
+`@softspark/*` package without one is treated as a regression.
+
+```bash
+npm view "@softspark/jira-mcp@X.Y.Z" --json \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"
+```
+
+- [ ] Output shows `PROVENANCE OK`
+- [ ] No `AssertionError` or `KeyError`
+
+**If attestation is missing:** the publish workflow did NOT emit provenance.
+Deprecate this version (`npm deprecate`), fix `publish.yml`, bump patch, and
+re-release.
+
+### Step 7.4: GitHub Release
 
 ```bash
 gh release view vX.Y.Z --repo softspark/jira-mcp
@@ -286,7 +331,7 @@ gh release view vX.Y.Z --repo softspark/jira-mcp
 - [ ] Release exists for tag `vX.Y.Z`
 - [ ] Release notes are populated
 
-### Step 7.4: Run Post-Release Testing
+### Step 7.5: Run Post-Release Testing
 
 After verification, run the full [Post-Release Testing SOP](sop-post-release-testing.md).
 
@@ -351,7 +396,7 @@ gh release delete vX.Y.Z --repo softspark/jira-mcp --yes
 | # | Phase | Action | Pass Criteria |
 |---|-------|--------|---------------|
 | 1 | Version bump | Decide patch/minor/major | Type selected |
-| 2 | Update version | Edit `package.json` | Version matches target |
+| 2 | Update version | Edit `package.json` + `npm install --package-lock-only` | Versions match in both files |
 | 3a | CHANGELOG | Add release entry | Entry exists with correct format |
 | 3b | README | Update "What's New" section | Title + bullets match new version |
 | 4a | Typecheck | `npm run typecheck` | 0 errors |
@@ -359,6 +404,8 @@ gh release delete vX.Y.Z --repo softspark/jira-mcp --yes
 | 4c | Test | `npm test` | All pass |
 | 4d | Build | `npm run build` | Clean build |
 | 4e | Validate counts | `python3 scripts/validate_counts.py` | All counts match |
+| 4f | Supply-chain gates | `grep -q -- '--provenance'` + `grep -q 'id-token: write'` | Both exit 0 |
 | 5 | Commit | `git commit` | Clean working tree |
 | 6 | Tag and push | `git tag` + `git push` | CI triggered |
-| 7 | Verify | `npm view` + GitHub | Correct version published |
+| 7a | Verify npm | `npm view` + GitHub | Correct version published |
+| 7b | Verify provenance | `npm view --json` + assert `slsa.dev/provenance/v1` | Attestation present |

@@ -2,11 +2,11 @@
 title: "SOP: Pre-Commit Quality Checklist"
 category: procedures
 service: jira-mcp
-tags: [sop, pre-commit, quality, lint, typecheck, test, build, security]
-version: "1.0.0"
+tags: [sop, pre-commit, quality, lint, typecheck, test, build, security, version-sync]
+version: "1.1.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
-description: "Pre-commit quality checklist for @softspark/jira-mcp — TypeScript type check, ESLint, tests, build, secret scan, conventional commit format, and branch naming."
+last_updated: "2026-04-18"
+description: "Pre-commit quality checklist for @softspark/jira-mcp — TypeScript type check, ESLint, tests, build, secret scan, version sync (package.json ↔ package-lock.json), conventional commit format, and branch naming."
 ---
 
 # SOP: Pre-Commit Quality Checklist
@@ -121,7 +121,26 @@ python3 scripts/validate_counts.py
 
 ---
 
-### Step 6: Secret scan
+### Step 6: Version Sync (package.json ↔ package-lock.json)
+
+If the commit touches `package.json`, `package-lock.json` must match the same
+`version` field. An out-of-sync lockfile breaks `npm ci` in CI and the publish
+workflow, producing a failed release.
+
+```bash
+node -e "const a=require('./package.json').version, b=require('./package-lock.json').version; if (a!==b) { console.error('MISMATCH: package.json='+a+' package-lock.json='+b); process.exit(1) } console.log('OK: '+a)"
+```
+
+- [ ] Exit code 0
+- [ ] Output: `OK: X.Y.Z`
+- [ ] No `MISMATCH` error
+
+**If it fails:** re-run `npm install --package-lock-only` to regenerate the
+lockfile, then stage it with the release commit.
+
+---
+
+### Step 7: Secret scan
 
 Manually verify that no secrets are staged for commit.
 
@@ -144,7 +163,7 @@ git diff --cached -S "token" -S "password" -S "secret" -S "api_key" --name-only
 
 ---
 
-### Step 7: Conventional Commit Message
+### Step 8: Conventional Commit Message
 
 Verify your commit message follows [Conventional Commits](https://www.conventionalcommits.org/):
 
@@ -178,7 +197,7 @@ test: add integration tests for sync_tasks
 
 ---
 
-### Step 8: Branch Naming
+### Step 9: Branch Naming
 
 Verify your branch name follows the project convention:
 
@@ -227,6 +246,7 @@ This checklist mirrors the CI jobs defined in `.github/workflows/ci.yml`:
 | 3 | Tests | `npm test` | All pass |
 | 4 | Build | `npm run build` | Clean build |
 | 5 | Validate README counts | `python3 scripts/validate_counts.py` | All counts match |
-| 6 | Secret scan | `git diff --cached` | No secrets staged |
-| 7 | Commit message | Manual review | Conventional commit format |
-| 8 | Branch naming | `git branch --show-current` | Valid prefix |
+| 6 | Version sync | `node -e` check on `package.json` vs `package-lock.json` | Versions match |
+| 7 | Secret scan | `git diff --cached` | No secrets staged |
+| 8 | Commit message | Manual review | Conventional commit format |
+| 9 | Branch naming | `git branch --show-current` | Valid prefix |

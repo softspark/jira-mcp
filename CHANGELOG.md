@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.4.2 -- Supply-Chain Hardening (2026-04-18)
+
+### Added
+- **npm provenance attestation** -- `publish.yml` now publishes with `--provenance` and `id-token: write`, producing a SLSA v1 attestation on every release. Consumers can verify via `npm audit signatures` or the Provenance badge on npmjs.com.
+- **Supply-chain gates in release SOP** -- `kb/procedures/sop-release.md` adds a pre-tag check for `--provenance` and `id-token: write` in `publish.yml`, plus a post-publish step that asserts `predicateType == https://slsa.dev/provenance/v1`.
+- **Provenance verification in post-release SOP** -- `kb/procedures/sop-post-release-testing.md` adds Phase 5 covering the SLSA attestation check, `npm audit signatures`, and the npmjs.com Provenance badge.
+- **Version-sync step in pre-commit SOP** -- `kb/procedures/sop-pre-commit.md` adds Step 6 verifying `package.json` and `package-lock.json` agree on the `version` field.
+
+### Changed
+- **Release workflow permissions** -- `packages: write` and `id-token: write` added to `.github/workflows/publish.yml` for OIDC attestation.
+- **Release commit now stages the lockfile** -- SOP Phase 5 stages `package.json`, `package-lock.json`, `CHANGELOG.md`, and `README.md`. Prevents lockfile drift between tags.
+
+### Fixed
+- **`package-lock.json` top-level version drift** -- lockfile root `version` was stuck at `1.0.0` across prior releases. Regenerated via `npm install --package-lock-only` and now matches `package.json` on every release commit.
+
 ## v1.4.1 -- Template Loading Fix (2026-04-15)
 
 ### Fixed
