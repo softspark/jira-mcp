@@ -27,6 +27,7 @@ import { createServer, TOOL_DEFINITIONS } from '../../src/server.js';
 const EXPECTED_TOOL_NAMES: readonly string[] = [
   'add_task_comment',
   'add_templated_comment',
+  'create_monthly_tasks',
   'create_task',
   'delete_comment',
   'delete_task',
@@ -67,8 +68,8 @@ describe('createServer', () => {
 // ---------------------------------------------------------------------------
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has exactly 18 tool definitions', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(18);
+  it('has exactly 19 tool definitions', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(19);
   });
 
   it('contains all expected tool names', () => {

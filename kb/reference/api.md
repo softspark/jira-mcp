@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [api, mcp, tools, jira]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-05-04"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
@@ -534,6 +534,59 @@ Create a new Jira issue with either explicit fields or a registered task templat
   "message": "Created PROJ-42: Bug: Save button fails"
 }
 ```
+
+---
+
+## Bulk Tools (1)
+
+### create_monthly_tasks
+
+Run all `monthly_admin.json` bulk task configs found under `~/.softspark/jira-mcp/templates/tasks/<KEY>/`. Defaults to a dry-run preview; pass `execute: true` to actually create tasks in Jira. The handler validates each config against `BulkConfigSchema`, replaces date placeholders (`{MONTH}`, `{YEAR}`, `{DATE}`), resolves the project language, and dispatches per-project to the correct Jira instance via `InstancePool`.
+
+Per-project errors do not abort the whole call; they are reported in the `configs` array with `status: "error"`.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `execute` | boolean | No | `false` | When `true`, create tasks for real. When `false` or omitted, run a dry-run preview. |
+| `project` | string | No | — | Optional project key (case-insensitive) to restrict execution to a single project subdirectory. |
+
+**Input example**
+
+```json
+{ "execute": false }
+```
+
+**Output example**
+
+```json
+{
+  "success": true,
+  "execute": false,
+  "total_processed": 2,
+  "total_failed": 0,
+  "total_succeeded": 2,
+  "configs": [
+    {
+      "project_key": "BIEL",
+      "config_path": "/Users/me/.softspark/jira-mcp/templates/tasks/BIEL/monthly_admin.json",
+      "status": "success",
+      "summary": { "created": 0, "updated": 0, "failed": 0, "skipped": 0, "previewed": 1 },
+      "dry_run": true
+    },
+    {
+      "project_key": "E8A",
+      "config_path": "/Users/me/.softspark/jira-mcp/templates/tasks/E8A/monthly_admin.json",
+      "status": "success",
+      "summary": { "created": 0, "updated": 0, "failed": 0, "skipped": 0, "previewed": 1 },
+      "dry_run": true
+    }
+  ]
+}
+```
+
+To install or update a `monthly_admin.json` template, use the CLI command `jira-mcp template add bulk <source.json> --project <KEY>`.
 
 ---
 

@@ -428,4 +428,24 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       required: ['jql'],
     },
   },
+  {
+    name: 'create_monthly_tasks',
+    description:
+      'Run all monthly_admin.json bulk task configs from ~/.softspark/jira-mcp/templates/tasks/<KEY>/. Defaults to dry-run. Set execute=true to actually create the tasks. Optionally filter to a single project key.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        execute: {
+          type: 'boolean',
+          description:
+            'When true, create tasks for real. When false or omitted, run a dry-run preview.',
+        },
+        project: {
+          type: 'string',
+          description:
+            'Optional project key (case-insensitive) to restrict execution to a single project subdirectory.',
+        },
+      },
+    },
+  },
 ];

@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [cli, commands, reference, config, cache, bulk-create]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-05-04"
 description: "Complete reference for all jira-mcp CLI commands, options, and usage examples."
 ---
 
@@ -231,39 +231,52 @@ jira-mcp cache list-users
 
 ### `template add`
 
-Install a comment or task template override from a local markdown file. The file is validated and copied into the global template directory under its declared `id`.
+Install a template override from a local file. There are three template kinds:
+
+- `comment`: markdown comment template with metadata header.
+- `task`: markdown single-task template with metadata header (used by `create_task`).
+- `bulk`: JSON bulk task config (e.g. `monthly_admin.json`), keyed by project under `templates/tasks/<KEY>/`.
 
 ```bash
+# Comment / task templates (id taken from file metadata)
 jira-mcp template add <comment|task> <source-file>
+
+# Bulk templates (id is the project key, validated against BulkConfigSchema)
+jira-mcp template add bulk <source-file> --project <KEY>
 ```
+
+| Option | Description |
+|--------|-------------|
+| `--project <KEY>` | **Required for `bulk`** — uppercase project key. The file is copied to `~/.softspark/jira-mcp/templates/tasks/<KEY>/monthly_admin.json` |
 
 ```bash
 jira-mcp template add comment ./my-status-update.md
 jira-mcp template add task ./bug-task.md
+jira-mcp template add bulk ./puc-monthly.json --project PUC
 ```
 
 ### `template list`
 
-List active templates. User overrides replace system templates with the same `id`.
+List active templates. User overrides replace system templates with the same `id`. Bulk templates are listed by project key.
 
 ```bash
-jira-mcp template list [comment|task]
+jira-mcp template list [comment|task|bulk]
 ```
 
 ### `template show`
 
-Show the active template file content.
+Show the active template file content. For `bulk`, the `id` is the project key.
 
 ```bash
-jira-mcp template show <comment|task> <id>
+jira-mcp template show <comment|task|bulk> <id>
 ```
 
 ### `template remove`
 
-Remove a user-installed override. If a system template with the same `id` exists, it becomes active again automatically.
+Remove a user-installed override. If a system template with the same `id` exists, it becomes active again automatically. For `bulk`, the project subdirectory is pruned when empty.
 
 ```bash
-jira-mcp template remove <comment|task> <id>
+jira-mcp template remove <comment|task|bulk> <id>
 ```
 
 ---

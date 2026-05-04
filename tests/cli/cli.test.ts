@@ -111,7 +111,7 @@ describe('top-level commands', () => {
     const template = findCommand(program, 'template');
 
     expect(template).toBeDefined();
-    expect(template!.description()).toBe('Manage file-backed comment and task templates');
+    expect(template!.description()).toBe('Manage file-backed comment, task, and bulk templates');
   });
 
   it('registers the internal hook command group', () => {

@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [templates, comments, tasks, variables, bulk, placeholders]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-04-15"
+last_updated: "2026-05-04"
 description: "Reference for the file-backed template system: comment templates, task templates for create_task, user overrides, and bulk task creation templates."
 ---
 
@@ -159,9 +159,10 @@ Install a user template with CLI:
 ```bash
 jira-mcp template add comment ./my-status-update.md
 jira-mcp template add task ./my-bug-task.md
+jira-mcp template add bulk ./puc-monthly.json --project PUC
 ```
 
-If `id` matches a built-in, the imported file becomes the active template globally.
+If `id` matches a built-in, the imported file becomes the active template globally. Bulk templates use the project key as the `id` and are stored under `~/.softspark/jira-mcp/templates/tasks/<KEY>/monthly_admin.json`.
 
 ## Bulk Task Creation Templates
 
@@ -204,6 +205,15 @@ Supported placeholders in bulk JSON:
 - `{MONTH}` → `04.2026`
 - `{YEAR}` → `2026`
 - `{DATE}` → `2026-04-13`
+
+### Running Bulk Templates
+
+Bulk templates are executed by:
+
+- CLI: `jira-mcp create-monthly [--execute] [--project <KEY>]`
+- MCP tool: `create_monthly_tasks({ execute?, project? })`
+
+Both scan `~/.softspark/jira-mcp/templates/tasks/<KEY>/monthly_admin.json`, validate each, replace placeholders, and dispatch to the matching Jira instance.
 
 ## Related Documentation
 

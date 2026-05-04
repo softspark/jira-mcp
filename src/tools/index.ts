@@ -106,5 +106,11 @@ export type {
   UpdateTaskDeps,
 } from './update-task.js';
 
+export { handleCreateMonthlyTasks } from './create-monthly-tasks.js';
+export type {
+  CreateMonthlyTasksArgs,
+  CreateMonthlyTasksDeps,
+} from './create-monthly-tasks.js';
+
 export type { ToolResult } from './helpers.js';
 export { success, failure } from './helpers.js';

@@ -7,6 +7,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.5.0 -- Bulk Template Management & Monthly Tasks Tool (2026-05-04)
+
+### Added
+- **`template add bulk` CLI command** -- new third template kind alongside `comment` and `task`. Validates the source JSON against `BulkConfigSchema` and installs it under `~/.softspark/jira-mcp/templates/tasks/<KEY>/monthly_admin.json`. `template list/show/remove` also support the `bulk` kind, keyed by project. Prunes the empty project subdirectory on remove.
+- **`create_monthly_tasks` MCP tool** -- exposes the existing `create-monthly` CLI handler over the protocol. Inputs: `{ execute?: boolean, project?: string }`. Returns a structured result with per-project status (success/error), summary counts, and the resolved config path. Lets MCP clients run monthly bulk task creation without dropping to the CLI.
+
 ## v1.4.3 -- JQL Escape & Cache Recovery (2026-04-18)
 
 ### Fixed

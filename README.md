@@ -9,11 +9,10 @@
 
 ---
 
-## What's New in v1.4.3
+## What's New in v1.5.0
 
-- **`sync_tasks` no longer breaks on hyphenated usernames** -- JQL escape was producing invalid `\-` sequences inside quoted strings. Default sync (without explicit `jql`) now works for every account.
-- **`update_task_status` and `reassign_task` recover from cache miss** -- after a successful Jira mutation, the cache is refreshed from the source of truth instead of failing with `TASK_NOT_FOUND`. Solves the "must re-sync after `create_task` or `log_task_time`" footgun.
-- **Provenance attestation** -- releases ship with SLSA v1 attestation via `npm publish --provenance` (introduced in v1.4.2).
+- **`template add bulk` CLI command** -- install per-project `monthly_admin.json` configs into `~/.softspark/jira-mcp/templates/tasks/<KEY>/`. Validated against `BulkConfigSchema`. `template list/show/remove` now also handle the `bulk` kind, keyed by project.
+- **`create_monthly_tasks` MCP tool** -- run all monthly bulk task configs over the protocol with `{ execute?, project? }`. Returns per-project status, summary counts, and resolved config paths. No more dropping to the CLI for monthly admin runs.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -183,7 +182,7 @@ Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rul
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 18 MCP tools** and **20 CLI commands** reference
+- **All 19 MCP tools** and **20 CLI commands** reference
 
 ### AI Toolkit Hooks
 
@@ -230,7 +229,7 @@ src/
   errors/         Typed error hierarchy
   operations/     Business logic (status, comments, time tracking)
   templates/      File-backed comment/task template loading and registries
-  tools/          MCP tool handlers (18 tools, one file per tool)
+  tools/          MCP tool handlers (19 tools, one file per tool)
   types/          Shared TypeScript types
   server.ts       MCP server setup and tool registration
   cli.ts          CLI entry point
@@ -252,18 +251,18 @@ src/
 
 **Per-instance credentials** -- different API tokens per Jira instance URL. Single-credential format still works (backward compatible). See [Configuration](kb/reference/configuration.md).
 
-**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 520KB bundle, 1 runtime dep (commander).
+**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 535KB bundle, 1 runtime dep (commander).
 
 **Typed error hierarchy** -- 20 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 573 tests across 59 test files. Self-contained 525KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 587 tests across 60 test files. Self-contained 535KB package.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Architecture](kb/reference/architecture.md) | System design and module overview |
-| [API Reference](kb/reference/api.md) | All 18 MCP tools with schemas |
+| [API Reference](kb/reference/api.md) | All 19 MCP tools with schemas |
 | [Configuration](kb/reference/configuration.md) | Config files, env vars, multi-instance |
 | [ADF Format](kb/reference/adf.md) | Atlassian Document Format conversion |
 | [Caching](kb/reference/caching.md) | Task, workflow, and user caching |

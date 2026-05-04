@@ -54,6 +54,7 @@ import { handleAddTemplatedComment } from './tools/add-templated-comment.js';
 import { handleCreateTask } from './tools/create-task.js';
 import { handleUpdateTask } from './tools/update-task.js';
 import { handleSearchTasks } from './tools/search-tasks.js';
+import { handleCreateMonthlyTasks } from './tools/create-monthly-tasks.js';
 
 import type { JiraConnector } from './connector/jira-connector.js';
 
@@ -329,6 +330,12 @@ export async function startServer(): Promise<void> {
           },
           { pool, config },
         );
+
+      case 'create_monthly_tasks':
+        return handleCreateMonthlyTasks({
+          execute: asOptionalBoolean(args['execute']),
+          project: asOptionalString(args['project']),
+        });
 
       default:
         return failure(new Error(`Unknown tool: ${name}`));
