@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [api, mcp, tools, jira]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-05-04"
+last_updated: "2026-06-10"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
@@ -13,7 +13,7 @@ description: "Complete reference for all MCP tools exposed by the Jira MCP serve
 
 All tools communicate over stdio using the MCP JSON-RPC protocol. Every tool returns `{ content: [{ type: "text", text: "..." }] }`.
 
-## Task Management Tools (16)
+## Task Management Tools (14)
 
 ### sync_tasks
 
@@ -74,6 +74,42 @@ Read tasks from the local cache without hitting the Jira API. Returns all tasks 
   "project_key": "PROJ",
   "project_url": "https://example.atlassian.net",
   "epic_link": "PROJ-100"
+}
+```
+
+---
+
+### search_tasks
+
+Search Jira issues with raw JQL, hitting the API directly. Results are returned immediately and are not written to the local cache.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `jql` | string | Yes | — | JQL query string. |
+| `max_results` | number | No | `50` | Maximum number of results to return. |
+| `project_key` | string | No | default project | Project key that selects the Jira instance to query. |
+
+**Input example**
+
+```json
+{
+  "jql": "project = PROJ AND status = \"In Progress\" ORDER BY updated DESC",
+  "max_results": 10
+}
+```
+
+**Output example**
+
+```json
+{
+  "results": [
+    { "key": "PROJ-123", "summary": "Implement login page", "status": "In Progress" }
+  ],
+  "count": 1,
+  "total_available": 23,
+  "message": "Found 1 issue(s) matching JQL query"
 }
 ```
 
@@ -277,6 +313,74 @@ Update fields on an existing Jira issue. Only fields that are explicitly provide
 
 ---
 
+### delete_task
+
+Delete a Jira task. Allowed only when the authenticated user is the task creator. Requires explicit user approval.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
+| `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves deleting this task. |
+
+**Input example**
+
+```json
+{
+  "task_key": "PROJ-123",
+  "user_approved": true
+}
+```
+
+**Output example**
+
+```json
+{
+  "deleted": { "task_key": "PROJ-123" },
+  "message": "Deleted task PROJ-123"
+}
+```
+
+**Error:** Fails when the caller is not the task creator or when `user_approved` is not `true`.
+
+---
+
+### delete_comment
+
+Delete a comment from a Jira task. Allowed only when the authenticated user is the comment author. Requires explicit user approval.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
+| `comment_id` | string | Yes | — | Comment ID to delete. |
+| `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves deleting this comment. |
+
+**Input example**
+
+```json
+{
+  "task_key": "PROJ-123",
+  "comment_id": "10042",
+  "user_approved": true
+}
+```
+
+**Output example**
+
+```json
+{
+  "deleted": { "task_key": "PROJ-123", "comment_id": "10042" },
+  "message": "Deleted comment 10042 from PROJ-123"
+}
+```
+
+**Error:** Fails when the caller is not the comment author or when `user_approved` is not `true`.
+
+---
+
 ### get_project_language
 
 Get the configured content language for a project. AI assistants should call this before writing task descriptions, comments, or any user-facing content to ensure the correct language is used.
@@ -365,7 +469,7 @@ Time Tracking for PROJ-123:
 
 ---
 
-## Template Tools (3)
+## Template & Creation Tools (4)
 
 ### list_comment_templates
 

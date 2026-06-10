@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [adf, atlassian-document-format, markdown, conversion]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-06-10"
 description: "Reference for Atlassian Document Format (ADF) usage, markdown conversion functions, builder helpers, and fallback behavior."
 ---
 
@@ -57,12 +57,16 @@ The built-in parser handles the following elements:
 
 - Headings (`#`, `##`, ..., `######`)
 - Bold (`**text**`), italic (`*text*`), strikethrough (`~~text~~`)
-- Unordered lists (`-`, `*`) and ordered lists (`1.`)
+- Unordered lists (`-`, `*`) and ordered lists (`1.`), including nesting via 2-space indentation
+- Task lists (`- [ ]` / `- [x]`) converted to ADF `taskList`/`taskItem` nodes (Jira checkboxes)
 - Inline code (`` `code` ``) and fenced code blocks (` ``` `)
 - Blockquotes (`> `)
 - Horizontal rules (`---`)
 - Links (`[text](url)`)
+- Images (`![alt](url)`) degrade to links, because ADF media nodes require uploaded attachments
 - Tables with a header row and delimiter row
+
+Nested bullet or ordered lists under a task item are lifted to siblings after the task list, because ADF only allows `taskItem`/`taskList` children inside a `taskList`.
 
 ### Fallback Behavior
 
@@ -105,6 +109,10 @@ The function never throws. The JSON fallback ensures the caller always has somet
 
 - ADF panel nodes, decision lists, and some complex node types may not round-trip perfectly through the converter.
 - Converted markdown is suitable for display but may not exactly reproduce the original markdown used to write the comment.
+
+### Read-Direction Node Support
+
+Beyond the basic blocks, the reader renders: `mention` (@name), `emoji` (shortname), `inlineCard` (link), `panel` (quoted `**TYPE:**` block), `status` (`[text]`), `date` (`YYYY-MM-DD` from the timestamp attr), `taskList`/`taskItem` (`- [ ]` / `- [x]` checkboxes with nesting), nested bullet/ordered lists (2-space indentation), and `media`/`mediaSingle` (`[media]` placeholder).
 
 ---
 

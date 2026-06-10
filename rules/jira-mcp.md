@@ -1,6 +1,6 @@
 # Jira MCP Server
 
-Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `add_task_comment`, `delete_task`, `delete_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `get_project_language`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `create_task`, `search_tasks`
+Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `add_task_comment`, `delete_task`, `delete_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `get_project_language`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `list_task_templates`, `create_task`, `create_monthly_tasks`, `search_tasks`
 
 ## Key Rules
 
@@ -47,20 +47,26 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 
 | Command | Description |
 |---------|-------------|
+| `jira-mcp` | Start MCP server (default) |
+| `jira-mcp serve` | Start MCP server (explicit) |
+| `jira-mcp create <path>` | Create tasks from config file (dry-run by default) |
+| `jira-mcp create-monthly` | Create monthly admin tasks from built-in templates |
+| `jira-mcp template add <type> <path>` | Install a template override from a local markdown file |
+| `jira-mcp template list [type]` | List active comment/task templates |
+| `jira-mcp template show <type> <id>` | Show the active template file content |
+| `jira-mcp template remove <type> <id>` | Remove a user-installed template override |
 | `jira-mcp config init` | Initialize global config (~/.softspark/jira-mcp/) |
 | `jira-mcp config add-project <key> <url>` | Add Jira project mapping |
 | `jira-mcp config remove-project <key>` | Remove a project |
 | `jira-mcp config list-projects` | Show configured projects with language |
-| `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-credentials` | Set API credentials |
+| `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-language <lang>` | Set global default language |
 | `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |
-| `jira-mcp create <path>` | Create tasks from template (dry-run default) |
-| `jira-mcp create-monthly` | Create monthly admin tasks |
-| `jira-mcp cache sync-users` | Cache user list for reassignment |
 | `jira-mcp cache sync-workflows` | Cache status transitions |
-| `jira-mcp cache list-users` | Show cached users |
+| `jira-mcp cache sync-users` | Cache user list for reassignment |
 | `jira-mcp cache list-workflows` | Show cached workflows |
+| `jira-mcp cache list-users` | Show cached users |
 
 ## Architecture
 
