@@ -9,6 +9,12 @@ Counts checked:
   - Test files (tests/**/*.test.ts)
   - Bundle size (dist/index.js in KiB)
 
+Doc-parity checks (catch drift outside README):
+  - README version badge matches package.json version
+  - Every tool from src/tools/definitions.ts has a "### <name>" section
+    in kb/reference/api.md
+  - Every tool from src/tools/definitions.ts is named in rules/jira-mcp.md
+
 Usage:
   python3 scripts/validate_counts.py          # basic counts (fast)
   python3 scripts/validate_counts.py --full   # also runs vitest for test count
@@ -119,6 +125,55 @@ def get_bundle_size_kib() -> int | None:
     return bundle.stat().st_size // 1024
 
 
+def tool_names_from_definitions() -> list[str]:
+    """Extract MCP tool names from src/tools/definitions.ts."""
+    definitions = (ROOT / "src" / "tools" / "definitions.ts").read_text()
+    return re.findall(r"^\s+name: '([a-z_]+)',$", definitions, re.MULTILINE)
+
+
+def check_version_badge(readme_text: str) -> None:
+    """README version badge must match package.json version."""
+    global errors
+    pkg = (ROOT / "package.json").read_text()
+    pkg_version = re.search(r'"version":\s*"([^"]+)"', pkg)
+    badge_version = re.search(r"badge/version-([0-9.]+)-", readme_text)
+    if pkg_version is None or badge_version is None:
+        green("Version badge (no badge or version found — skipped)")
+        return
+    if pkg_version.group(1) == badge_version.group(1):
+        green(f"Version badge ({pkg_version.group(1)})")
+    else:
+        red(
+            f"Version badge — README badge says {badge_version.group(1)}, "
+            f"package.json says {pkg_version.group(1)}"
+        )
+        errors += 1
+
+
+def check_tools_documented(tool_names: list[str]) -> None:
+    """Every MCP tool must have a section in kb/reference/api.md."""
+    global errors
+    api_doc = (ROOT / "kb" / "reference" / "api.md").read_text()
+    missing = [t for t in tool_names if f"### {t}" not in api_doc]
+    if not missing:
+        green(f"kb/reference/api.md documents all tools ({len(tool_names)})")
+    else:
+        red(f"kb/reference/api.md missing tool sections: {', '.join(missing)}")
+        errors += 1
+
+
+def check_rules_tools(tool_names: list[str]) -> None:
+    """Every MCP tool must be named in rules/jira-mcp.md."""
+    global errors
+    rules_doc = (ROOT / "rules" / "jira-mcp.md").read_text()
+    missing = [t for t in tool_names if f"`{t}`" not in rules_doc]
+    if not missing:
+        green(f"rules/jira-mcp.md names all tools ({len(tool_names)})")
+    else:
+        red(f"rules/jira-mcp.md missing tools: {', '.join(missing)}")
+        errors += 1
+
+
 def run_vitest_count() -> int | None:
     """Run vitest and extract total test count."""
     try:
@@ -172,7 +227,13 @@ def main() -> None:
             red(f"Bundle size — README says {readme_size}KB, actual is {bundle_kib}KiB (delta: {delta})")
             errors += 1
 
-    # 7. Test Count (optional)
+    # 7. Doc parity
+    tool_names = tool_names_from_definitions()
+    check_version_badge(readme_text)
+    check_tools_documented(tool_names)
+    check_rules_tools(tool_names)
+
+    # 8. Test Count (optional)
     if full_mode:
         print()
         bold("Running vitest for test count verification...")
