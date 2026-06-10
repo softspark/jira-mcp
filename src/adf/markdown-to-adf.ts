@@ -1,14 +1,23 @@
 /**
  * Markdown to ADF conversion -- zero-dependency implementation.
  *
- * Parses markdown line-by-line for block-level elements (headings, lists,
- * code blocks, blockquotes, horizontal rules) and inline elements within
- * text (bold, italic, strikethrough, inline code, links).
+ * Parses markdown line-by-line for block-level elements (headings, nested
+ * lists, task lists, code blocks, blockquotes, horizontal rules, tables)
+ * and inline elements within text (bold, italic, strikethrough, inline
+ * code, links; images degrade to links because media requires uploads).
  *
  * Replaces the former `marklassian` dependency.
  */
 
 import type { AdfDocument, AdfMark, AdfNode } from './types.js';
+
+/**
+ * Mutable conversion state threaded through block parsing.
+ * ADF task lists require document-unique `localId` attributes.
+ */
+interface ConversionContext {
+  nextTaskId: number;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Public API                                                        */
@@ -46,7 +55,7 @@ export function markdownToAdf(markdown: string): AdfDocument {
   }
 
   try {
-    const content = parseBlocks(normalized);
+    const content = parseBlocks(normalized, { nextTaskId: 1 });
     if (content.length === 0) {
       return buildPlainTextFallback(normalized);
     }
@@ -88,12 +97,16 @@ function hasMore(reader: LineReader): boolean {
 const HEADING_RE = /^(#{1,6})\s+(.+)$/;
 const UNORDERED_LIST_RE = /^(\s*)[-*+]\s+(.*)$/;
 const ORDERED_LIST_RE = /^(\s*)\d+\.\s+(.*)$/;
+const TASK_ITEM_RE = /^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$/;
 const CODE_FENCE_RE = /^```(\w*)$/;
 const BLOCKQUOTE_RE = /^>\s?(.*)$/;
 const HORIZONTAL_RULE_RE = /^(?:---+|\*\*\*+|___+)\s*$/;
 const TABLE_DELIMITER_CELL_RE = /^:?-{3,}:?$/;
 
-function parseBlocks(markdown: string): readonly AdfNode[] {
+function parseBlocks(
+  markdown: string,
+  ctx: ConversionContext,
+): readonly AdfNode[] {
   const reader = createReader(markdown);
   const nodes: AdfNode[] = [];
 
@@ -137,19 +150,14 @@ function parseBlocks(markdown: string): readonly AdfNode[] {
 
     // Blockquote
     if (BLOCKQUOTE_RE.test(line)) {
-      nodes.push(parseBlockquote(reader));
+      nodes.push(parseBlockquote(reader, ctx));
       continue;
     }
 
-    // Unordered list
-    if (UNORDERED_LIST_RE.test(line)) {
-      nodes.push(parseUnorderedList(reader));
-      continue;
-    }
-
-    // Ordered list
-    if (ORDERED_LIST_RE.test(line)) {
-      nodes.push(parseOrderedList(reader));
+    // Lists (bullet, ordered, task) -- task lines also match the
+    // unordered pattern, so classification happens inside the collector
+    if (UNORDERED_LIST_RE.test(line) || ORDERED_LIST_RE.test(line)) {
+      nodes.push(...buildLists(collectListLines(reader), ctx));
       continue;
     }
 
@@ -192,7 +200,7 @@ function parseCodeBlock(reader: LineReader, language: string): AdfNode {
   };
 }
 
-function parseBlockquote(reader: LineReader): AdfNode {
+function parseBlockquote(reader: LineReader, ctx: ConversionContext): AdfNode {
   const quotedLines: string[] = [];
 
   while (hasMore(reader)) {
@@ -205,7 +213,7 @@ function parseBlockquote(reader: LineReader): AdfNode {
   }
 
   const innerMarkdown = quotedLines.join('\n');
-  const innerContent = parseBlocks(innerMarkdown);
+  const innerContent = parseBlocks(innerMarkdown, ctx);
 
   return {
     type: 'blockquote',
@@ -213,43 +221,170 @@ function parseBlockquote(reader: LineReader): AdfNode {
   };
 }
 
-function parseUnorderedList(reader: LineReader): AdfNode {
-  const items = parseListItems(reader, UNORDERED_LIST_RE);
-  return {
-    type: 'bulletList',
-    content: items,
-  };
+/* ------------------------------------------------------------------ */
+/*  List parsing (nested bullet/ordered/task lists)                    */
+/* ------------------------------------------------------------------ */
+
+type ListKind = 'bullet' | 'ordered' | 'task';
+
+interface ListLine {
+  readonly indent: number;
+  readonly kind: ListKind;
+  readonly checked: boolean;
+  readonly text: string;
 }
 
-function parseOrderedList(reader: LineReader): AdfNode {
-  const items = parseListItems(reader, ORDERED_LIST_RE);
-  return {
-    type: 'orderedList',
-    attrs: { order: 1 },
-    content: items,
-  };
+interface ListEntry {
+  readonly line: ListLine;
+  readonly children: readonly ListLine[];
 }
 
-function parseListItems(
-  reader: LineReader,
-  pattern: RegExp,
-): readonly AdfNode[] {
-  const items: AdfNode[] = [];
+/** Measure indentation width, expanding tabs to two spaces. */
+function indentWidth(whitespace: string): number {
+  return whitespace.replace(/\t/g, '  ').length;
+}
+
+/** Consume consecutive list lines and classify each one. */
+function collectListLines(reader: LineReader): readonly ListLine[] {
+  const lines: ListLine[] = [];
 
   while (hasMore(reader)) {
     const line = peek(reader);
     if (line === undefined) break;
-    const match = pattern.exec(line);
-    if (!match) break;
-    consume(reader);
-    const text = match[2] ?? '';
-    items.push({
-      type: 'listItem',
-      content: [buildParagraph(parseInline(text))],
-    });
+
+    const taskMatch = TASK_ITEM_RE.exec(line);
+    if (taskMatch) {
+      consume(reader);
+      lines.push({
+        indent: indentWidth(taskMatch[1] ?? ''),
+        kind: 'task',
+        checked: (taskMatch[2] ?? ' ').toLowerCase() === 'x',
+        text: taskMatch[3] ?? '',
+      });
+      continue;
+    }
+
+    const bulletMatch = UNORDERED_LIST_RE.exec(line);
+    if (bulletMatch) {
+      consume(reader);
+      lines.push({
+        indent: indentWidth(bulletMatch[1] ?? ''),
+        kind: 'bullet',
+        checked: false,
+        text: bulletMatch[2] ?? '',
+      });
+      continue;
+    }
+
+    const orderedMatch = ORDERED_LIST_RE.exec(line);
+    if (orderedMatch) {
+      consume(reader);
+      lines.push({
+        indent: indentWidth(orderedMatch[1] ?? ''),
+        kind: 'ordered',
+        checked: false,
+        text: orderedMatch[2] ?? '',
+      });
+      continue;
+    }
+
+    break;
   }
 
-  return items;
+  return lines;
+}
+
+/**
+ * Build ADF list nodes from classified list lines.
+ *
+ * Consecutive same-kind lines at the same indent form one list; deeper
+ * lines become nested lists inside the preceding item. A kind switch at
+ * the same indent starts a sibling list node.
+ */
+function buildLists(
+  lines: readonly ListLine[],
+  ctx: ConversionContext,
+): readonly AdfNode[] {
+  const nodes: AdfNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const first = lines[i];
+    if (first === undefined) break;
+    const base = first.indent;
+    const kind = first.kind;
+    const entries: ListEntry[] = [];
+
+    while (i < lines.length) {
+      const current = lines[i];
+      if (current === undefined || current.indent !== base || current.kind !== kind) {
+        break;
+      }
+      i++;
+      const children: ListLine[] = [];
+      for (; i < lines.length; i++) {
+        const child = lines[i];
+        if (child === undefined || child.indent <= base) break;
+        children.push(child);
+      }
+      entries.push({ line: current, children });
+    }
+
+    nodes.push(...makeListNodes(kind, entries, ctx));
+  }
+
+  return nodes;
+}
+
+/**
+ * Construct ADF nodes for one run of same-kind sibling entries.
+ *
+ * Task lists may only contain taskItem/taskList children in ADF, so
+ * nested bullet or ordered lists under a task item are lifted to
+ * siblings after the task list instead of being nested invalidly.
+ */
+function makeListNodes(
+  kind: ListKind,
+  entries: readonly ListEntry[],
+  ctx: ConversionContext,
+): readonly AdfNode[] {
+  if (kind === 'task') {
+    const content: AdfNode[] = [];
+    const lifted: AdfNode[] = [];
+    for (const { line, children } of entries) {
+      content.push({
+        type: 'taskItem',
+        attrs: {
+          localId: `task-${String(ctx.nextTaskId++)}`,
+          state: line.checked ? 'DONE' : 'TODO',
+        },
+        content: parseInline(line.text),
+      });
+      for (const childNode of buildLists(children, ctx)) {
+        if (childNode.type === 'taskList') {
+          content.push(childNode);
+        } else {
+          lifted.push(childNode);
+        }
+      }
+    }
+    const taskList: AdfNode = {
+      type: 'taskList',
+      attrs: { localId: `task-list-${String(ctx.nextTaskId++)}` },
+      content,
+    };
+    return [taskList, ...lifted];
+  }
+
+  const items = entries.map(({ line, children }): AdfNode => ({
+    type: 'listItem',
+    content: [buildParagraph(parseInline(line.text)), ...buildLists(children, ctx)],
+  }));
+
+  if (kind === 'ordered') {
+    return [{ type: 'orderedList', attrs: { order: 1 }, content: items }];
+  }
+  return [{ type: 'bulletList', content: items }];
 }
 
 function parseParagraph(reader: LineReader): AdfNode {
@@ -556,6 +691,24 @@ function tokenizeInline(text: string): readonly AdfNode[] {
           nodes.push(addMark(node, { type: 'em' }));
         }
         pos = endIdx + 1;
+        continue;
+      }
+    }
+
+    // Image: ![alt](url) -- degrades to a link because ADF media
+    // nodes require uploaded attachments, not external URLs
+    if (ch === '!' && next === '[') {
+      const imageResult = tryParseLink(text, pos + 1);
+      if (imageResult) {
+        flushBuffer();
+        const label =
+          imageResult.text.length > 0 ? imageResult.text : imageResult.href;
+        nodes.push(
+          makeTextNode(label, [
+            { type: 'link', attrs: { href: imageResult.href } },
+          ]),
+        );
+        pos = imageResult.endPos;
         continue;
       }
     }

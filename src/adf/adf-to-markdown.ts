@@ -48,10 +48,13 @@ function convertNode(node: AdfNode): string {
     }
 
     case 'bulletList':
-      return convertListItems(node.content ?? [], '-') + '\n';
+      return convertList(node.content ?? [], '-', 0) + '\n';
 
     case 'orderedList':
-      return convertListItems(node.content ?? [], '1.') + '\n';
+      return convertList(node.content ?? [], '1.', 0) + '\n';
+
+    case 'taskList':
+      return convertTaskList(node.content ?? [], 0) + '\n';
 
     case 'listItem':
       return convertNodes(node.content ?? []);
@@ -113,6 +116,12 @@ function convertNode(node: AdfNode): string {
       return text ? `[${text}]` : '';
     }
 
+    case 'date': {
+      const timestamp = Number(node.attrs?.['timestamp']);
+      if (!Number.isFinite(timestamp)) return '';
+      return new Date(timestamp).toISOString().slice(0, 10);
+    }
+
     default:
       if (node.content) {
         return convertNodes(node.content);
@@ -154,26 +163,69 @@ function applyMarks(text: string, marks: NonNullable<AdfNode['marks']>): string 
   return result;
 }
 
-function convertListItems(items: readonly AdfNode[], prefix: string): string {
-  return items
-    .map((item) => {
-      const content = convertNodes(item.content ?? []).trim();
-      return `${prefix} ${content}`;
-    })
-    .join('\n');
+/**
+ * Render list items at the given nesting depth.
+ *
+ * Inline children (paragraphs) form the item line; nested lists render
+ * on the following lines indented by two spaces per level.
+ */
+function convertList(
+  items: readonly AdfNode[],
+  prefix: string,
+  depth: number,
+): string {
+  const indent = '  '.repeat(depth);
+  const lines: string[] = [];
+
+  for (const item of items) {
+    const inlineParts: string[] = [];
+    const nestedParts: string[] = [];
+
+    for (const child of item.content ?? []) {
+      if (child.type === 'bulletList') {
+        nestedParts.push(convertList(child.content ?? [], '-', depth + 1));
+      } else if (child.type === 'orderedList') {
+        nestedParts.push(convertList(child.content ?? [], '1.', depth + 1));
+      } else if (child.type === 'taskList') {
+        nestedParts.push(convertTaskList(child.content ?? [], depth + 1));
+      } else {
+        inlineParts.push(convertNode(child).trim());
+      }
+    }
+
+    lines.push(`${indent}${prefix} ${inlineParts.filter(Boolean).join(' ')}`);
+    lines.push(...nestedParts.filter(Boolean));
+  }
+
+  return lines.join('\n');
+}
+
+/** Render an ADF task list as markdown checkboxes (`- [ ]` / `- [x]`). */
+function convertTaskList(items: readonly AdfNode[], depth: number): string {
+  const indent = '  '.repeat(depth);
+  const lines: string[] = [];
+
+  for (const item of items) {
+    if (item.type === 'taskList') {
+      lines.push(convertTaskList(item.content ?? [], depth + 1));
+      continue;
+    }
+    const checkbox = item.attrs?.['state'] === 'DONE' ? 'x' : ' ';
+    const text = convertNodes(item.content ?? []).trim();
+    lines.push(`${indent}- [${checkbox}] ${text}`);
+  }
+
+  return lines.join('\n');
 }
 
 function convertTable(rows: readonly AdfNode[]): string {
   if (rows.length === 0) return '';
 
   const tableRows: string[][] = [];
-  let hasHeader = false;
 
   for (const row of rows) {
     const cells: string[] = [];
     for (const cell of row.content ?? []) {
-      const isHeader = cell.type === 'tableHeader';
-      if (isHeader) hasHeader = true;
       cells.push(convertNodes(cell.content ?? []).trim());
     }
     tableRows.push(cells);
@@ -184,19 +236,10 @@ function convertTable(rows: readonly AdfNode[]): string {
   const lines: string[] = [];
   const firstRow = tableRows[0] ?? [];
   lines.push('| ' + firstRow.join(' | ') + ' |');
-
-  if (hasHeader) {
-    lines.push('| ' + firstRow.map(() => '---').join(' | ') + ' |');
-    for (let i = 1; i < tableRows.length; i++) {
-      const row = tableRows[i] ?? [];
-      lines.push('| ' + row.join(' | ') + ' |');
-    }
-  } else {
-    lines.push('| ' + firstRow.map(() => '---').join(' | ') + ' |');
-    for (let i = 1; i < tableRows.length; i++) {
-      const row = tableRows[i] ?? [];
-      lines.push('| ' + row.join(' | ') + ' |');
-    }
+  lines.push('| ' + firstRow.map(() => '---').join(' | ') + ' |');
+  for (let i = 1; i < tableRows.length; i++) {
+    const row = tableRows[i] ?? [];
+    lines.push('| ' + row.join(' | ') + ' |');
   }
 
   return lines.join('\n') + '\n';
