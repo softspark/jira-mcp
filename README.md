@@ -4,15 +4,18 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.4.3-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.6.0-blue)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## What's New in v1.5.0
+## What's New in v1.6.0
 
-- **`template add bulk` CLI command** -- install per-project `monthly_admin.json` configs into `~/.softspark/jira-mcp/templates/tasks/<KEY>/`. Validated against `BulkConfigSchema`. `template list/show/remove` now also handle the `bulk` kind, keyed by project.
-- **`create_monthly_tasks` MCP tool** -- run all monthly bulk task configs over the protocol with `{ execute?, project? }`. Returns per-project status, summary counts, and resolved config paths. No more dropping to the CLI for monthly admin runs.
+- **Nested lists in ADF conversion** -- indented markdown lists produce real nested `bulletList`/`orderedList` nodes in both directions instead of being flattened.
+- **Task lists (Jira checkboxes)** -- `- [ ]` / `- [x]` markdown round-trips through ADF `taskList`/`taskItem` nodes, including nesting.
+- **`date` nodes render on read** -- dates in descriptions and comments show as `YYYY-MM-DD` instead of disappearing; images (`![alt](url)`) degrade to clean links on write.
+- **Coverage gate enforced in CI** -- the test job runs `test:coverage`, so the 70% thresholds actually block merges.
+- **Doc-parity validation** -- `validate_counts.py` also checks the version badge and that every MCP tool is documented in `kb/reference/api.md` and `rules/jira-mcp.md`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -255,7 +258,7 @@ src/
 
 **Typed error hierarchy** -- 20 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 587 tests across 60 test files. Self-contained 535KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 672 tests across 64 test files. Self-contained 535KB package.
 
 ## Documentation
 

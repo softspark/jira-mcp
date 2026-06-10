@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.6.0 -- ADF Nested Lists, Task Lists & Doc-Parity Gates (2026-06-10)
+
+### Added
+- **Nested list support in ADF conversion** -- indented markdown lists (2 spaces or tab) now produce properly nested `bulletList`/`orderedList` ADF nodes instead of being flattened, in both write and read directions. Read direction renders nesting with 2-space indentation.
+- **Task list (checkbox) support** -- `- [ ]` / `- [x]` markdown converts to ADF `taskList`/`taskItem` nodes (Jira checkboxes) with document-unique `localId`s, and renders back to markdown checkboxes including nesting. Nested bullet/ordered lists under a task item are lifted to siblings after the task list to keep the ADF valid.
+- **Image degradation** -- `![alt](url)` markdown converts to a link (alt text as label, URL as fallback) instead of leaking a stray `!` into the text. ADF media nodes require uploaded attachments, so a link is the lossless-enough fallback.
+- **`date` node rendering on read** -- ADF date nodes now render as `YYYY-MM-DD` instead of disappearing from task descriptions and comments.
+- **Doc-parity checks in `validate_counts.py`** -- the validator now also verifies the README version badge against `package.json`, and that every MCP tool from `definitions.ts` is documented in `kb/reference/api.md` and named in `rules/jira-mcp.md`.
+
+### Changed
+- **CI enforces the coverage gate** -- the test job runs `npm run test:coverage`, so the 70% thresholds (lines, branches, functions) actually block merges. Branch coverage raised from 64.5% to above the threshold with new CLI and ADF edge-case tests.
+
+### Fixed
+- **README version badge drift** (1.4.3 -> 1.5.0) and stale test counts.
+- **`kb/reference/api.md`** now documents `search_tasks`, `delete_task`, and `delete_comment`, which were missing despite the "complete reference" claim.
+- **`rules/jira-mcp.md` / `AGENTS.md`** tool list extended to all 19 tools (was 17) and the CLI table extended to all 20 commands (was 14).
+- **Dev dependency vulnerabilities** -- `npm audit fix` applied (7 advisories: fast-uri, brace-expansion, hono, ip-address chains). Runtime dependencies were and remain clean.
+
+---
+
 ## v1.5.0 -- Bulk Template Management & Monthly Tasks Tool (2026-05-04)
 
 ### Added
