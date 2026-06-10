@@ -5,3 +5,6 @@
 /.idea/
 /dist/
 /coverage/
+/.github/copilot-instructions.md
+/.github/instructions/
+/.github/prompts/
