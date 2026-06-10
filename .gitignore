@@ -3,3 +3,5 @@
 /.claude/
 /.codex/
 /.idea/
+/dist/
+/coverage/
