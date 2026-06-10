@@ -3,9 +3,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: jira-mcp
 tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, provenance, supply-chain]
-version: "1.2.0"
+version: "1.3.0"
 created: "2026-04-13"
-last_updated: "2026-04-18"
+last_updated: "2026-06-10"
 description: "End-to-end smoke test after publishing a new @softspark/jira-mcp release — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN project, supply-chain verification (provenance, npm audit signatures), and cleanup."
 ---
 
@@ -156,8 +156,12 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jira-mcp serve 2>/dev/nu
 ```
 
 - [ ] Response contains a JSON-RPC result
-- [ ] Tool list includes expected tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `add_task_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `create_task`, `search_tasks`, `update_task`, `get_project_language`
+- [ ] Tool list matches the full set registered in `src/tools/definitions.ts` (compare names, not a hardcoded count; includes `sync_tasks`, `create_task`, `delete_task`, `delete_comment`, `create_monthly_tasks`, `list_task_templates`, and the rest)
 - [ ] No error response
+
+> **Note:** the plain `tools/list` echo only works after the MCP initialize
+> handshake. Send three lines: `initialize`, `notifications/initialized`,
+> then `tools/list` (see the v1.6.0 test run for a working snippet).
 
 ---
 
@@ -366,10 +370,12 @@ npm view "@softspark/jira-mcp@X.Y.Z" --json \
 
 ### Step 5.2: npm Audit Signatures
 
-Verify the chain of trust from the npm registry signing keys:
+Verify the chain of trust from the npm registry signing keys. Run it inside
+the installed package directory, otherwise npm audits whatever project the
+current working directory happens to contain:
 
 ```bash
-npm audit signatures --registry https://registry.npmjs.org
+cd "$(npm root -g)/@softspark/jira-mcp" && npm audit signatures --registry https://registry.npmjs.org
 ```
 
 - [ ] Exit code 0
@@ -486,8 +492,8 @@ If any phase fails and the cause is not listed above:
 |-------|-----------|
 | Install | `npm install -g` succeeds, `--version` shows correct version |
 | CLI | `--help` displays commands, `config list-projects` shows KAN |
-| MCP Server | `serve` starts without crash, 15 tools returned |
-| Live Jira API | All 15 MCP tools execute successfully against KAN project |
+| MCP Server | `serve` starts without crash, tool list matches `src/tools/definitions.ts` |
+| Live Jira API | Every task-management MCP tool executes successfully against KAN project |
 | Supply-chain | Provenance attestation present (SLSA v1), `npm audit signatures` passes |
 | Cleanup | Test task in Done/deleted, `jira-mcp` still installed globally |
 
