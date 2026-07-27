@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [sop, release, version, publish, changelog, semver, npm, tag, provenance, supply-chain]
 version: "1.1.0"
 created: "2026-04-13"
-last_updated: "2026-04-18"
+last_updated: "2026-07-27"
 description: "Step-by-step release procedure for @softspark/jira-mcp — version bump, changelog, quality gates, supply-chain gates (provenance + id-token), tagging, npm publish via CI, and rollback instructions."
 ---
 
@@ -38,12 +38,17 @@ python3 scripts/validate_counts.py
 # 4.6. Supply-chain gates (v2.8.0+)
 grep -q -- '--provenance' .github/workflows/publish.yml
 grep -q 'id-token: write' .github/workflows/publish.yml
+# 4.7. Licensing gate (v1.7.0+) -- headers, LICENSE, NOTICE, dist banner
+npx vitest run tests/licensing.test.ts
 # 5. Commit
 git add package.json package-lock.json CHANGELOG.md README.md
 git commit -m "chore: release vX.Y.Z"
-# 6. Tag and push
+# 6. Tag, assert, push
 git tag vX.Y.Z
-git push origin main --tags
+test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
+git push origin main
+git push origin refs/tags/vX.Y.Z   # single tag by full ref, never --tags
 # 7. Verify: npm view @softspark/jira-mcp version + provenance attestation
 ```
 
@@ -236,6 +241,54 @@ deprecated and re-published.
 
 ---
 
+## Phase 4.7: Licensing Gate (v1.7.0+)
+
+The project is Apache-2.0. Attribution only counts if it reaches the artifact,
+and for this package that is not automatic.
+
+```bash
+npx vitest run tests/licensing.test.ts
+```
+
+Eight assertions, and why each exists:
+
+| Check | Fails when |
+|---|---|
+| The walker finds >100 source files | The file walk broke and every other assertion would pass vacuously |
+| Every source file carries an SPDX header | A new `.ts` file was added without one |
+| Every header names Apache-2.0 | A file was copied in from a differently-licensed source |
+| `LICENSE` is the complete Apache 2.0 text | The file was truncated or replaced with a summary |
+| `NOTICE` carries attribution, source URL and section 4(d) | The attribution mechanism was gutted |
+| `LICENSE` and `NOTICE` both in `package.json` `files` | A NOTICE that never reaches the consumer cannot satisfy 4(d) |
+| `package.json` declares Apache-2.0 | The manifest drifted from the licence |
+| **Both build entries carry the licence banner** | The one that matters -- see below |
+
+**Why the banner assertion is the important one.** npm ships `dist/`, not `src/`,
+and the build runs with `minify: true`, which strips every comment. The SPDX
+headers in `src/` never reach a consumer. The only attribution in the published
+package comes from the `banner` in `tsup.config.ts`. Delete it and the package
+ships with no licence marker at all, while typecheck, lint, tests and build all
+stay green. Verify by hand after a build if you touched the bundler config:
+
+```bash
+npm run build && grep -c 'Apache-2.0' dist/index.js dist/cli.js   # expect 1 and 1
+```
+
+The banner sits just after the hoisted ESM imports rather than on line 1 -- that
+is normal esbuild behaviour for this format, not a defect.
+
+**Adding source files?** Header after any shebang, `//` comments:
+
+```
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
+// Source: https://github.com/softspark/jira-mcp
+```
+
+Full convention: [Licensing](../reference/licensing.md).
+
+---
+
 ## Phase 5: Commit Release
 
 Stage only the release files (lockfile included — see Phase 2):
@@ -270,12 +323,34 @@ Create an annotated tag and push:
 
 ```bash
 git tag vX.Y.Z
-git push origin main --tags
+
+# Assert before pushing. Both checks are one line and both have caught a real
+# broken release in a sibling repository on the same day.
+test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" \
+  || { echo "FAIL: tag is not on HEAD"; exit 1; }
+git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
+  || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
+
+git push origin main
+git push origin refs/tags/vX.Y.Z
 ```
 
 - [ ] Tag `vX.Y.Z` created locally
+- [ ] Both assertions exit 0 **before** any push
 - [ ] Push to `origin main` succeeds
-- [ ] Tag pushed to remote
+- [ ] Single tag pushed by full ref
+
+> **Never `git push --tags`.** It pushes every local tag at once, and GitHub
+> suppresses tag-triggered workflow runs when many tags arrive in one push --
+> the publish workflow silently does not fire and nothing reaches npm. This is
+> not hypothetical: a `--tags` push carrying 37 tags is exactly how the sibling
+> `rag-mcp` project skipped an image build. Push the single release tag by its
+> full ref.
+>
+> **Assert the tag placement.** A tag landing on the commit *before* the release
+> commit publishes the previous version's tree under the new version number, or
+> fails on an already-published version. Both happened on 2026-07-27, in two
+> different repositories, and both were found only after the fact.
 
 This triggers `.github/workflows/publish.yml` which:
 1. Checks out the tag
