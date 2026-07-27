@@ -4,18 +4,17 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.6.0-blue)](CHANGELOG.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![version](https://img.shields.io/badge/version-1.7.0-blue)](CHANGELOG.md)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.6.0
+## What's New in v1.7.0
 
-- **Nested lists in ADF conversion** -- indented markdown lists produce real nested `bulletList`/`orderedList` nodes in both directions instead of being flattened.
-- **Task lists (Jira checkboxes)** -- `- [ ]` / `- [x]` markdown round-trips through ADF `taskList`/`taskItem` nodes, including nesting.
-- **`date` nodes render on read** -- dates in descriptions and comments show as `YYYY-MM-DD` instead of disappearing; images (`![alt](url)`) degrade to clean links on write.
-- **Coverage gate enforced in CI** -- the test job runs `test:coverage`, so the 70% thresholds actually block merges.
-- **Doc-parity validation** -- `validate_counts.py` also checks the version badge and that every MCP tool is documented in `kb/reference/api.md` and `rules/jira-mcp.md`.
+- **Licence: MIT to Apache-2.0.** Still permissive -- fork it, modify it, ship it commercially. What changes is what a redistributor owes back: the contents of [NOTICE](NOTICE) must travel with any redistribution (§4d), modified files must say they were modified (§4b), plus an express patent grant and a trademark reservation. Releases up to v1.6.0 stay available under MIT; nothing already granted is revoked.
+- **Attribution reaches the published bundles.** npm ships `dist/`, not `src/`, and the build minifies away every comment -- so the SPDX headers added to 165 source files never reach a consumer. A build banner carries the licence into `dist/index.js` and `dist/cli.js` instead, and a test asserts both entries keep it.
+- **Licensing gate in `npm test`** -- `tests/licensing.test.ts`, 8 assertions covering headers, `LICENSE`, `NOTICE`, npm `files`, and the build banner. Release SOP gains Phase 4.7 running the same gate before tagging.
+- **Release SOP hardened** -- tag placement is now asserted before the push, and `git push --tags` is replaced with a single-tag push by full ref. A `--tags` push is how a sibling project silently skipped a publish.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -258,7 +257,7 @@ src/
 
 **Typed error hierarchy** -- 20 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 672 tests across 64 test files. Self-contained 535KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 680 tests across 65 test files. Self-contained 535KB package.
 
 ## Documentation
 
@@ -285,7 +284,17 @@ See [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE) -- SoftSpark
+Apache License 2.0 -- see [LICENSE](LICENSE) and [NOTICE](NOTICE). SoftSpark.
+
+Fork it, modify it, ship it commercially. Three things the licence asks in return:
+
+- **Keep the attribution.** Redistributions must carry the contents of [NOTICE](NOTICE) (§4d) -- project name, copyright and source URL.
+- **Say what you changed.** Modified files must carry a prominent notice stating that you changed them (§4b).
+- **Names are not included.** No rights to the "jira-mcp" or "SoftSpark" names or marks (§6).
+
+The published bundles are minified, so the source headers do not survive into `dist/`. Attribution reaches consumers through a build banner instead -- the first comment in `dist/index.js` and `dist/cli.js`.
+
+Releases up to and including v1.6.0 were published under MIT and stay available under MIT; the change applies going forward and revokes nothing already granted.
 
 ## Changelog
 

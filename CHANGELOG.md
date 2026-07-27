@@ -7,6 +7,45 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.7.0 -- Apache-2.0 (2026-07-27)
+
+### Changed -- licence: MIT to Apache-2.0
+
+The project is now licensed under the Apache License 2.0. It stays permissive:
+fork it, modify it, ship it commercially. What changes is what a redistributor
+owes back.
+
+- **`NOTICE` is the point.** MIT already required keeping the copyright notice, so
+  attribution is not new. Apache-2.0 adds section 4(d): a redistributor must carry
+  the contents of `NOTICE` -- project name, copyright, source URL -- into their
+  distribution. `NOTICE` is in `package.json` `files`, so it ships with the package.
+- **Modified files must say so** (section 4b), an express patent grant with
+  retaliation (section 3), and no rights to the project or company names
+  (section 6). None of these existed under MIT.
+- **Attribution reaches the published bundles through a build banner.** This is
+  the part specific to this package: npm ships `dist/`, not `src/`, and the build
+  runs with `minify: true`, which strips every comment. SPDX headers in `src/`
+  are for whoever clones the repository; consumers see the tsup `banner`, now
+  present in both `dist/index.js` and `dist/cli.js`.
+- **SPDX headers on 165 source files**, placed after any shebang.
+- **Nothing is revoked.** Releases up to and including v1.6.0 were published under
+  MIT and remain available under MIT. All contributions were made by the
+  copyright holder, so no third-party permission was required.
+
+`LICENSE` holds the verbatim Apache-2.0 text, cross-verified against two
+independent published copies before being written.
+
+### Tests
+
+- `tests/licensing.test.ts`, 8 assertions run by `npm test`: SPDX headers present
+  and naming Apache-2.0, `LICENSE` complete, `NOTICE` carrying attribution and
+  section 4(d), both files in `package.json` `files`, `package.json` declaring
+  Apache-2.0, and **both build entries carrying the licence banner**. The banner
+  assertion exists because losing it would strip attribution from the published
+  artifact while every other check stayed green.
+
+---
+
 ## v1.6.0 -- ADF Nested Lists, Task Lists & Doc-Parity Gates (2026-06-10)
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@softspark/jira-mcp",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "MCP server for Jira integration — multi-instance routing, ADF formatting, task caching, and comment templates via the Model Context Protocol.",
   "keywords": [
     "mcp",
@@ -23,7 +23,7 @@
   "bugs": {
     "url": "https://github.com/softspark/jira-mcp/issues"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "SoftSpark <biuro@softspark.eu>",
   "type": "module",
   "main": "dist/index.js",
@@ -44,7 +44,8 @@
     "templates-system/**/*.md",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=18.0.0"
