@@ -7,7 +7,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## v1.7.0 -- Apache-2.0 (2026-07-27)
+## v1.8.0 -- Status Paths (2026-08-03)
+
+### Added
+
+- **`status` accepts an ordered path** in bulk task configs -- `"status": ["On hold", "Open"]`
+  walks the transitions one at a time. Jira only exposes the transitions available from an
+  issue's *current* status, so a target that is not directly reachable from the initial
+  status could not be set at all before. A plain string still means a single transition.
+- **`warnings` in `create_monthly_tasks` output** -- per-task problems that did not stop the
+  issue from being written now surface in the tool response instead of being dropped by the
+  counters-only summary.
+
+### Fixed
+
+- **A rejected status transition is no longer silent.** `setStatus` swallowed every failure,
+  including the ordinary case of the requested status simply not being reachable: the issue
+  was created, the status was ignored, and the run reported `failed: 0`. Eleven monthly admin
+  tasks sat in the wrong status for months because of this. The transition is now reported as
+  a `warning` on the task result, naming the status that failed and listing the ones that were
+  reachable at that point. The issue itself is still created -- the transition stays non-fatal.
+
+### Changed
+
+- **`TaskResult` gains a `warning` field** (`string | null`). `formatBulkResult` prints it
+  indented under the task line. Consumers destructuring `TaskResult` are unaffected; anyone
+  constructing one now has to supply the field.
+
+
 
 ### Changed -- licence: MIT to Apache-2.0
 

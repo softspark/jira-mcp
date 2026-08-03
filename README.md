@@ -4,17 +4,16 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.7.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.8.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.7.0
+## What's New in v1.8.0
 
-- **Licence: MIT to Apache-2.0.** Still permissive -- fork it, modify it, ship it commercially. What changes is what a redistributor owes back: the contents of [NOTICE](NOTICE) must travel with any redistribution (§4d), modified files must say they were modified (§4b), plus an express patent grant and a trademark reservation. Releases up to v1.6.0 stay available under MIT; nothing already granted is revoked.
-- **Attribution reaches the published bundles.** npm ships `dist/`, not `src/`, and the build minifies away every comment -- so the SPDX headers added to 165 source files never reach a consumer. A build banner carries the licence into `dist/index.js` and `dist/cli.js` instead, and a test asserts both entries keep it.
-- **Licensing gate in `npm test`** -- `tests/licensing.test.ts`, 8 assertions covering headers, `LICENSE`, `NOTICE`, npm `files`, and the build banner. Release SOP gains Phase 4.7 running the same gate before tagging.
-- **Release SOP hardened** -- tag placement is now asserted before the push, and `git push --tags` is replaced with a single-tag push by full ref. A `--tags` push is how a sibling project silently skipped a publish.
+- **`status` takes a path, not just a name.** `"status": ["On hold", "Open"]` walks the transitions in order. Jira only ever exposes the transitions out of an issue's *current* status, so a target that is not directly reachable from the initial status was previously impossible to set -- which is exactly how workflows that gate `Open` behind a `Reopen` transition behave.
+- **Failed transitions stop being silent.** The old code caught every transition error and moved on: issue created, status ignored, run reports `failed: 0`. It now returns a `warning` naming the status that failed and listing what was reachable instead, surfaced per task and aggregated into `create_monthly_tasks` output.
+- **`TaskResult.warning`** -- new `string | null` field for problems that occur after the issue is already written. `formatBulkResult` prints it under the task line.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
