@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.8.1 -- Duplicate Detection (2026-08-03)
+
+### Fixed
+
+- **Duplicate detection never matched anything.** `findExistingTask` searched with
+  `summary = "..."`, but `summary` is a text field and JQL only supports `~` on it.
+  Jira answers `=` with an empty result set instead of an error, so every lookup
+  reported "not found": `update_existing` never updated, and re-running a bulk config
+  created a second copy of every task. The lookup now uses a quoted `~` phrase and
+  compares the returned summary exactly, since `~` is a fuzzy match. Found by running
+  a config twice against a live instance and getting a duplicate issue.
+
 ## v1.8.0 -- Status Paths (2026-08-03)
 
 ### Added
