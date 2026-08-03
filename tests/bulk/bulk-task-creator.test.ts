@@ -410,6 +410,49 @@ describe('BulkTaskCreator', () => {
   });
 
   // -----------------------------------------------------------------------
+  // 9b. Duplicate lookup JQL
+  // -----------------------------------------------------------------------
+
+  it('looks up duplicates with a quoted ~ phrase, never =', async () => {
+    const config = buildConfig({}, [{ summary: 'Prace administracyjne 08.2026' }]);
+
+    await creator.execute(config);
+
+    const jql = connector.searchIssues.mock.calls[0]![0] as string;
+    // `summary = "..."` is accepted by Jira but matches nothing, so every
+    // duplicate check silently reported "not found".
+    expect(jql).not.toMatch(/summary\s*=/);
+    expect(jql).toBe(
+      'project = "PROJ" AND summary ~ "\\"Prace administracyjne 08.2026\\""',
+    );
+  });
+
+  it('ignores fuzzy matches whose summary is not identical', async () => {
+    // `~` is a text match, so Jira also returns near-misses
+    connector.searchIssues.mockResolvedValue([
+      {
+        key: 'PROJ-50',
+        summary: 'Prace administracyjne 07.2026',
+        status: 'Open',
+        assignee: null,
+        priority: 'Medium',
+        issueType: 'Task',
+        created: '2026-07-01',
+        updated: '2026-07-01',
+        projectKey: 'PROJ',
+        epicLink: null,
+      } satisfies JiraIssue,
+    ]);
+
+    const config = buildConfig({}, [{ summary: 'Prace administracyjne 08.2026' }]);
+
+    const result = await creator.execute(config);
+
+    expect(result.results[0]!.action).toBe('created');
+    expect(connector.createIssue).toHaveBeenCalledOnce();
+  });
+
+  // -----------------------------------------------------------------------
   // 10. Status transition
   // -----------------------------------------------------------------------
 

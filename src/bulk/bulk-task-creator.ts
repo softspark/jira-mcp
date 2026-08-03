@@ -505,6 +505,12 @@ export class BulkTaskCreator {
   /**
    * Search for an existing task by summary in the project.
    *
+   * `summary` is a text field, so JQL only supports `~` on it -- `=` matches
+   * nothing at all and returns an empty result set rather than an error, which
+   * silently turns every duplicate check into "not found". The phrase is
+   * therefore quoted inside the `~` operand to keep the words together, and the
+   * result is compared exactly here because `~` is a fuzzy text match.
+   *
    * @param summary    - Exact summary text to match.
    * @param projectKey - Jira project key.
    * @returns Issue key if found, `null` otherwise.
@@ -514,15 +520,12 @@ export class BulkTaskCreator {
     projectKey: string,
   ): Promise<string | null> {
     try {
-      const escapedSummary = escapeJql(summary);
-      const jql = `project = "${projectKey}" AND summary = "${escapedSummary}"`;
+      const phrase = escapeJql(`"${summary}"`);
+      const jql = `project = "${escapeJql(projectKey)}" AND summary ~ "${phrase}"`;
 
       const issues = await this.connector.searchIssues(jql);
-      const first = issues[0];
-      if (first) {
-        return first.key;
-      }
-      return null;
+      const exact = issues.find((issue) => issue.summary === summary);
+      return exact?.key ?? null;
     } catch {
       // Search failure treated as "not found" -- task will be created
       return null;
