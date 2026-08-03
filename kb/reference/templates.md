@@ -198,6 +198,22 @@ If `id` matches a built-in, the imported file becomes the active template global
 }
 ```
 
+### Status Paths
+
+`status` accepts a single name or an ordered array of names.
+
+Jira only exposes the transitions available from an issue's *current* status, so a status that is not directly reachable from the issue's initial status cannot be set in one step. Pass the intermediate statuses as an array and each one is applied in order:
+
+```json
+"status": ["On hold", "Open"]
+```
+
+This is required on workflows where the only way into `Open` is a `Reopen` transition out of `On hold`.
+
+When a step cannot be applied the issue is still created (or updated) and the problem is reported as a `warning` on the task result, listing the statuses that *were* reachable at the point it stopped. Check `warnings` in the `create_monthly_tasks` output — a silent no-op used to be the failure mode here.
+
+Use `get_task_statuses` on an existing issue to discover the transitions available from a given status before writing the path.
+
 ### Date Placeholders
 
 Supported placeholders in bulk JSON:

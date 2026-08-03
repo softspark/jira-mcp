@@ -54,6 +54,8 @@ interface ConfigSummary {
     readonly previewed: number;
   };
   readonly dry_run?: boolean;
+  /** Non-fatal per-task problems, e.g. a status the workflow rejected. */
+  readonly warnings?: readonly string[];
 }
 
 function shapeConfig(config: MonthlyConfigResult): ConfigSummary {
@@ -67,12 +69,17 @@ function shapeConfig(config: MonthlyConfigResult): ConfigSummary {
   }
 
   if (config.result) {
+    const warnings = config.result.results
+      .filter((task) => task.warning !== null)
+      .map((task) => `${task.issue_key ?? task.summary}: ${task.warning ?? ''}`);
+
     return {
       project_key: config.projectKey,
       config_path: config.configPath,
       status: 'success',
       summary: config.result.summary,
       dry_run: config.result.dry_run,
+      ...(warnings.length > 0 ? { warnings } : {}),
     };
   }
 

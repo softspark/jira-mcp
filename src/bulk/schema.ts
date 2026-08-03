@@ -25,7 +25,14 @@ export const TaskConfigSchema = z
       .default('Medium'),
     labels: z.array(z.string()).default([]),
     estimate_hours: z.number().positive('Estimate must be positive').optional(),
-    status: z.string().optional(),
+    // A string performs one transition; an array walks them in order, which
+    // is needed when the target status is not directly reachable.
+    status: z
+      .union([
+        z.string(),
+        z.array(z.string().min(1)).min(1, 'Status path must not be empty'),
+      ])
+      .optional(),
   })
   // Allow localized fields: summary_en, summary_de, description_fr, etc.
   .catchall(z.string().optional());

@@ -418,10 +418,82 @@ describe('BulkTaskCreator', () => {
       { summary: 'Task with status', status: 'In Progress' },
     ]);
 
-    await creator.execute(config);
+    const result = await creator.execute(config);
 
     expect(connector.getTransitions).toHaveBeenCalledWith('PROJ-1');
     expect(connector.doTransition).toHaveBeenCalledWith('PROJ-1', '21');
+    expect(result.results[0]!.warning).toBeNull();
+  });
+
+  it('walks a multi-step status path in order', async () => {
+    // "Open" is only reachable through "On hold", which is how Jira
+    // workflows with a Reopen-only entry into Open behave.
+    connector.getTransitions
+      .mockResolvedValueOnce([
+        { id: '21', name: 'Hold', toStatus: 'On hold' },
+        { id: '11', name: 'Estimate', toStatus: 'IN ESTIMATION' },
+      ])
+      .mockResolvedValueOnce([
+        { id: '261', name: 'Reopen', toStatus: 'Open' },
+      ]);
+
+    const config = buildConfig({}, [
+      { summary: 'Two hops', status: ['On hold', 'Open'] },
+    ]);
+
+    const result = await creator.execute(config);
+
+    expect(connector.doTransition).toHaveBeenNthCalledWith(1, 'PROJ-1', '21');
+    expect(connector.doTransition).toHaveBeenNthCalledWith(2, 'PROJ-1', '261');
+    expect(result.results[0]!.action).toBe('created');
+    expect(result.results[0]!.warning).toBeNull();
+  });
+
+  it('reports a warning when the requested status is unreachable', async () => {
+    connector.getTransitions.mockResolvedValue([
+      { id: '21', name: 'Hold', toStatus: 'On hold' },
+    ]);
+
+    const config = buildConfig({}, [
+      { summary: 'Unreachable', status: 'Open' },
+    ]);
+
+    const result = await creator.execute(config);
+
+    // The issue is still created -- only the transition is reported
+    expect(result.results[0]!.action).toBe('created');
+    expect(result.summary.created).toBe(1);
+    expect(result.results[0]!.warning).toContain('"Open" is not reachable');
+    expect(result.results[0]!.warning).toContain('On hold');
+    expect(connector.doTransition).not.toHaveBeenCalled();
+  });
+
+  it('reports which step of a status path failed', async () => {
+    connector.getTransitions
+      .mockResolvedValueOnce([{ id: '21', name: 'Hold', toStatus: 'On hold' }])
+      .mockResolvedValueOnce([{ id: '99', name: 'Done', toStatus: 'Done' }]);
+
+    const config = buildConfig({}, [
+      { summary: 'Broken path', status: ['On hold', 'Open'] },
+    ]);
+
+    const result = await creator.execute(config);
+
+    expect(connector.doTransition).toHaveBeenCalledTimes(1);
+    expect(result.results[0]!.warning).toContain('stopped after reaching "On hold"');
+  });
+
+  it('reports a warning when a transition call fails', async () => {
+    connector.doTransition.mockRejectedValue(new Error('403 Forbidden'));
+
+    const config = buildConfig({}, [
+      { summary: 'Rejected transition', status: 'In Progress' },
+    ]);
+
+    const result = await creator.execute(config);
+
+    expect(result.results[0]!.action).toBe('created');
+    expect(result.results[0]!.warning).toContain('403 Forbidden');
   });
 
   // -----------------------------------------------------------------------

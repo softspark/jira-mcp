@@ -30,6 +30,9 @@ export function formatBulkResult(result: BulkResult): string {
     const key = task.issue_key ?? '(no key)';
     const errMsg = task.error ? ` - ${task.error}` : '';
     lines.push(`  [${status}] ${key}: ${task.summary}${errMsg}`);
+    if (task.warning) {
+      lines.push(`    ! ${task.warning}`);
+    }
   }
 
   // Summary section

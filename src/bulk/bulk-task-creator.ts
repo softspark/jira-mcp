@@ -276,6 +276,7 @@ export class BulkTaskCreator {
         action: 'preview',
         error: null,
         url: null,
+        warning: null,
       };
     }
 
@@ -288,7 +289,7 @@ export class BulkTaskCreator {
 
       if (existingKey !== null) {
         if (options.update_existing) {
-          await this.updateTask(
+          const warning = await this.updateTask(
             existingKey,
             task,
             epicKey,
@@ -301,6 +302,7 @@ export class BulkTaskCreator {
             action: 'updated',
             error: null,
             url: `${this.connector.instanceUrl}/browse/${existingKey}`,
+            warning,
           };
         }
 
@@ -311,6 +313,7 @@ export class BulkTaskCreator {
           action: 'skipped',
           error: null,
           url: `${this.connector.instanceUrl}/browse/${existingKey}`,
+          warning: null,
         };
       }
 
@@ -323,9 +326,9 @@ export class BulkTaskCreator {
       );
 
       // Transition to target status if specified
-      if (task.status) {
-        await this.setStatus(created.key, task.status);
-      }
+      const warning = task.status
+        ? await this.applyStatusPath(created.key, task.status)
+        : null;
 
       // Force re-assign to override Jira automation rules
       if (options.force_reassign && task.assignee) {
@@ -342,6 +345,7 @@ export class BulkTaskCreator {
         action: 'created',
         error: null,
         url: created.url,
+        warning,
       };
     } catch (error: unknown) {
       const message =
@@ -352,6 +356,7 @@ export class BulkTaskCreator {
         action: 'failed',
         error: message,
         url: null,
+        warning: null,
       };
     }
   }
@@ -435,6 +440,8 @@ export class BulkTaskCreator {
    * @param epicKey          - Parent epic key.
    * @param epicLinkFieldId  - Custom field ID for Epic Link.
    * @param options          - Bulk options (language, etc.).
+   * @returns A warning when the requested status could not be applied,
+   *          `null` otherwise.
    */
   private async updateTask(
     issueKey: string,
@@ -442,7 +449,7 @@ export class BulkTaskCreator {
     epicKey: string,
     epicLinkFieldId: string | null,
     options: BulkOptions,
-  ): Promise<void> {
+  ): Promise<string | null> {
     const effectiveDescription = this.selectDescription(
       task,
       options.language,
@@ -485,8 +492,10 @@ export class BulkTaskCreator {
 
     // Transition status if requested
     if (task.status) {
-      await this.setStatus(issueKey, task.status);
+      return this.applyStatusPath(issueKey, task.status);
     }
+
+    return null;
   }
 
   // -----------------------------------------------------------------------
@@ -525,31 +534,63 @@ export class BulkTaskCreator {
   // -----------------------------------------------------------------------
 
   /**
-   * Transition an issue to the requested status.
+   * Walk an issue through a sequence of statuses.
    *
-   * Fetches available transitions and executes the one whose target status
-   * name matches (case-insensitive). Silently skips if no matching
-   * transition is available.
+   * Each step fetches the transitions available from the issue's current
+   * status and executes the one whose target status name matches
+   * (case-insensitive). A single status name is treated as a one-step path.
    *
-   * @param issueKey   - Issue to transition.
-   * @param statusName - Target status name.
+   * Multi-step paths exist because Jira only exposes transitions out of the
+   * current status, so a status that is not directly reachable has to be
+   * reached through the intermediate ones (e.g. `["On hold", "Open"]`).
+   *
+   * Never throws -- the issue itself is already written by this point, so a
+   * failed transition is reported as a warning instead of failing the task.
+   *
+   * @param issueKey - Issue to transition.
+   * @param status   - Target status name, or an ordered path of names.
+   * @returns A warning message when the path could not be completed,
+   *          `null` when every step succeeded.
    */
-  private async setStatus(
+  private async applyStatusPath(
     issueKey: string,
-    statusName: string,
-  ): Promise<void> {
-    try {
-      const transitions = await this.connector.getTransitions(issueKey);
+    status: string | readonly string[],
+  ): Promise<string | null> {
+    const path = typeof status === 'string' ? [status] : status;
+
+    for (const [index, statusName] of path.entries()) {
+      let transitions;
+      try {
+        transitions = await this.connector.getTransitions(issueKey);
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : String(error);
+        return `Could not read transitions while moving to "${statusName}": ${message}`;
+      }
+
       const match = transitions.find(
         (t) => t.toStatus.toLowerCase() === statusName.toLowerCase(),
       );
 
-      if (match) {
-        await this.connector.doTransition(issueKey, match.id);
+      if (!match) {
+        const available = transitions.map((t) => t.toStatus).join(', ');
+        const reached =
+          index === 0
+            ? ''
+            : ` (stopped after reaching "${path[index - 1] ?? ''}")`;
+        return `Status "${statusName}" is not reachable${reached}. Available from here: ${available || '(none)'}`;
       }
-    } catch {
-      // Transition failure is non-fatal -- the task was already created
+
+      try {
+        await this.connector.doTransition(issueKey, match.id);
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : String(error);
+        return `Transition "${match.name}" to "${statusName}" failed: ${message}`;
+      }
     }
+
+    return null;
   }
 
   // -----------------------------------------------------------------------

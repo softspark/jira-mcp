@@ -33,8 +33,15 @@ export interface TaskConfig {
   readonly labels?: readonly string[];
   /** Time estimate in hours. */
   readonly estimate_hours?: number;
-  /** Initial status to transition to after creation. */
-  readonly status?: string;
+  /**
+   * Initial status to transition to after creation.
+   *
+   * A single name performs one transition from the issue's initial status.
+   * An array performs the transitions in order, which is required when the
+   * target status is not directly reachable (e.g. `["On hold", "Open"]` on
+   * workflows where `Open` is only reachable via a `Reopen` transition).
+   */
+  readonly status?: string | readonly string[];
 }
 
 /**
@@ -69,6 +76,11 @@ export interface TaskResult {
   readonly action: TaskAction;
   readonly error: string | null;
   readonly url: string | null;
+  /**
+   * Non-fatal problem encountered after the issue itself was written,
+   * such as a requested status that the workflow would not allow.
+   */
+  readonly warning: string | null;
 }
 
 /**
