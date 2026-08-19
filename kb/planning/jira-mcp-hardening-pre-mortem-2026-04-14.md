@@ -6,6 +6,7 @@ status: planned
 created: "2026-04-14"
 last_updated: "2026-04-14"
 related_plan: "kb/planning/jira-mcp-hardening-plan-2026-04-14.md"
+description: "A plan to prevent `jira-mcp` release failures, SDK upgrade regressions, and documentation drift during hardening. Cause: lack of enforced quality gates, boundary tests, and docs parity checks in CI."
 ---
 
 # Pre-Mortem: `jira-mcp` Hardening & Market Readiness

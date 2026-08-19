@@ -5,6 +5,7 @@ service: jira-mcp
 status: proposed
 created: "2026-04-14"
 last_updated: "2026-04-14"
+description: "Release hardening and boundary tests are prioritized over refactoring `src/server.ts`, because current risks include release hardening, critical boundary tests, and `JiraConnector` resilience."
 ---
 
 # ADR-0001: Hardening Before Refactor for `jira-mcp`

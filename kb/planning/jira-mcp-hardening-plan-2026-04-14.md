@@ -11,6 +11,7 @@ related_docs:
   - "kb/planning/jira-mcp-hardening-success-criteria-2026-04-14.md"
   - "kb/planning/jira-mcp-hardening-pre-mortem-2026-04-14.md"
   - "kb/decisions/ADR-0001-jira-mcp-hardening-priorities.md"
+description: "Release hardening and boundary-path testing for `jira-mcp` are incomplete, causing potential publish failures and Jira API resilience gaps. Cause: `publish.yml` skips full quality gates and `vitest` excludes critical modules."
 ---
 
 # Plan: `jira-mcp` Hardening & Market Readiness

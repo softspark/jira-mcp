@@ -6,6 +6,7 @@ status: planned
 created: "2026-04-14"
 last_updated: "2026-04-14"
 related_plan: "kb/planning/jira-mcp-hardening-plan-2026-04-14.md"
+description: "All deliverables for `jira-mcp` hardening and market readiness are tracked, with automated checks and quality standards defined for code, tests, and documentation. Status: D6 and D7 are partially complete, with CI integration and security fixes pending."
 ---
 
 # Success Criteria: `jira-mcp` Hardening & Market Readiness
