@@ -4,16 +4,17 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.9.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.10.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.9.0
+## What's New in v1.10.0
 
+- **`update_task` sets the remaining estimate.** `remaining_estimate` writes `timetracking.remainingEstimate`. Jira holds the two estimates apart, so lowering a parent's original estimate left remaining untouched and any report summing remaining kept showing the old total.
 - **Sub-tasks can be created.** `create_task` takes `parent_key`, which sets the Jira `parent` field. `epic_key` writes the Epic Link custom field instead, so a sub-task sent with it came back as `Issue type is a sub-task but parent issue key or id not specified`.
-- **Original estimate is settable.** `create_task` and `update_task` take `original_estimate` and write `timetracking.originalEstimate`. Estimates previously had to be typed into the Jira UI by hand -- `log_task_time` records work already done, which is a separate field.
-- **One time format everywhere.** `original_estimate` goes through the same parser as `log_task_time`: `"2h"`, `"30m"`, `"2h 30m"`, and days are rejected.
+- **Original estimate is settable.** `create_task` and `update_task` take `original_estimate` and write `timetracking.originalEstimate`. `log_task_time` records work already done, which is a separate field.
+- **One time format everywhere.** Estimates go through the same parser as `log_task_time`: `"2h"`, `"30m"`, `"2h 30m"`, and days are rejected.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -97,7 +98,7 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `sync_tasks` | Sync tasks from Jira to local cache | `project_key?`, `jql?` |
 | `read_cached_tasks` | Read tasks from cache without hitting Jira | `task_key?` |
 | `update_task_status` | Change task status via workflow transition | `task_key`, `status` |
-| `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?`, `original_estimate?` |
+| `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?`, `original_estimate?`, `remaining_estimate?` |
 | `add_task_comment` | Add a markdown comment (auto-converted to ADF) | `task_key`, `comment`, `user_approved` |
 | `delete_task` | Delete a task, only when the authenticated user is the task creator | `task_key`, `user_approved` |
 | `delete_comment` | Delete a comment, only when the authenticated user is the comment author | `task_key`, `comment_id`, `user_approved` |

@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.10.0 -- Remaining Estimate (2026-09-01)
+
+### Added
+
+- **`remaining_estimate` in `update_task`** -- writes `timetracking.remainingEstimate`.
+  Jira keeps the two estimates independent: setting `original_estimate` on a parent
+  issue leaves its remaining estimate at the old value, so a report that sums
+  remaining still showed the pre-edit total. Setting one field does not disturb
+  the other, and both can be sent in a single call. Same format and day rejection
+  as `original_estimate`.
+
 ## v1.9.0 -- Sub-tasks and Estimates (2026-09-01)
 
 ### Added
