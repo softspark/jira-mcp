@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.9.0 -- Sub-tasks and Estimates (2026-09-01)
+
+### Added
+
+- **`parent_key` in `create_task`** -- sets the Jira `parent` field so sub-tasks can be
+  created at all. `epic_key` resolves the Epic Link custom field, which is a different
+  field, so passing it for a sub-task made Jira answer with
+  `Issue type is a sub-task but parent issue key or id not specified`.
+- **`original_estimate` in `create_task` and `update_task`** -- writes
+  `timetracking.originalEstimate`. Estimates could only be set by hand in the Jira UI
+  before; `log_task_time` logs work already done, which is a different field.
+  Accepts the same `"2h"` / `"30m"` / `"2h 30m"` format as `log_task_time` and rejects
+  days through the same parser.
+
 ## v1.8.1 -- Duplicate Detection (2026-08-03)
 
 ### Fixed

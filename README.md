@@ -4,17 +4,16 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.8.1-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.9.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.8.1
+## What's New in v1.9.0
 
-- **Duplicate detection actually works now.** The lookup used `summary = "..."`, and Jira answers `=` on a text field with an empty result set rather than an error -- so it always reported "not found". `update_existing` never updated anything, and re-running a bulk config duplicated every task. Now a quoted `~` phrase with an exact comparison on the result.
-- **`status` takes a path, not just a name.** `"status": ["On hold", "Open"]` walks the transitions in order. Jira only ever exposes the transitions out of an issue's *current* status, so a target that is not directly reachable from the initial status was previously impossible to set -- which is exactly how workflows that gate `Open` behind a `Reopen` transition behave.
-- **Failed transitions stop being silent.** The old code caught every transition error and moved on: issue created, status ignored, run reports `failed: 0`. It now returns a `warning` naming the status that failed and listing what was reachable instead, surfaced per task and aggregated into `create_monthly_tasks` output.
-- **`TaskResult.warning`** -- new `string | null` field for problems that occur after the issue is already written. `formatBulkResult` prints it under the task line.
+- **Sub-tasks can be created.** `create_task` takes `parent_key`, which sets the Jira `parent` field. `epic_key` writes the Epic Link custom field instead, so a sub-task sent with it came back as `Issue type is a sub-task but parent issue key or id not specified`.
+- **Original estimate is settable.** `create_task` and `update_task` take `original_estimate` and write `timetracking.originalEstimate`. Estimates previously had to be typed into the Jira UI by hand -- `log_task_time` records work already done, which is a separate field.
+- **One time format everywhere.** `original_estimate` goes through the same parser as `log_task_time`: `"2h"`, `"30m"`, `"2h 30m"`, and days are rejected.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -98,7 +97,7 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `sync_tasks` | Sync tasks from Jira to local cache | `project_key?`, `jql?` |
 | `read_cached_tasks` | Read tasks from cache without hitting Jira | `task_key?` |
 | `update_task_status` | Change task status via workflow transition | `task_key`, `status` |
-| `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?` |
+| `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?`, `original_estimate?` |
 | `add_task_comment` | Add a markdown comment (auto-converted to ADF) | `task_key`, `comment`, `user_approved` |
 | `delete_task` | Delete a task, only when the authenticated user is the task creator | `task_key`, `user_approved` |
 | `delete_comment` | Delete a comment, only when the authenticated user is the comment author | `task_key`, `comment_id`, `user_approved` |
@@ -111,7 +110,7 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `list_comment_templates` | List available comment templates | `category?` |
 | `list_task_templates` | List available task templates for `create_task` | — |
 | `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?`, `user_approved` |
-| `create_task` | Create a new Jira issue with explicit fields or a task template | `project_key`, `summary?`, `template_id?`, `variables?`, `description?`, `assignee_email?`, `labels?`, `epic_key?` |
+| `create_task` | Create a new Jira issue with explicit fields or a task template | `project_key`, `summary?`, `template_id?`, `variables?`, `description?`, `assignee_email?`, `labels?`, `epic_key?`, `parent_key?`, `original_estimate?` |
 | `search_tasks` | Search Jira issues with JQL (no caching) | `jql`, `max_results?`, `project_key?` |
 
 ## Comment Templates
