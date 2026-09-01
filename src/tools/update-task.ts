@@ -6,7 +6,8 @@
  * Tool handler: update_task
  *
  * Updates an existing Jira issue's fields: summary, description,
- * priority, labels, or original estimate. Only provided fields are changed.
+ * priority, labels, original estimate, or remaining estimate. Only provided
+ * fields are changed.
  *
  * @module
  */
@@ -28,6 +29,7 @@ export interface UpdateTaskArgs {
   readonly priority?: string;
   readonly labels?: readonly string[];
   readonly original_estimate?: string;
+  readonly remaining_estimate?: string;
 }
 
 export interface UpdateTaskDeps {
@@ -69,13 +71,23 @@ export async function handleUpdateTask(
       fields['labels'] = args.labels;
     }
 
+    // Jira keeps originalEstimate and remainingEstimate independent: writing one
+    // leaves the other untouched, so only the provided keys are sent.
+    const timetracking: Record<string, string> = {};
     if (args.original_estimate !== undefined) {
       parseTimeSpent(args.original_estimate);
-      fields['timetracking'] = { originalEstimate: args.original_estimate };
+      timetracking['originalEstimate'] = args.original_estimate;
+    }
+    if (args.remaining_estimate !== undefined) {
+      parseTimeSpent(args.remaining_estimate);
+      timetracking['remainingEstimate'] = args.remaining_estimate;
+    }
+    if (Object.keys(timetracking).length > 0) {
+      fields['timetracking'] = timetracking;
     }
 
     if (Object.keys(fields).length === 0) {
-      return failure(new Error('No fields to update. Provide at least one of: summary, description, priority, labels, original_estimate.'));
+      return failure(new Error('No fields to update. Provide at least one of: summary, description, priority, labels, original_estimate, remaining_estimate.'));
     }
 
     await connector.updateIssue(args.task_key, fields);

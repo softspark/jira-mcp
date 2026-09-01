@@ -117,4 +117,47 @@ describe('handleUpdateTask', () => {
     const connector = (deps.pool.getConnector as ReturnType<typeof vi.fn>).mock.results[0]?.value;
     expect(connector.updateIssue).not.toHaveBeenCalled();
   });
+  it('updates the remaining estimate', async () => {
+    const deps = makeDeps();
+    const result = await handleUpdateTask(
+      { task_key: 'PROJ-1', remaining_estimate: '7h' },
+      deps,
+    );
+
+    expect(result.content[0]?.text).toContain('timetracking');
+    const connector = (deps.pool.getConnector as ReturnType<typeof vi.fn>).mock.results[0]?.value;
+    expect(connector.updateIssue).toHaveBeenCalledWith(
+      'PROJ-1',
+      expect.objectContaining({ timetracking: { remainingEstimate: '7h' } }),
+    );
+  });
+
+  it('sends both estimates in one timetracking object', async () => {
+    const deps = makeDeps();
+    await handleUpdateTask(
+      { task_key: 'PROJ-1', original_estimate: '7h', remaining_estimate: '7h' },
+      deps,
+    );
+
+    const connector = (deps.pool.getConnector as ReturnType<typeof vi.fn>).mock.results[0]?.value;
+    expect(connector.updateIssue).toHaveBeenCalledWith(
+      'PROJ-1',
+      expect.objectContaining({
+        timetracking: { originalEstimate: '7h', remainingEstimate: '7h' },
+      }),
+    );
+  });
+
+  it('rejects a remaining estimate expressed in days', async () => {
+    const deps = makeDeps();
+    const result = await handleUpdateTask(
+      { task_key: 'PROJ-1', remaining_estimate: '1d' },
+      deps,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('Days (d) not supported');
+    const connector = (deps.pool.getConnector as ReturnType<typeof vi.fn>).mock.results[0]?.value;
+    expect(connector.updateIssue).not.toHaveBeenCalled();
+  });
 });

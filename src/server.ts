@@ -324,6 +324,7 @@ export async function startServer(): Promise<void> {
             priority: asOptionalString(args['priority']),
             labels: asOptionalStringArray(args['labels']),
             original_estimate: asOptionalString(args['original_estimate']),
+            remaining_estimate: asOptionalString(args['remaining_estimate']),
           },
           { pool },
         );

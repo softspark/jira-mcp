@@ -290,6 +290,7 @@ Update fields on an existing Jira issue. Only fields that are explicitly provide
 | `priority` | string | No | — | Priority name (e.g. `"High"`, `"Medium"`, `"Low"`). |
 | `labels` | array of string | No | — | Replacement label list. Replaces all existing labels on the issue. |
 | `original_estimate` | string | No | — | New original estimate as `"2h"`, `"30m"`, or `"2h 30m"`. Days are rejected. |
+| `remaining_estimate` | string | No | — | New remaining estimate, same format. Independent of `original_estimate`: writing one leaves the other unchanged. |
 
 **Input example**
 

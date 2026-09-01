@@ -388,7 +388,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'update_task',
     description:
-      'Update an existing Jira issue, including its original estimate. Only provided fields are changed; omitted fields are left untouched.',
+      'Update an existing Jira issue, including its original and remaining estimates. Only provided fields are changed; omitted fields are left untouched.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -418,6 +418,11 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           type: 'string',
           description:
             'New original estimate in format "2h", "30m", or "2h 30m". Days are not supported.',
+        },
+        remaining_estimate: {
+          type: 'string',
+          description:
+            'New remaining estimate in format "2h", "30m", or "2h 30m". Days are not supported. Independent of original_estimate -- setting one leaves the other unchanged.',
         },
       },
       required: ['task_key'],
