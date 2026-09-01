@@ -255,4 +255,91 @@ describe('handleCreateTask', () => {
     expect(fields['labels']).toEqual(['bug']);
     expect(fields['description']).toBeDefined();
   });
+  it('creates a sub-task with parent_key', async () => {
+    const { pool, cache, connector, taskRegistry } = setupDeps();
+    connector.createIssue.mockResolvedValue({
+      key: 'PROJ-71',
+      id: '10071',
+      url: 'https://test.atlassian.net/browse/PROJ-71',
+    });
+
+    const result = await handleCreateTask(
+      {
+        project_key: 'PROJ',
+        summary: 'Migrate storage',
+        type: 'Sub-task',
+        parent_key: 'PROJ-69',
+      },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
+    );
+
+    expect(parseResult(result)['success']).toBe(true);
+    const fields = connector.createIssue.mock.calls[0][0] as Record<string, unknown>;
+    expect(fields['parent']).toEqual({ key: 'PROJ-69' });
+    expect(fields['issuetype']).toEqual({ name: 'Sub-task' });
+  });
+
+  it('creates a task with original_estimate', async () => {
+    const { pool, cache, connector, taskRegistry } = setupDeps();
+    connector.createIssue.mockResolvedValue({
+      key: 'PROJ-72',
+      id: '10072',
+      url: 'https://test.atlassian.net/browse/PROJ-72',
+    });
+
+    await handleCreateTask(
+      { project_key: 'PROJ', summary: 'Estimated task', original_estimate: '2h 30m' },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
+    );
+
+    const fields = connector.createIssue.mock.calls[0][0] as Record<string, unknown>;
+    expect(fields['timetracking']).toEqual({ originalEstimate: '2h 30m' });
+  });
+
+  it('rejects an original_estimate expressed in days', async () => {
+    const { pool, cache, connector, taskRegistry } = setupDeps();
+
+    const result = await handleCreateTask(
+      { project_key: 'PROJ', summary: 'Bad estimate', original_estimate: '1d' },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('Days (d) not supported');
+    expect(connector.createIssue).not.toHaveBeenCalled();
+  });
+
+  it('omits parent and timetracking when not requested', async () => {
+    const { pool, cache, connector, taskRegistry } = setupDeps();
+    connector.createIssue.mockResolvedValue({
+      key: 'PROJ-73',
+      id: '10073',
+      url: 'https://test.atlassian.net/browse/PROJ-73',
+    });
+
+    await handleCreateTask(
+      { project_key: 'PROJ', summary: 'Plain task' },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
+    );
+
+    const fields = connector.createIssue.mock.calls[0][0] as Record<string, unknown>;
+    expect(fields['parent']).toBeUndefined();
+    expect(fields['timetracking']).toBeUndefined();
+  });
 });

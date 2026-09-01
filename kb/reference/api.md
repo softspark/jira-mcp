@@ -289,6 +289,7 @@ Update fields on an existing Jira issue. Only fields that are explicitly provide
 | `description` | string | No | — | New description in markdown format. Converted to ADF before submission. |
 | `priority` | string | No | — | Priority name (e.g. `"High"`, `"Medium"`, `"Low"`). |
 | `labels` | array of string | No | — | Replacement label list. Replaces all existing labels on the issue. |
+| `original_estimate` | string | No | — | New original estimate as `"2h"`, `"30m"`, or `"2h 30m"`. Days are rejected. |
 
 **Input example**
 
@@ -601,7 +602,9 @@ Create a new Jira issue with either explicit fields or a registered task templat
 | `priority` | string | No | `"Medium"` | Priority name. |
 | `assignee_email` | string | No | — | Email of the assignee. |
 | `labels` | array of string | No | — | Labels to apply to the issue. |
-| `epic_key` | string | No | — | Epic issue key. |
+| `epic_key` | string | No | — | Epic issue key. Writes the Epic Link custom field. |
+| `parent_key` | string | No | — | Parent issue key. Writes the `parent` field, which Jira requires for sub-task issue types. |
+| `original_estimate` | string | No | — | Original estimate as `"2h"`, `"30m"`, or `"2h 30m"`. Days are rejected. |
 
 **Input example (explicit fields)**
 

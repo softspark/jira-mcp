@@ -297,7 +297,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'create_task',
     description:
-      'Create a new Jira issue with either explicit fields or a registered task template, plus optional assignee, labels, and epic link.',
+      'Create a new Jira issue with either explicit fields or a registered task template, plus optional assignee, labels, epic link, sub-task parent, and original estimate.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -347,6 +347,16 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           description:
             'Epic issue key to link this issue under (e.g. "PROJ-100").',
         },
+        parent_key: {
+          type: 'string',
+          description:
+            'Parent issue key (e.g. "PROJ-69"). Required when type is a sub-task; Jira rejects sub-task creation without it.',
+        },
+        original_estimate: {
+          type: 'string',
+          description:
+            'Original estimate in format "2h", "30m", or "2h 30m". Days are not supported.',
+        },
       },
       required: ['project_key'],
     },
@@ -378,7 +388,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'update_task',
     description:
-      'Update an existing Jira issue. Only provided fields are changed; omitted fields are left untouched.',
+      'Update an existing Jira issue, including its original estimate. Only provided fields are changed; omitted fields are left untouched.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -403,6 +413,11 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           type: 'array',
           items: { type: 'string' },
           description: 'New set of label strings (replaces existing labels).',
+        },
+        original_estimate: {
+          type: 'string',
+          description:
+            'New original estimate in format "2h", "30m", or "2h 30m". Days are not supported.',
         },
       },
       required: ['task_key'],

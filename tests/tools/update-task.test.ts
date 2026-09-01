@@ -90,4 +90,31 @@ describe('handleUpdateTask', () => {
     expect(result.content[0]?.text).toContain('description');
     expect(result.content[0]?.text).toContain('priority');
   });
+  it('updates the original estimate', async () => {
+    const deps = makeDeps();
+    const result = await handleUpdateTask(
+      { task_key: 'PROJ-1', original_estimate: '1h' },
+      deps,
+    );
+
+    expect(result.content[0]?.text).toContain('timetracking');
+    const connector = (deps.pool.getConnector as ReturnType<typeof vi.fn>).mock.results[0]?.value;
+    expect(connector.updateIssue).toHaveBeenCalledWith(
+      'PROJ-1',
+      expect.objectContaining({ timetracking: { originalEstimate: '1h' } }),
+    );
+  });
+
+  it('rejects an original estimate expressed in days', async () => {
+    const deps = makeDeps();
+    const result = await handleUpdateTask(
+      { task_key: 'PROJ-1', original_estimate: '2d' },
+      deps,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('Days (d) not supported');
+    const connector = (deps.pool.getConnector as ReturnType<typeof vi.fn>).mock.results[0]?.value;
+    expect(connector.updateIssue).not.toHaveBeenCalled();
+  });
 });

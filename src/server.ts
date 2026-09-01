@@ -297,6 +297,8 @@ export async function startServer(): Promise<void> {
             assignee_email: asOptionalString(args['assignee_email']),
             labels: asOptionalStringArray(args['labels']),
             epic_key: asOptionalString(args['epic_key']),
+            parent_key: asOptionalString(args['parent_key']),
+            original_estimate: asOptionalString(args['original_estimate']),
           },
           { pool, cacheManager, taskTemplateRegistry: taskRegistry },
         );
@@ -321,6 +323,7 @@ export async function startServer(): Promise<void> {
             description: asOptionalString(args['description']),
             priority: asOptionalString(args['priority']),
             labels: asOptionalStringArray(args['labels']),
+            original_estimate: asOptionalString(args['original_estimate']),
           },
           { pool },
         );

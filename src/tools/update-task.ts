@@ -6,7 +6,7 @@
  * Tool handler: update_task
  *
  * Updates an existing Jira issue's fields: summary, description,
- * priority, or labels. Only provided fields are changed.
+ * priority, labels, or original estimate. Only provided fields are changed.
  *
  * @module
  */
@@ -15,6 +15,7 @@ import type { InstancePool } from '../connector/instance-pool.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure } from './helpers.js';
 import { markdownToAdf } from '../adf/markdown-to-adf.js';
+import { parseTimeSpent } from '../connector/time-parser.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +27,7 @@ export interface UpdateTaskArgs {
   readonly description?: string;
   readonly priority?: string;
   readonly labels?: readonly string[];
+  readonly original_estimate?: string;
 }
 
 export interface UpdateTaskDeps {
@@ -67,8 +69,13 @@ export async function handleUpdateTask(
       fields['labels'] = args.labels;
     }
 
+    if (args.original_estimate !== undefined) {
+      parseTimeSpent(args.original_estimate);
+      fields['timetracking'] = { originalEstimate: args.original_estimate };
+    }
+
     if (Object.keys(fields).length === 0) {
-      return failure(new Error('No fields to update. Provide at least one of: summary, description, priority, labels.'));
+      return failure(new Error('No fields to update. Provide at least one of: summary, description, priority, labels, original_estimate.'));
     }
 
     await connector.updateIssue(args.task_key, fields);

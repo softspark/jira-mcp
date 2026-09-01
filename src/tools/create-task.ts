@@ -6,7 +6,8 @@
  * Tool handler: create_task
  *
  * Creates a new Jira issue with optional description (markdown converted
- * to ADF), assignee, labels, priority, and epic link.
+ * to ADF), assignee, labels, priority, epic link, sub-task parent, and
+ * original estimate.
  *
  * @module
  */
@@ -16,6 +17,7 @@ import type { CacheManager } from '../cache/manager.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure } from './helpers.js';
 import { markdownToAdf } from '../adf/markdown-to-adf.js';
+import { parseTimeSpent } from '../connector/time-parser.js';
 import { renderTemplate } from '../templates/renderer.js';
 import type { TaskTemplateRegistry } from '../templates/task-registry.js';
 
@@ -34,6 +36,8 @@ export interface CreateTaskArgs {
   readonly assignee_email?: string;
   readonly labels?: readonly string[];
   readonly epic_key?: string;
+  readonly parent_key?: string;
+  readonly original_estimate?: string;
 }
 
 export interface CreateTaskDeps {
@@ -173,6 +177,17 @@ export async function handleCreateTask(
     if (args.assignee_email) {
       const accountId = await connector.findUser(args.assignee_email);
       fields['assignee'] = { accountId };
+    }
+
+    // Optional sub-task parent (Jira rejects sub-task creation without it)
+    if (args.parent_key) {
+      fields['parent'] = { key: args.parent_key };
+    }
+
+    // Optional original estimate -- validated with the same rules as log_task_time
+    if (args.original_estimate) {
+      parseTimeSpent(args.original_estimate);
+      fields['timetracking'] = { originalEstimate: args.original_estimate };
     }
 
     // Optional epic link
