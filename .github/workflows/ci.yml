@@ -65,7 +65,7 @@ jobs:
           node-version: '22'
       - run: npm ci
       - run: npm run build
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: python3 scripts/validate_counts.py
