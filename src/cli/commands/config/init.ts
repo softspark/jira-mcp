@@ -55,7 +55,7 @@ async function ensureDirectory(
   if (await pathExists(dirPath)) {
     results.push({ path: dirPath, kind: 'directory', action: 'skipped' });
   } else {
-    await mkdir(dirPath, { recursive: true });
+    await mkdir(dirPath, { recursive: true, mode: 0o700 });
     results.push({ path: dirPath, kind: 'directory', action: 'created' });
   }
 }
@@ -101,7 +101,7 @@ export async function handleInit(configDir: string): Promise<readonly InitResult
     results,
     true, // secure: 0o600 permissions
   );
-  await ensureFile(join(configDir, 'state.json'), SKELETON_STATE, results);
+  await ensureFile(join(configDir, 'state.json'), SKELETON_STATE, results, true);
 
   return results;
 }

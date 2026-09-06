@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, writeFile, access } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, access, chmod, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -134,6 +134,15 @@ describe('WorkflowCacheManager.save', () => {
     const loaded = await nestedManager.load();
 
     expect(loaded).not.toBeNull();
+    expect((await stat(join(tempDir, 'a', 'b'))).mode & 0o777).toBe(0o700);
+    expect((await stat(nestedPath)).mode & 0o777).toBe(0o600);
+  });
+
+  it('preserves existing directory permissions while saving a private cache file', async () => {
+    await chmod(tempDir, 0o750);
+    await manager.save(createValidCacheData());
+    expect((await stat(tempDir)).mode & 0o777).toBe(0o750);
+    expect((await stat(cachePath)).mode & 0o777).toBe(0o600);
   });
 
   it('throws CacheCorruptionError for invalid data', async () => {

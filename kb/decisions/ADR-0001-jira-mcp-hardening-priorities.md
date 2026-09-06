@@ -2,13 +2,19 @@
 title: "ADR-0001: Hardening Before Refactor for jira-mcp"
 category: decisions
 service: jira-mcp
+tags: [architecture, hardening, testing, history]
+version: "1.0.0"
 status: proposed
 created: "2026-04-14"
-last_updated: "2026-04-14"
-description: "Release hardening and boundary tests are prioritized over refactoring `src/server.ts`, because current risks include release hardening, critical boundary tests, and `JiraConnector` resilience."
+last_updated: "2026-09-06"
+description: "Historical April 2026 decision proposal prioritizing release hardening, boundary tests and JiraConnector resilience before server refactoring."
 ---
 
 # ADR-0001: Hardening Before Refactor for `jira-mcp`
+
+This record preserves the proposal from 2026-04-14. Current release checks and
+executed evidence are in [the release SOP](../procedures/sop-release.md) and
+[the September verification record](../procedures/release-verification-20260906.md).
 
 ## Status
 Proposed

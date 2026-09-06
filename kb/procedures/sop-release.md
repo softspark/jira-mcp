@@ -3,9 +3,9 @@ title: "SOP: Release Creation"
 category: procedures
 service: jira-mcp
 tags: [sop, release, version, publish, changelog, semver, npm, tag, provenance, supply-chain]
-version: "1.1.0"
+version: "1.11.0"
 created: "2026-04-13"
-last_updated: "2026-07-27"
+last_updated: "2026-09-06"
 description: "Step-by-step release procedure for @softspark/jira-mcp — version bump, changelog, quality gates, supply-chain gates (provenance + id-token), tagging, npm publish via CI, and rollback instructions."
 ---
 

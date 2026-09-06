@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, writeFile, access } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, access, chmod, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -75,6 +75,14 @@ describe('CacheManager.initialize', () => {
 
     await nestedManager.initialize();
     await expect(access(nestedManager.cachePath)).resolves.toBeUndefined();
+    expect((await stat(nestedDir)).mode & 0o777).toBe(0o700);
+    expect((await stat(nestedManager.cachePath)).mode & 0o777).toBe(0o600);
+  });
+
+  it('preserves existing directory permissions during initialization', async () => {
+    await chmod(tempDir, 0o750);
+    await manager.initialize();
+    expect((await stat(tempDir)).mode & 0o777).toBe(0o750);
   });
 });
 

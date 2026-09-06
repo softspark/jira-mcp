@@ -7,6 +7,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.11.0 (release candidate, 2026-09-06)
+
+- Add text, JSON and SARIF audits for local filesystem permissions and shipped hook ownership.
+- Create new configuration/cache directories with mode 0700 and state files with mode 0600.
+- Complete third-party attribution in NOTICE and require the full applicable module and SOP artifact set in CI.
+- Require behavior, tests and documentation in the same pull request; correct the lockfile-based signature verification procedure.
+
 ## v1.10.0 -- Remaining Estimate (2026-09-01)
 
 ### Added

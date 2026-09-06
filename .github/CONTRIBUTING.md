@@ -9,9 +9,10 @@ We welcome bug fixes, new MCP tools/resources, and improvements. This guide expl
 3. **Make your changes** -- follow the conventions below
 4. **Run all checks** locally (see CI Requirements)
 5. **Push** to your fork and open a **Pull Request** against `main`
-6. The maintainer will review, pull the branch locally if needed, adjust documentation, and merge
+6. The maintainer will review the code, tests and documentation together before merging
 
-> **Note:** Documentation updates (README, CHANGELOG, etc.) are handled by the maintainer after merge. You do not need to update these yourself.
+Update affected README, CHANGELOG and KB documentation in the same pull request
+as a behavior change. Include regression tests for the user-visible behavior.
 
 ## Branch Naming
 
@@ -46,8 +47,9 @@ Your PR must pass **all** CI jobs before review. Run them locally:
 # All of these must pass with zero errors:
 npm run typecheck    # tsc --noEmit
 npm run lint         # ESLint (zero warnings)
-npm test             # Vitest test suite
+npm run test:coverage # Vitest suite and 70% coverage gate
 npm run build        # TypeScript compilation (tsup)
+npm run validate:counts # README counts agree with the built project
 ```
 
 CI runs these in parallel on every push/PR to `main`:
@@ -55,10 +57,10 @@ CI runs these in parallel on every push/PR to `main`:
 - **ESLint** (zero errors, zero warnings)
 - **Tests** (ubuntu + macOS matrix)
 - **Build** (tsup)
-- **Validate README counts** (`scripts/validate_counts.py`) — maintained by the project owner
+- **Validate README counts** (`scripts/validate_counts.py`)
 - **Required files check** (LICENSE, CHANGELOG, SECURITY, etc.)
 
-> **Note:** README count validation (`validate:counts`) is enforced by CI but managed by the maintainer. You do not need to update counts in README yourself.
+Keep README counts in sync when adding commands, tools, templates or tests.
 
 ## What to Contribute
 

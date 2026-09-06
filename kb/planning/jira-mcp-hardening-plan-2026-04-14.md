@@ -2,19 +2,25 @@
 title: "Plan: jira-mcp Hardening & Market Readiness"
 category: planning
 service: jira-mcp
+tags: [planning, hardening, release, history]
+version: "1.0.0"
 status: planned
 created: "2026-04-14"
-last_updated: "2026-04-14"
+last_updated: "2026-09-06"
 completion: "90%"
 approval_status: pending
 related_docs:
   - "kb/planning/jira-mcp-hardening-success-criteria-2026-04-14.md"
   - "kb/planning/jira-mcp-hardening-pre-mortem-2026-04-14.md"
   - "kb/decisions/ADR-0001-jira-mcp-hardening-priorities.md"
-description: "Release hardening and boundary-path testing for `jira-mcp` are incomplete, causing potential publish failures and Jira API resilience gaps. Cause: `publish.yml` skips full quality gates and `vitest` excludes critical modules."
+description: "Historical April 2026 hardening plan and its recorded progress, covering publication gates, boundary tests and Jira API resilience."
 ---
 
 # Plan: `jira-mcp` Hardening & Market Readiness
+
+This plan preserves its 2026-04-14 planning state. Current release gates and
+executed checks are recorded in [the release SOP](../procedures/sop-release.md)
+and [the September verification record](../procedures/release-verification-20260906.md).
 
 ## 1. Task Overview
 
@@ -326,4 +332,3 @@ The following items were completed during the initial audit session on 2026-04-1
 | 2026-04-14 | 14:00 | 0% | planned | Plan created after repository audit |
 | 2026-04-14 | 15:00 | 15% | in progress | Security audit fixes (HIGH+MEDIUM+LOW), count validation script, docs parity partial |
 | 2026-04-14 | 16:00 | 90% | in progress | Phase 0-3 complete. Boundary tests (+96), retry/backoff, dep upgrades (TS6, eslint 10, zod 4, @types/node 25). Vitest 4 deferred. Phase 4 (optional refactor) remains. |
-

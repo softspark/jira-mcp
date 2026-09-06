@@ -136,9 +136,9 @@ export const SYSTEM_TASK_TEMPLATES_DIR: string = join(
  *  - ~/.softspark/jira-mcp/templates/tasks/
  */
 export async function ensureGlobalDirs(): Promise<void> {
-  await mkdir(GLOBAL_CONFIG_DIR, { recursive: true });
-  await mkdir(GLOBAL_CACHE_DIR, { recursive: true });
-  await mkdir(GLOBAL_COMMENT_TEMPLATES_DIR, { recursive: true });
-  await mkdir(GLOBAL_TASK_TEMPLATE_DEFINITIONS_DIR, { recursive: true });
-  await mkdir(GLOBAL_TASK_TEMPLATES_DIR, { recursive: true });
+  await mkdir(GLOBAL_CONFIG_DIR, { recursive: true, mode: 0o700 });
+  await mkdir(GLOBAL_CACHE_DIR, { recursive: true, mode: 0o700 });
+  await mkdir(GLOBAL_COMMENT_TEMPLATES_DIR, { recursive: true, mode: 0o700 });
+  await mkdir(GLOBAL_TASK_TEMPLATE_DEFINITIONS_DIR, { recursive: true, mode: 0o700 });
+  await mkdir(GLOBAL_TASK_TEMPLATES_DIR, { recursive: true, mode: 0o700 });
 }

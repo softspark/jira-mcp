@@ -104,7 +104,7 @@ export class WorkflowCacheManager {
       );
     }
 
-    await mkdir(dirname(this.cachePath), { recursive: true });
+    await mkdir(dirname(this.cachePath), { recursive: true, mode: 0o700 });
 
     const tmpPath = `${this.cachePath}.tmp`;
     const json = JSON.stringify(result.data, null, 2);

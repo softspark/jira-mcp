@@ -74,7 +74,7 @@ export class CacheManager {
    * @throws {CacheCorruptionError} If an existing cache fails validation.
    */
   async initialize(): Promise<void> {
-    await mkdir(this.cacheDir, { recursive: true });
+    await mkdir(this.cacheDir, { recursive: true, mode: 0o700 });
 
     if (await pathExists(this.cachePath)) {
       // Validate existing cache on startup

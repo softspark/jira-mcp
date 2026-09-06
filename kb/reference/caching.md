@@ -3,9 +3,9 @@ title: "Jira MCP Server - Caching Reference"
 category: reference
 service: jira-mcp
 tags: [cache, storage, sync, workflow, users, tasks]
-version: "1.0.0"
+version: "1.11.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-09-06"
 description: "Reference for the three cache subsystems: task cache, workflow cache, and user cache — including formats, file paths, atomic writes, and invalidation strategies."
 ---
 
@@ -105,6 +105,10 @@ rename(cachePath + ".tmp", cachePath)
 This ensures readers always see a complete file. If the process is interrupted mid-write, the `.tmp` file is left behind but the main cache file is intact.
 
 All cache files are written with **restrictive permissions (0o600)** — owner read/write only. This prevents other users on a shared machine from reading cached Jira data (task summaries, assignee emails, project keys).
+
+New cache directories use mode 0700. Existing directory modes are preserved;
+`jira-mcp audit --json` reports shared permissions, unexpected ownership or
+symlinks without reading cached data or changing filesystem permissions.
 
 ### Validation on Load
 

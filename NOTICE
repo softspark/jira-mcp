@@ -19,6 +19,11 @@ limitations under the License.
 If you redistribute this software or a derivative of it, Section 4(d) of the
 License requires you to carry the contents of this NOTICE file with it.
 
+This NOTICE covers jira-mcp only. Third-party dependencies, including code
+bundled into dist/, retain their own copyright notices and licenses. Consult
+package-lock.json for exact dependency versions and each dependency's LICENSE
+and NOTICE files for its terms; npm ls --all lists the installed dependencies.
+
 --------------------------------------------------------------------------------
 
 PRIOR LICENSE

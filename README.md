@@ -4,21 +4,16 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.10.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.11.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.10.0
+## What's New in v1.11.0 (release candidate)
 
-- **`update_task` sets the remaining estimate.** `remaining_estimate` writes `timetracking.remainingEstimate`. Jira holds the two estimates apart, so lowering a parent's original estimate left remaining untouched and any report summing remaining kept showing the old total.
-- **Sub-tasks can be created.** `create_task` takes `parent_key`, which sets the Jira `parent` field. `epic_key` writes the Epic Link custom field instead, so a sub-task sent with it came back as `Issue type is a sub-task but parent issue key or id not specified`.
-- **Original estimate is settable.** `create_task` and `update_task` take `original_estimate` and write `timetracking.originalEstimate`. `log_task_time` records work already done, which is a separate field.
-- **One time format everywhere.** Estimates go through the same parser as `log_task_time`: `"2h"`, `"30m"`, `"2h 30m"`, and days are rejected.
-
-See [CHANGELOG.md](CHANGELOG.md) for full details.
-
----
+- `jira-mcp audit --json` and `--sarif` inspect local permissions and the shipped comment hook without contacting Jira.
+- New configuration/cache directories are private, and the state file is created with mode 0600.
+- CI checks the complete applicable module artifact and SOP set. Documentation changes travel with their behavior changes.
 
 ## Table of Contents
 
@@ -72,6 +67,7 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 |---------|-------------|
 | `jira-mcp` | Start MCP server (default) |
 | `jira-mcp serve` | Start MCP server (explicit) |
+| `jira-mcp audit [--json\|--sarif]` | Audit local permissions and shipped hook ownership without contacting Jira |
 | `jira-mcp create <path>` | Create tasks from config file (dry-run by default) |
 | `jira-mcp create-monthly` | Create monthly admin tasks from built-in templates |
 | `jira-mcp template add <type> <path>` | Install a template override from a local markdown file |
@@ -184,7 +180,7 @@ Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rul
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 19 MCP tools** and **20 CLI commands** reference
+- **All 19 MCP tools** and **21 CLI commands** reference
 
 ### AI Toolkit Hooks
 
@@ -253,17 +249,18 @@ src/
 
 **Per-instance credentials** -- different API tokens per Jira instance URL. Single-credential format still works (backward compatible). See [Configuration](kb/reference/configuration.md).
 
-**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 535KB bundle, 1 runtime dep (commander).
+**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 540KB library bundle, 1 runtime dep (commander).
 
 **Typed error hierarchy** -- 20 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 680 tests across 65 test files. Self-contained 535KB package.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 710 tests across 67 test files.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
 | [Architecture](kb/reference/architecture.md) | System design and module overview |
+| [Local audit](kb/reference/audit.md) | JSON/SARIF formats, filesystem checks and hook permissions |
 | [API Reference](kb/reference/api.md) | All 19 MCP tools with schemas |
 | [Configuration](kb/reference/configuration.md) | Config files, env vars, multi-instance |
 | [ADF Format](kb/reference/adf.md) | Atlassian Document Format conversion |

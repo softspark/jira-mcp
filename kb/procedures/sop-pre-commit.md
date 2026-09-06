@@ -3,9 +3,9 @@ title: "SOP: Pre-Commit Quality Checklist"
 category: procedures
 service: jira-mcp
 tags: [sop, pre-commit, quality, lint, typecheck, test, build, security, version-sync]
-version: "1.1.0"
+version: "1.11.0"
 created: "2026-04-13"
-last_updated: "2026-04-18"
+last_updated: "2026-09-06"
 description: "Pre-commit quality checklist for @softspark/jira-mcp — TypeScript type check, ESLint, tests, build, secret scan, version sync (package.json ↔ package-lock.json), conventional commit format, and branch naming."
 ---
 

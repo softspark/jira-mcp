@@ -2,14 +2,19 @@
 title: "Pre-Mortem: jira-mcp Hardening & Market Readiness"
 category: planning
 service: jira-mcp
+tags: [planning, pre-mortem, hardening, history]
+version: "1.0.0"
 status: planned
 created: "2026-04-14"
-last_updated: "2026-04-14"
+last_updated: "2026-09-06"
 related_plan: "kb/planning/jira-mcp-hardening-plan-2026-04-14.md"
-description: "A plan to prevent `jira-mcp` release failures, SDK upgrade regressions, and documentation drift during hardening. Cause: lack of enforced quality gates, boundary tests, and docs parity checks in CI."
+description: "Historical April 2026 pre-mortem listing anticipated release, SDK upgrade and documentation risks for the hardening initiative."
 ---
 
 # Pre-Mortem: `jira-mcp` Hardening & Market Readiness
+
+The scenarios below are the planning assumptions from 2026-04-14. Current
+executed checks are in [the September verification record](../procedures/release-verification-20260906.md).
 
 Assumption: the hardening initiative failed badly. Below is what could have gone wrong, what the early warnings would have been, and how to prevent it. Required by the planning SOP. [PATH: kb/procedures/plan-implementation-sop.md]
 
@@ -123,4 +128,3 @@ If any of the following happens during execution, stop the scope and return to a
 - retry/backoff requires a much larger connector redesign,
 - the publish flow cannot be safely aligned in one step,
 - boundary tests expose a larger architectural problem than expected.
-

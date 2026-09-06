@@ -2,14 +2,19 @@
 title: "Success Criteria: jira-mcp Hardening & Market Readiness"
 category: planning
 service: jira-mcp
+tags: [planning, acceptance-criteria, hardening, history]
+version: "1.0.0"
 status: planned
 created: "2026-04-14"
-last_updated: "2026-04-14"
+last_updated: "2026-09-06"
 related_plan: "kb/planning/jira-mcp-hardening-plan-2026-04-14.md"
-description: "All deliverables for `jira-mcp` hardening and market readiness are tracked, with automated checks and quality standards defined for code, tests, and documentation. Status: D6 and D7 are partially complete, with CI integration and security fixes pending."
+description: "Historical April 2026 acceptance checklist for release hardening, boundary tests and documentation, preserving the progress recorded at that time."
 ---
 
 # Success Criteria: `jira-mcp` Hardening & Market Readiness
+
+This checklist preserves its 2026-04-14 planning state. Current executed results
+are in [the September verification record](../procedures/release-verification-20260906.md).
 
 This plan and validation checklist follow the SOP requirement for deliverables, verification methods, quality standards, and acceptance criteria. [PATH: kb/procedures/plan-implementation-sop.md] [PATH: kb/procedures/success-criteria-validation.md]
 
@@ -132,4 +137,3 @@ This plan and validation checklist follow the SOP requirement for deliverables, 
 - count validation output,
 - npm dry-run output,
 - dependency/CVE validation output.
-

@@ -3,9 +3,9 @@ title: "Jira MCP Server - Configuration Reference"
 category: reference
 service: jira-mcp
 tags: [configuration, config, credentials, multi-instance, environment-variables]
-version: "1.0.0"
+version: "1.11.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-09-06"
 description: "Full reference for config.json, credentials.json, path resolution order, environment variables, and multi-instance setup."
 ---
 
@@ -14,6 +14,11 @@ description: "Full reference for config.json, credentials.json, path resolution 
 ## Configuration Files
 
 The server requires two JSON files: `config.json` (project definitions) and `credentials.json` (authentication).
+
+New configuration/cache directories use mode 0700; credentials and state files
+use 0600. Initialization preserves existing files and directory permissions.
+Use `jira-mcp audit --json` to inspect modes, owners and unsafe file types
+without reading credential contents. See the [audit reference](audit.md).
 
 ### config.json
 

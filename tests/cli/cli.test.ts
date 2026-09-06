@@ -126,11 +126,11 @@ describe('top-level commands', () => {
     expect(hook!.description()).toBe('Internal hook runners');
   });
 
-  it('has exactly 7 top-level commands', () => {
+  it('has exactly 8 top-level commands', () => {
     const program = createProgram();
     const names = subcommandNames(program);
 
-    expect(names).toHaveLength(7);
+    expect(names).toHaveLength(8);
     expect(names).toEqual(
       expect.arrayContaining([
         'serve',
@@ -140,6 +140,7 @@ describe('top-level commands', () => {
         'create-monthly',
         'template',
         'hook',
+        'audit',
       ]),
     );
   });
@@ -238,7 +239,7 @@ describe('cache subcommands', () => {
 // ---------------------------------------------------------------------------
 
 describe('total command count', () => {
-  it('has 24 total commands (7 top-level + 8 config + 4 cache + 4 template + 1 hook)', () => {
+  it('has 25 total commands (8 top-level + 8 config + 4 cache + 4 template + 1 hook)', () => {
     const program = createProgram();
     const config = findCommand(program, 'config')!;
     const cache = findCommand(program, 'cache')!;
@@ -252,12 +253,12 @@ describe('total command count', () => {
     const hookSubs = hook.commands.length;
     const total = topLevel + configSubs + cacheSubs + templateSubs + hookSubs;
 
-    expect(topLevel).toBe(7);
+    expect(topLevel).toBe(8);
     expect(configSubs).toBe(8);
     expect(cacheSubs).toBe(4);
     expect(templateSubs).toBe(4);
     expect(hookSubs).toBe(1);
-    expect(total).toBe(24);
+    expect(total).toBe(25);
   });
 });
 describe('template subcommands', () => {

@@ -3,9 +3,9 @@ title: "Jira MCP CLI Reference"
 category: howto
 service: jira-mcp
 tags: [cli, commands, reference, config, cache, bulk-create]
-version: "1.0.0"
+version: "1.11.0"
 created: "2026-04-13"
-last_updated: "2026-05-04"
+last_updated: "2026-09-06"
 description: "Complete reference for all jira-mcp CLI commands, options, and usage examples."
 ---
 
@@ -14,6 +14,11 @@ description: "Complete reference for all jira-mcp CLI commands, options, and usa
 The `jira-mcp` binary exposes commands for configuration management, cache maintenance, and bulk task creation. Running `jira-mcp` with no subcommand starts the MCP server.
 
 ## Top-level usage
+
+For a local audit, run `jira-mcp audit --json` or `jira-mcp audit --sarif`.
+This inspects permissions and the shipped hook definition without contacting
+Jira or reading credential/cache contents. It returns 0 with no findings and
+1 when findings exist. See [audit formats and rules](../reference/audit.md).
 
 ```
 jira-mcp [command] [options]

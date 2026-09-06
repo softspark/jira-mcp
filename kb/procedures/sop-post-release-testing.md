@@ -3,9 +3,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: jira-mcp
 tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, provenance, supply-chain]
-version: "1.3.0"
+version: "1.11.0"
 created: "2026-04-13"
-last_updated: "2026-06-10"
+last_updated: "2026-09-06"
 description: "End-to-end smoke test after publishing a new @softspark/jira-mcp release — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN project, supply-chain verification (provenance, npm audit signatures), and cleanup."
 ---
 
@@ -60,7 +60,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jira-mcp serve 2>/dev/nu
 
 # Phase 5: Supply-chain verification (provenance + audit signatures)
 npm view "@softspark/jira-mcp@$VERSION" --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"
-npm audit signatures --registry https://registry.npmjs.org
+# Use the temporary project and lockfile from Step 5.2 for signature verification.
 
 # Phase 6: Cleanup (delete test task from KAN, keep jira-mcp installed)
 ```
@@ -370,12 +370,16 @@ npm view "@softspark/jira-mcp@X.Y.Z" --json \
 
 ### Step 5.2: npm Audit Signatures
 
-Verify the chain of trust from the npm registry signing keys. Run it inside
-the installed package directory, otherwise npm audits whatever project the
-current working directory happens to contain:
+Verify the chain of trust in a temporary project that installs the release
+as a dependency. The global package directory has no consumer lockfile and
+cannot prove that the release itself was audited:
 
 ```bash
-cd "$(npm root -g)/@softspark/jira-mcp" && npm audit signatures --registry https://registry.npmjs.org
+JIRA_AUDIT_DIR=$(mktemp -d)
+cd "$JIRA_AUDIT_DIR"
+npm init -y
+npm install "@softspark/jira-mcp@X.Y.Z" --ignore-scripts
+npm audit signatures --registry https://registry.npmjs.org
 ```
 
 - [ ] Exit code 0
@@ -498,3 +502,9 @@ If any phase fails and the cause is not listed above:
 | Cleanup | Test task in Done/deleted, `jira-mcp` still installed globally |
 
 All six phases must pass for the release to be considered verified.
+
+## Verification on 2026-09-06
+
+The published 1.10.0 package was checked separately from the unshipped
+1.11.0 candidate. See [the execution record](release-verification-20260906.md)
+for completed checks and remaining release checks.

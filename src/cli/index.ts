@@ -15,6 +15,7 @@
 import { Command } from 'commander';
 
 import { VERSION } from '../version.js';
+import { registerAuditCommand } from './commands/audit.js';
 import { registerConfigCommands } from './commands/config/index.js';
 import { registerCacheCommands } from './commands/cache/index.js';
 import { registerCreateCommand } from './commands/create.js';
@@ -65,10 +66,12 @@ export function createProgram(): Command {
 
   // Internal hook runner commands
   registerHookCommands(program);
+  registerAuditCommand(program);
 
   // Expand subcommands in --help
   program.addHelpText('after', `
 All commands:
+  audit [--json|--sarif]        Inspect local permissions and shipped hook ownership
   serve                          Start the MCP server (default behavior)
   create <config-path>           Create tasks from a bulk config file (dry-run by default)
   create-monthly                 Run all monthly_admin.json configs from templates
