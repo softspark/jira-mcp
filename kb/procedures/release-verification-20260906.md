@@ -26,9 +26,9 @@ Published `jira-mcp --version` returned 1.10.0. No live Jira API calls, task
 creation, comments, transitions or deletion were performed. The existing live
 Jira portion of the post-release SOP still requires its own authorized run.
 
-## Candidate status
+## Pre-release validation
 
-Version 1.11.0 is prepared locally and **has not been published**. Its new
+Version 1.11.0 was validated locally before publication. Its new
 audit commands are tested against real temporary filesystem/configuration
 fixtures, including secret redaction and SARIF output. Existing text behavior
 is retained except for documented repairs.

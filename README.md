@@ -9,7 +9,7 @@
 
 ---
 
-## What's New in v1.11.0 (release candidate)
+## What's New in v1.11.0
 
 - `jira-mcp audit --json` and `--sarif` inspect local permissions and the shipped comment hook without contacting Jira.
 - New configuration/cache directories are private, and the state file is created with mode 0600.

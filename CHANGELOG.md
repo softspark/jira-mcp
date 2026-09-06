@@ -7,7 +7,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## v1.11.0 (release candidate, 2026-09-06)
+## v1.11.0 -- Local audits and private configuration (2026-09-06)
 
 - Add text, JSON and SARIF audits for local filesystem permissions and shipped hook ownership.
 - Create new configuration/cache directories with mode 0700 and state files with mode 0600.
