@@ -6,10 +6,36 @@ tags: [release, verification, provenance]
 version: "1.11.0"
 created: "2026-09-06"
 last_updated: "2026-09-06"
-description: "Executed checks for published 1.10.0 and the 1.11.0 candidate."
+description: "Published 1.11.0 verification, pre-release gates and earlier smoke evidence."
 ---
 
 # Executed verification
+
+## Published 1.11.0
+
+Published on 2026-09-06 from commit `bcfd4a28828af794298174bd3e6120c5c9dbb9f7`.
+
+- [Release](https://github.com/softspark/jira-mcp/releases/tag/v1.11.0)
+- [Exact release-head CI](https://github.com/softspark/jira-mcp/actions/runs/34051733618): success
+- [Publish workflow](https://github.com/softspark/jira-mcp/actions/runs/34052344553): success
+
+Registry metadata returned the exact version and SLSA v1 provenance. A fresh
+consumer lockfile installed gitspace 1.3.0, mage2x 1.4.0 and jira-mcp 1.11.0 with
+scripts disabled. Cryptographic verification completed successfully:
+**4 verified registry signatures and 3 verified attestations**. This is a new
+verification of the released artifacts, separate from the older smoke below.
+
+All three packages contained their expected runtime files, LICENSE and NOTICE;
+tests, KB and .github were absent. Syntax checks preceded CLI execution.
+
+The installed CLI reported version 1.11.0. Its JSON and SARIF audits detected
+a deliberately shared credential file in a temporary fixture without printing
+its synthetic secret. A test-only Node homedir adapter isolated the fixed-path
+lookup; HOME and real user configuration were not changed. No live Jira API
+writes, comments, transitions, task creation or deletion were performed.
+
+## Earlier published-version smoke
+
 
 The published package `@softspark/jira-mcp@1.10.0` was installed as an
 exact dependency in a temporary npm project, with `--ignore-scripts` and a

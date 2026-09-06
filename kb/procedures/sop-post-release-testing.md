@@ -505,6 +505,10 @@ All six phases must pass for the release to be considered verified.
 
 ## Verification on 2026-09-06
 
+Published 1.11.0: exact release-head CI and publish workflow passed;
+registry version, provenance, cryptographic signatures and installed CLI smoke
+were verified. See [the executed publication record](release-verification-20260906.md#published-1110).
+
 The published 1.10.0 package was checked separately from the unshipped
 1.11.0 candidate. See [the execution record](release-verification-20260906.md)
 for completed checks and remaining release checks.
