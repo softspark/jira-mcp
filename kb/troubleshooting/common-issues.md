@@ -2,10 +2,10 @@
 title: "Jira MCP Common Issues"
 category: troubleshooting
 service: jira-mcp
-tags: [troubleshooting, errors, authentication, cache, configuration]
+tags: [troubleshooting, errors, authentication, cache, configuration, npm, release]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-09-09"
 description: "Diagnosis and resolution for the most common errors encountered with the Jira MCP server."
 ---
 
@@ -262,8 +262,70 @@ curl -u "user@example.com:API_TOKEN" "https://your-org.atlassian.net/rest/api/3/
 
 ---
 
+## npm 404 on a version that was just published
+
+**Symptoms:**
+```
+npm error 404 tarball, folder, http url, or git url.
+```
+`npm install -g @softspark/jira-mcp` fails, while the registry insists the
+version exists:
+
+```bash
+npm view @softspark/jira-mcp version            # 1.14.2
+npm view @softspark/jira-mcp dist-tags --json   # {"latest": "1.14.2"}
+curl -sIL -o /dev/null -w '%{http_code}\n' \
+  "$(npm view @softspark/jira-mcp@1.14.2 dist.tarball | tr -d '[:space:]')"   # 404
+```
+
+The metadata is complete and correct: `fileCount`, `shasum`, `integrity`, the
+registry signature and the SLSA provenance attestation are all there. Only the
+tarball is missing, and `latest` already points at the version nobody can
+install.
+
+**Cause:** npm CDN propagation. The packument updates before the tarball is
+served from every edge, so there is a window where the version is discoverable
+but not downloadable. Observed on 2026-09-09 for 1.14.2, roughly seven minutes,
+on both `@softspark/jira-mcp` and `@softspark/confluence-mcp`. It is not
+something the publish workflow did wrong: the same workflow run reported
+"Publish" green for both packages and emitted valid provenance.
+
+**Resolution:** wait and poll. Do not re-publish, do not `npm deprecate`, and do
+not roll the tag back.
+
+```bash
+for i in $(seq 1 10); do
+  code=$(curl -sIL -o /dev/null -w '%{http_code}' \
+    "https://registry.npmjs.org/@softspark/jira-mcp/-/jira-mcp-1.14.2.tgz")
+  echo "attempt $i: HTTP $code"
+  [ "$code" = "200" ] && break
+  sleep 45
+done
+```
+
+Confirm the problem is npm's and not local by requesting the **previous**
+version's tarball. If that answers 200 while the new one 404s, nothing on your
+machine or in the package is at fault:
+
+```bash
+curl -sIL -o /dev/null -w '%{http_code}\n' \
+  "https://registry.npmjs.org/@softspark/jira-mcp/-/jira-mcp-1.14.1.tgz"
+```
+
+The two packages propagate independently, so expect one to come back before the
+other. Escalate only if the 404 outlives several minutes of polling, or if the
+previous version 404s too, which points at the registry or the network rather
+than at propagation.
+
+Note that a direct `curl` of the tarball URL can return `{"error":"Not found"}`
+as JSON with a 404 status. A `tar` reading that body reports
+`Unrecognized archive format`, which looks like a corrupt package and is not one.
+
+---
+
 ## Related Documentation
 
 - [Setup guide](../howto/setup.md)
 - [CLI reference](../howto/cli-usage.md)
 - [Multi-instance configuration](../howto/multi-instance.md)
+- [Post-release testing SOP](../procedures/sop-post-release-testing.md)

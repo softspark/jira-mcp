@@ -391,6 +391,11 @@ npm view @softspark/jira-mcp dist.tarball
 
 - [ ] Tarball URL is accessible
 
+**If the tarball 404s while the version and its metadata are present:** that is
+npm CDN propagation, not a bad publish. Poll the URL rather than re-publishing
+or deprecating. See
+[npm 404 on a version that was just published](../troubleshooting/common-issues.md#npm-404-on-a-version-that-was-just-published).
+
 ### Step 7.3: Provenance Attestation (v2.8.0+)
 
 Verify that the release landed with a SLSA provenance attestation. Any public
