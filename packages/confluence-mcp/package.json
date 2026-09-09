@@ -1,6 +1,6 @@
 {
   "name": "@softspark/confluence-mcp",
-  "version": "1.14.2",
+  "version": "1.14.3",
   "description": "MCP server for Confluence Cloud \u2014 pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.",
   "keywords": [
     "mcp",

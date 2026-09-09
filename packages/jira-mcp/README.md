@@ -4,16 +4,17 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.14.2-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.14.3-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.14.2
+## What's New in v1.14.3
 
 - Polish versions of all eight built-in comment templates ship with the package. Until now a templated comment was English on every project, including one configured for another language.
 - `jira-mcp template list-locales` shows which languages are available, and `jira-mcp template install-locale pl` installs them. Add `--keep-english` to keep the originals reachable as `<id>-en`.
 - Fixed in 1.14.1: `jira-mcp --help` now lists both new commands. 1.14.2 adds the test that would have caught it, on both binaries.
+- 1.14.3 changes nothing in the package itself; it carries knowledge base work only.
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](../../CHANGELOG.md).
 
 ## Table of Contents

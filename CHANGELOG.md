@@ -7,6 +7,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.14.3 -- Knowledge base only (2026-09-09)
+
+**The published contents of both packages are identical to 1.14.2.** Nothing in
+`dist/`, `templates-system/`, `hooks/` or either README changed. Everything below
+lives in `kb/`, which no tarball carries, so upgrading from 1.14.2 gains nothing.
+The version exists to give the documentation below a release to sit against.
+
+### Added
+
+- **A troubleshooting entry for an npm 404 on a version that was just
+  published.** 1.14.2 was discoverable and uninstallable for about seven minutes:
+  `npm view` reported the version with a correct `fileCount`, `shasum`,
+  `integrity`, registry signature and SLSA provenance, `dist-tags.latest` already
+  pointed at it, and the tarball URL from that same metadata returned
+  `{"error":"Not found"}`. Both packages. It is CDN propagation, and the entry
+  says to poll rather than deprecate and re-release, which is the instinctive and
+  wrong response. It also records that a `curl` of the tarball returns a JSON
+  error body, which `tar` reports as `Unrecognized archive format`, looking like
+  a corrupt package when nothing is corrupt.
+- **The executed record of the 1.14.0, 1.14.1 and 1.14.2 releases**, including
+  the post-release runs against KAN and the DevOps space.
+
+### Fixed
+
+- **Closed a stale note.** The 1.12.0/1.13.0 verification record still listed
+  localised comment templates as unstarted with no decision taken. They shipped
+  in 1.14.0, and by a different design than that note guessed at.
+
 ## v1.14.2 -- Drift guard on the Confluence help listing (2026-09-09)
 
 No behaviour change in either package. It ships the guard that the 1.14.1 fix
