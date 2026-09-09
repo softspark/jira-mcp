@@ -15,6 +15,7 @@
  *    keyed by project under `templates/tasks/<KEY>/monthly_admin.json`.
  */
 
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, readFile, readdir, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -25,6 +26,9 @@ import {
 } from '@softspark/atlassian-mcp-core';
 import {
   GLOBAL_CONFIG_DIR,
+  SYSTEM_COMMENT_TEMPLATES_DIR,
+  SYSTEM_LOCALES_DIR,
+  systemLocaleCommentsDir,
 } from '../../../paths.js';
 import { loadTemplateCatalog } from '../../../templates/catalog.js';
 import { validateTemplateFile } from '../../../templates/file-loaders.js';
@@ -310,6 +314,115 @@ export async function handleShowTemplate(
 // CLI registration
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// install-locale
+// ---------------------------------------------------------------------------
+
+/** One installed or skipped file, for reporting. */
+export interface LocaleInstallResult {
+  readonly installed: readonly string[];
+  readonly keptEnglish: readonly string[];
+}
+
+/** Language codes this package ships translated comment templates for. */
+export function listAvailableLocales(): readonly string[] {
+  if (!existsSync(SYSTEM_LOCALES_DIR)) {
+    return [];
+  }
+  return readdirSync(SYSTEM_LOCALES_DIR, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .filter((lang) => existsSync(systemLocaleCommentsDir(lang)))
+    .sort();
+}
+
+/**
+ * Install the shipped translations of the comment templates.
+ *
+ * Each translation carries the English `id` of the template it replaces, so
+ * installing it makes that language the default for every project. That is
+ * the point: a template cannot pick a language at render time, so the choice
+ * has to be made once, here.
+ *
+ * `keepEnglish` additionally installs the originals under `<id>-en`. Without
+ * it the English wording becomes unreachable, which matters on an install
+ * that has projects in more than one language.
+ *
+ * @throws {Error} If the package ships no templates for that language.
+ */
+export async function handleInstallLocale(
+  configDir: string,
+  language: string,
+  options: { readonly keepEnglish?: boolean } = {},
+): Promise<LocaleInstallResult> {
+  const sourceDir = systemLocaleCommentsDir(language);
+  if (!existsSync(sourceDir)) {
+    const available = listAvailableLocales();
+    throw new Error(
+      `No comment templates shipped for language "${language}". Available: ${available.join(', ') || '(none)'}.`,
+    );
+  }
+
+  const targetDir = resolveTemplateDir(configDir, 'comment');
+  await mkdir(targetDir, { recursive: true });
+
+  const installed: string[] = [];
+  for (const entry of readdirSync(sourceDir)) {
+    if (!entry.endsWith('.md')) continue;
+    await writeFile(
+      join(targetDir, entry),
+      await readFile(join(sourceDir, entry), 'utf-8'),
+      'utf-8',
+    );
+    installed.push(entry.replace(/\.md$/, ''));
+  }
+
+  const keptEnglish: string[] = [];
+  if (options.keepEnglish === true) {
+    for (const entry of readdirSync(SYSTEM_COMMENT_TEMPLATES_DIR)) {
+      if (!entry.endsWith('.md')) continue;
+      const raw = await readFile(
+        join(SYSTEM_COMMENT_TEMPLATES_DIR, entry),
+        'utf-8',
+      );
+      const suffixed = suffixTemplateId(raw, 'en');
+      if (!suffixed) continue;
+      const id = `${entry.replace(/\.md$/, '')}-en`;
+      await writeFile(join(targetDir, `${id}.md`), suffixed, 'utf-8');
+      keptEnglish.push(id);
+    }
+  }
+
+  return { installed: installed.sort(), keptEnglish: keptEnglish.sort() };
+}
+
+/**
+ * Rewrite a template's `id` and `name` with a language suffix.
+ *
+ * Returns `undefined` for a file whose frontmatter cannot be parsed, so one
+ * malformed shipped template cannot fail the whole install.
+ */
+export function suffixTemplateId(raw: string, suffix: string): string | undefined {
+  const match = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/.exec(raw);
+  if (!match?.[1] || match[2] === undefined) {
+    return undefined;
+  }
+  let meta: Record<string, unknown>;
+  try {
+    meta = JSON.parse(match[1]) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+  if (typeof meta['id'] !== 'string') {
+    return undefined;
+  }
+  meta['id'] = `${meta['id']}-${suffix}`;
+  if (typeof meta['name'] === 'string') {
+    meta['name'] = `${meta['name']} (${suffix.toUpperCase()})`;
+  }
+  return `---\n${JSON.stringify(meta, null, 2)}\n---\n${match[2]}`;
+}
+
 export function registerTemplateCommands(parent: Command): void {
   const template = parent
     .command('template')
@@ -437,6 +550,66 @@ export function registerTemplateCommands(parent: Command): void {
 
         await handleRemoveTemplate(GLOBAL_CONFIG_DIR, type, id);
         info(`Removed ${type} template override "${id}"`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        error(message);
+        process.exitCode = 1;
+      }
+    });
+
+  template
+    .command('list-locales')
+    .description('List languages this package ships translated templates for')
+    .action(() => {
+      const locales = listAvailableLocales();
+      if (locales.length === 0) {
+        info('No translated templates are shipped with this package.');
+        return;
+      }
+      table(
+        ['LANGUAGE', 'COMMENT TEMPLATES'],
+        locales.map((lang) => [
+          lang,
+          String(
+            readdirSync(systemLocaleCommentsDir(lang)).filter((f) =>
+              f.endsWith('.md'),
+            ).length,
+          ),
+        ]),
+      );
+    });
+
+  template
+    .command('install-locale')
+    .description(
+      'Install the shipped translations of the comment templates, making that language the default',
+    )
+    .argument('<lang>', 'Language code, e.g. pl. See: template list-locales')
+    .option(
+      '--keep-english',
+      'Also install the English originals under <id>-en, for installs with projects in more than one language',
+    )
+    .action(async (lang: string, options: { keepEnglish?: boolean }) => {
+      try {
+        const result = await handleInstallLocale(GLOBAL_CONFIG_DIR, lang, {
+          keepEnglish: options.keepEnglish === true,
+        });
+
+        info(
+          `Installed ${String(result.installed.length)} ${lang} comment template(s): ${result.installed.join(', ')}`,
+        );
+        if (result.keptEnglish.length > 0) {
+          info(
+            `Kept the English originals as: ${result.keptEnglish.join(', ')}`,
+          );
+        } else {
+          info(
+            'The English wording is now unreachable. Re-run with --keep-english if some projects are not in this language.',
+          );
+        }
+        info(
+          'Restart your MCP client: a running server keeps the template catalog it loaded at startup.',
+        );
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         error(message);

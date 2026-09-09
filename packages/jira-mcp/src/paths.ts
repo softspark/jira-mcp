@@ -129,6 +129,21 @@ export const SYSTEM_TASK_TEMPLATES_DIR: string = join(
 );
 
 /**
+ * Package-shipped translations of the built-in templates.
+ *
+ * One directory per language code, each mirroring the layout above:
+ * `locales/<lang>/comments/<id>.md`. A translation keeps the English `id` of
+ * the template it replaces, so installing it overrides the shipped original.
+ * Variable names stay English too, because callers pass them.
+ */
+export const SYSTEM_LOCALES_DIR: string = join(SYSTEM_TEMPLATES_DIR, 'locales');
+
+/** Comment templates shipped for one language. */
+export function systemLocaleCommentsDir(language: string): string {
+  return join(SYSTEM_LOCALES_DIR, language, 'comments');
+}
+
+/**
  * Ensure the global config directory tree exists.
  *
  * Creates the full hierarchy if any part is missing:

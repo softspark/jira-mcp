@@ -239,7 +239,7 @@ describe('cache subcommands', () => {
 // ---------------------------------------------------------------------------
 
 describe('total command count', () => {
-  it('has 25 total commands (8 top-level + 8 config + 4 cache + 4 template + 1 hook)', () => {
+  it('has 27 total commands (8 top-level + 8 config + 4 cache + 6 template + 1 hook)', () => {
     const program = createProgram();
     const config = findCommand(program, 'config')!;
     const cache = findCommand(program, 'cache')!;
@@ -256,9 +256,9 @@ describe('total command count', () => {
     expect(topLevel).toBe(8);
     expect(configSubs).toBe(8);
     expect(cacheSubs).toBe(4);
-    expect(templateSubs).toBe(4);
+    expect(templateSubs).toBe(6);
     expect(hookSubs).toBe(1);
-    expect(total).toBe(25);
+    expect(total).toBe(27);
   });
 });
 describe('template subcommands', () => {
@@ -267,13 +267,15 @@ describe('template subcommands', () => {
     'list',
     'show',
     'remove',
+    'list-locales',
+    'install-locale',
   ] as const;
 
-  it('has exactly 4 template subcommands', () => {
+  it('has exactly 6 template subcommands', () => {
     const program = createProgram();
     const template = findCommand(program, 'template')!;
 
-    expect(template.commands).toHaveLength(4);
+    expect(template.commands).toHaveLength(6);
   });
 
   it.each(EXPECTED_TEMPLATE_SUBCOMMANDS)(

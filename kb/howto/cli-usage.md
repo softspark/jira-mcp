@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [cli, commands, reference, config, cache, bulk-create]
 version: "1.11.0"
 created: "2026-04-13"
-last_updated: "2026-09-06"
+last_updated: "2026-09-09"
 description: "Complete reference for all jira-mcp CLI commands, options, and usage examples."
 ---
 
@@ -283,6 +283,34 @@ Remove a user-installed override. If a system template with the same `id` exists
 ```bash
 jira-mcp template remove <comment|task|bulk> <id>
 ```
+
+### `template list-locales`
+
+List the languages the package ships translated comment templates for, with a count per language.
+
+```bash
+jira-mcp template list-locales
+```
+
+### `template install-locale`
+
+Install those translations as user overrides. Each one keeps the English `id` and the English variable names of the template it replaces, so it overrides the shipped original and no existing `add_templated_comment` call breaks.
+
+```bash
+jira-mcp template install-locale <lang> [--keep-english]
+```
+
+The choice is global, because a template carries no language and cannot pick one at render time. `--keep-english` additionally installs the originals under `<id>-en`, which an installation with projects in more than one language needs: an override replaces the shipped template rather than sitting beside it.
+
+```bash
+# Polish everywhere
+jira-mcp template install-locale pl
+
+# Polish by default, English still reachable as status-update-en and friends
+jira-mcp template install-locale pl --keep-english
+```
+
+Restart the MCP client afterwards. The server reads the template catalog once at startup, so a running one keeps serving what it loaded.
 
 ---
 

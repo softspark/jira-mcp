@@ -74,6 +74,8 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `jira-mcp template list [type]` | List active comment/task templates |
 | `jira-mcp template show <type> <id>` | Show the active template file content |
 | `jira-mcp template remove <type> <id>` | Remove a user-installed template override |
+| `jira-mcp template list-locales` | List languages with shipped template translations |
+| `jira-mcp template install-locale <lang> [--keep-english]` | Install the translated comment templates for a language |
 | `jira-mcp config init` | Initialize global config at `~/.softspark/jira-mcp/` |
 | `jira-mcp config add-project <key> <url>` | Add a Jira project to config |
 | `jira-mcp config remove-project <key>` | Remove a project from config |
@@ -150,6 +152,24 @@ jira-mcp template add task ./my-bug-task.md
 jira-mcp template list
 ```
 
+### Translated templates
+
+The shipped templates are English, and a template cannot pick a language at render time: its headings are fixed text in the body. On a project configured for another language, `add_templated_comment` would post an English comment and break the language-first rule.
+
+The package ships translations under `templates-system/locales/<lang>/comments/`, installed as overrides:
+
+```bash
+jira-mcp template list-locales
+jira-mcp template install-locale pl
+jira-mcp template install-locale pl --keep-english   # installs with several project languages
+```
+
+Each translation keeps the English `id` and the English variable names of the template it replaces, so it overrides cleanly and no existing `add_templated_comment` call breaks. Only the prose changes.
+
+Installing a language makes it the default for **every** project, because the choice cannot be made per call. `--keep-english` additionally installs the originals as `<id>-en`, which is what you want when some projects are English and some are not.
+
+**Restart your MCP client afterwards.** The template catalog is read once at server startup, so a running server keeps serving the templates it loaded and the next templated comment silently renders the old version.
+
 ## Usage with Claude Code
 
 Add to your Claude Code MCP configuration (`~/.claude/claude_desktop_config.json` or project-level):
@@ -180,7 +200,7 @@ Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rul
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 19 MCP tools** and **21 CLI commands** reference
+- **All 19 MCP tools** and **23 CLI commands** reference
 
 ### AI Toolkit Hooks
 
@@ -253,7 +273,7 @@ src/
 
 **Typed error hierarchy** -- 26 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 953 tests across 78 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 970 tests across 79 test files.
 
 ## Documentation
 

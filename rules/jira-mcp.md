@@ -12,7 +12,7 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 - **Comments are ADF:** `add_task_comment` converts markdown to ADF (Atlassian Document Format) automatically.
 - **Delete guard:** `delete_task` is allowed only for the task creator, and `delete_comment` is allowed only for the comment author. Both require explicit `user_approved=true`.
 - **Templates:** use `list_comment_templates` to discover available templates, then `add_templated_comment` with `template_id` + `variables`.
-- **Shipped templates are English-only.** Their headings ("Status Update", "Completed", "Blockers") are fixed text, and no template carries a language. On a project whose configured language is not English, a shipped template posts an English comment and breaks the language-first rule. Use `add_templated_comment` with `markdown` instead, or install a translated override of the same `id` in `~/.softspark/jira-mcp/templates/comments/`. Trust `list_comment_templates` over this list: an installation may have overridden any of them.
+- **Shipped templates are English, with translations available.** `jira-mcp template list-locales` shows which languages ship translated comment templates, and `jira-mcp template install-locale <lang>` installs them as overrides. Their headings ("Status Update", "Completed", "Blockers") are fixed text, and no template carries a language. On a project whose configured language is not English, a shipped template posts an English comment and breaks the language-first rule. Use `add_templated_comment` with `markdown` instead, or install a translated override of the same `id` in `~/.softspark/jira-mcp/templates/comments/`. Trust `list_comment_templates` over this list: an installation may have overridden any of them.
 - **The template catalog is read once, at server startup.** `jira-mcp template add` changes what the CLI reports immediately, but a running MCP server keeps serving the catalog it loaded when it started. After installing or editing a template, restart the MCP client, or the next `add_templated_comment` silently renders the old version.
 
 ## Writing Style
@@ -57,6 +57,8 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 | `jira-mcp template list [type]` | List active comment/task templates |
 | `jira-mcp template show <type> <id>` | Show the active template file content |
 | `jira-mcp template remove <type> <id>` | Remove a user-installed template override |
+| `jira-mcp template list-locales` | List languages with shipped template translations |
+| `jira-mcp template install-locale <lang> [--keep-english]` | Install translated comment templates |
 | `jira-mcp config init` | Initialize global config (~/.softspark/jira-mcp/) |
 | `jira-mcp config add-project <key> <url>` | Add Jira project mapping |
 | `jira-mcp config remove-project <key>` | Remove a project |

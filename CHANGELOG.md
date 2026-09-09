@@ -7,6 +7,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Added
+
+- **Translated comment templates** -- the package now ships Polish versions of all
+  eight built-in comment templates under `templates-system/locales/pl/comments/`,
+  installed with `jira-mcp template install-locale pl`. A template cannot pick a
+  language at render time, because its headings are fixed text in the body, so on
+  a project configured for another language `add_templated_comment` posted English
+  and broke the language-first rule.
+- **`jira-mcp template list-locales`** -- lists the languages with shipped
+  translations.
+- **`jira-mcp template install-locale <lang> [--keep-english]`** -- installs them as
+  overrides. Each translation keeps the English `id` and variable names of the
+  template it replaces, so nothing that calls `add_templated_comment` breaks.
+  `--keep-english` also installs the originals as `<id>-en`, for an install whose
+  projects are not all in one language.
+
+### Fixed
+
+- **Documented that the template catalog is read once, at server startup.**
+  `template add` and `install-locale` change what the CLI reports immediately, but
+  a running MCP server keeps serving the catalog it loaded, and the next templated
+  comment silently renders the old version. Both commands now say to restart the
+  client, and it is stated in the rules and the templates reference.
+
 ## v1.13.0 -- Page templates and real space keys (2026-09-09)
 
 Both packages are released together under one version. `@softspark/jira-mcp` has

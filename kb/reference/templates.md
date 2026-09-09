@@ -18,12 +18,17 @@ Two things that bite in practice.
 **Templates carry no language.** Their headings are fixed text in the template
 body, so a shipped template renders English regardless of the project's
 configured language, and `add_templated_comment` cannot honour the
-language-first rule on a non-English project. The supported answer is a user
-override with the same `id`, which wins globally. Installing translated
-overrides for every shipped id makes the default correct for that language;
-keep the originals reachable by installing them again under a suffixed id such
-as `status-update-en`, because an override replaces the shipped template
-rather than sitting beside it.
+language-first rule on a non-English project. The package ships translations under
+`templates-system/locales/<lang>/comments/`, installed with
+`jira-mcp template install-locale <lang>`. Each translation keeps the English
+`id` and the English variable names of the template it replaces, so it
+overrides cleanly and no caller breaks; only the prose changes.
+
+Installing a language makes it the default for every project, because the
+choice cannot be made per call. `--keep-english` additionally installs the
+originals as `<id>-en`, which is what an install with projects in more than
+one language needs, since an override replaces the shipped template rather
+than sitting beside it.
 
 **The catalog is read once, at server startup.** `loadTemplateCatalog()` runs
 in `startServer()`. `jira-mcp template add` writes the file and the CLI reports
