@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.14.4 -- The changelog actually ships (2026-09-09)
+
+### Fixed
+
+- **Both packages now contain the `CHANGELOG.md` their `files` list has promised
+  since 1.12.0.** npm resolves `files` patterns inside the package directory,
+  the changelog lives at the repository root, and a pattern matching nothing is
+  dropped without a warning. Every release since the workspace split shipped
+  without it, and the README version badge linked to a file the tarball did not
+  contain. A symlink does not help, because `npm pack` skips it; each package's
+  tsup config copies the root file in instead, so the root stays the one place
+  anybody edits.
+- **Changelog links in both READMEs pointed outside the package.**
+  `../../CHANGELOG.md` resolves within the repository but not within a published
+  tarball, so on npmjs.com those links were dead for the same reason.
+
+### Added
+
+- **A packaging test over both published packages.** It asserts that every
+  `files` entry matches at least one real file, and that each package's copied
+  changelog is identical to the root one. The first catches a manifest promising
+  what it does not deliver; the second catches a release built before the
+  changelog was edited, which would ship stale history.
+
 ## v1.14.3 -- Knowledge base only (2026-09-09)
 
 **Behaviourally identical to 1.14.2.** Everything below lives in `kb/`, which no

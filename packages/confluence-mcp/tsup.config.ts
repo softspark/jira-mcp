@@ -2,14 +2,10 @@
 // Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
 // Source: https://github.com/softspark/jira-mcp
 
-import { copyFileSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'tsup';
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string };
-
-// See the jira-mcp tsup config for why the shared root changelog is copied in
-// rather than declared and silently skipped.
-copyFileSync('../../CHANGELOG.md', './CHANGELOG.md');
 
 // See the jira-mcp tsup config for why this banner is the only attribution
 // that survives minification into the published artifact.

@@ -1,6 +1,6 @@
 {
   "name": "@softspark/atlassian-mcp",
-  "version": "1.14.3",
+  "version": "1.14.4",
   "description": "Workspace root for the SoftSpark Atlassian MCP servers: @softspark/jira-mcp and @softspark/confluence-mcp.",
   "private": true,
   "homepage": "https://github.com/softspark/jira-mcp",
@@ -22,18 +22,18 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "scripts_comments": "No postinstall/preinstall scripts by design \u2014 supply chain safety",
+  "scripts_comments": "No postinstall/preinstall scripts by design — supply chain safety",
   "installConfig": {
     "ignore-scripts": true
   },
   "scripts": {
-    "build": "npm run build --workspace @softspark/jira-mcp && npm run build --workspace @softspark/confluence-mcp",
+    "build": "node scripts/sync-changelog.mjs && npm run build --workspace @softspark/jira-mcp && npm run build --workspace @softspark/confluence-mcp",
     "build:jira": "npm run build --workspace @softspark/jira-mcp",
     "build:confluence": "npm run build --workspace @softspark/confluence-mcp",
     "dev": "npm run dev --workspace @softspark/jira-mcp",
-    "test": "vitest run",
+    "test": "node scripts/sync-changelog.mjs && vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "node scripts/sync-changelog.mjs && vitest run --coverage",
     "lint": "eslint packages/",
     "lint:fix": "eslint packages/ --fix",
     "typecheck": "tsc --noEmit",

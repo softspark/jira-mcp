@@ -11,10 +11,11 @@
  * shipped without it and the README version badge pointed at a file the tarball
  * did not contain. Nothing failed, because nothing was checking.
  *
- * The changelog is now copied into each package by its tsup config, which keeps
- * one source of truth at the root. That copy can go stale on its own, so the
- * second test compares it against the root file: a release built from a stale
- * copy would ship the wrong history.
+ * The changelog is now copied into each package by scripts/sync-changelog.mjs,
+ * which runs from `prebuild` and `pretest`, keeping one source of truth at the
+ * root. That copy can go stale on its own, so the second test compares it
+ * against the root file: a release built from a stale copy would ship the wrong
+ * history.
  *
  * Like tool-name-collisions, this reaches across package directories on
  * purpose. It asserts a property of how the workspace publishes, which neither
@@ -92,8 +93,9 @@ describe.each(PUBLISHED)('%s package', (pkg) => {
     const root = readFileSync(join(WORKSPACE_ROOT, 'CHANGELOG.md'), 'utf-8');
     const copied = readFileSync(join(packageDir(pkg), 'CHANGELOG.md'), 'utf-8');
 
-    // Written by the package's tsup config. Drift means the build did not run
-    // after the changelog was edited, and the release would ship stale history.
+    // Written by scripts/sync-changelog.mjs. Drift means neither the build nor
+    // the test hook ran after the changelog was edited, and a release from this
+    // tree would ship stale history.
     expect(copied).toBe(root);
   });
 });

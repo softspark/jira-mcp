@@ -2,20 +2,10 @@
 // Copyright 2024-2026 Lukasz Krzemien (biuro@softspark.eu)
 // Source: https://github.com/softspark/jira-mcp
 
-import { copyFileSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'tsup';
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string };
-
-// The changelog is shared by both published packages and lives at the repository
-// root, but `files` in package.json resolves inside the package directory, so a
-// bare "CHANGELOG.md" entry matched nothing and npm skipped it silently. Every
-// release from 1.12.0 shipped without the changelog it promised, and the README
-// version badge linked to a file that was not in the tarball.
-//
-// The root file stays the one people edit; this copy is written by the build,
-// and packages/core/tests/packaging.test.ts fails if the two ever drift.
-copyFileSync('../../CHANGELOG.md', './CHANGELOG.md');
 
 // Licence banner for the shipped bundles.
 //

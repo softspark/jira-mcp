@@ -1,6 +1,6 @@
 {
   "name": "@softspark/atlassian-mcp-core",
-  "version": "1.14.3",
+  "version": "1.14.4",
   "description": "Shared configuration, ADF conversion, HTTP transport and MCP plumbing for the SoftSpark Atlassian MCP servers. Not published.",
   "private": true,
   "license": "Apache-2.0",
