@@ -3,6 +3,16 @@
 ## Overview
 Stdio MCP server (`@softspark/jira-mcp`) that lets AI agents and MCP clients (Claude Code, Cursor) drive Jira across multiple instances: sync, read, search, comment, transition status, log time, reassign, create, and delete tasks, with markdown to ADF conversion and a local task cache.
 
+**This repo is an npm workspace with three packages:**
+
+| Path | Package | Published |
+|---|---|---|
+| `packages/core` | `@softspark/atlassian-mcp-core` | no, bundled into both servers |
+| `packages/jira-mcp` | `@softspark/jira-mcp` | yes, bin `jira-mcp` |
+| `packages/confluence-mcp` | `@softspark/confluence-mcp` | yes, bin `confluence-mcp` |
+
+Both servers share config.json, credentials.json, the ADF layer, the HTTP client and the error hierarchy via `core`, and keep separate tool lists on purpose: merging them would put near-homonyms (`search_tasks`/`search_pages`) in one list and degrade tool selection. `packages/core/tests/tool-name-collisions.test.ts` asserts they never overlap. See `kb/reference/confluence.md`.
+
 ## Tech Stack
 - **Language**: TypeScript, strict mode, ESM, Node >= 18. No `any`, `import type` for types, `.js` import specifiers, `moduleResolution: bundler`.
 - **Framework**: `@modelcontextprotocol/sdk` (server) and `commander` (CLI). Zod for schema validation, tsup for build, Vitest for tests, ESLint for lint.
@@ -24,6 +34,17 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 
 - **Fixed config path**: everything persistent is under `~/.softspark/jira-mcp/` via `GLOBAL_CONFIG_DIR` (src/config/paths.ts). No env vars and no manual paths in MCP client setup.
 - **Project key routes the instance**: the Jira project key selects which instance and credentials are used (multi-instance map in `config.json`). One key maps to exactly one instance.
+- **Space key routes Confluence**: a page id carries no space, so `space_key` routes instead, falling back to `default_space` then to the only configured space. Several spaces with no default is an error, never a guess.
+- **Config writers spread, never rebuild**: config.json holds both `projects` and `spaces`. A command that lists its fields explicitly when saving deletes the other product's section. Always `{ ...config, <field> }`.
+- **Confluence uses two API versions**: v2 for CRUD, v1 for CQL search, label writes, restrictions, multipart upload and cross-space moves. v2 does not expose those. Do not consolidate.
+- **One HTTP client for both products**: `src/http/atlassian-client.ts` owns auth, retry, backoff and empty bodies. Connectors inject only a status-to-error mapper. Do not reintroduce a private `fetch` loop in a connector.
+- **Restrictions replace, they never merge**: an empty `set_page_restrictions` clears them and exposes the page, so it is guarded. Clearing needs DELETE; an empty PUT leaves the records in place.
+- **Inline comments verify their anchor**: the passage is counted in the page body before the write, because a wrong match count silently anchors to the wrong text.
+- **Whiteboard content is not reachable over REST**: only the container. Never report having written whiteboard content.
+- **Confluence body format is per space**: `format: "markdown" | "storage"` in config.json (`confluence-mcp space set-format`), with `default_format` as fallback. `storage` means the space's pages are Confluence XHTML: reads default to storage and markdown writes are refused. ADF (`atlas_doc_format`, `body.value` is a JSON *string*) backs the markdown path.
+- **Only the destructive direction is blocked**: storage into a markdown space is fine, markdown into a storage space is not. An explicit `body_format` on a read still wins over the setting. `update_page` also reads storage first, writes an untouched body back verbatim, and refuses markdown over a macro-bearing page (`MARKUP_LOSS_REFUSED`). Never "simplify" those guards away: a real space is mostly storage.
+- **Path constants belong to the package that owns the files**: `PACKAGE_ROOT_DIR` walks up to the nearest package.json, so resolving it from `core` finds the wrong package and `templates-system/` goes missing. Shared roots live in `core/src/config/paths.ts`; Jira's live in `jira-mcp/src/paths.ts`, which re-exports the shared ones so the package has exactly one paths module to mock in tests.
+- **Confluence updates are read-modify-write**: an update must carry the full title, body and `version + 1`. A stale version raises `VersionConflictError`; re-read and reapply rather than retrying.
 - **Language first**: call `get_project_language(projectKey)` (or read `language` from `get_task_details`) before writing any comment, description, or task. Write content in the project's configured language. Never assume Polish or English.
 - **ADF round-trip never throws**: `markdownToAdf()` on writes, `adfToMarkdown()` on reads. Malformed input degrades gracefully instead of raising.
 - **Dual-write**: after a Jira mutation, update the local cache, then return the API result.
@@ -32,7 +53,8 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Status transitions**: call `get_task_statuses` first; only the offered transitions are valid for that issue.
 - **Supply-chain hygiene**: `commander` is the only runtime dependency; everything else (Zod included) is bundled into `dist/` by tsup. No install scripts (`ignore-scripts`).
 - **Layered, deps point down only**: types/config, then infrastructure (`connector`, `cache`, `adf`, `templates`), then business logic (`operations`, `bulk`), then entry points (`tools`, `cli`, `server.ts`).
-- **DI for tests**: handlers take an optional `deps` parameter so tests inject fakes (`tests/fixtures/mocks.ts`). Tests never hit real Jira and never write to `~/.softspark/`.
+- **DI for tests**: handlers take an optional `deps` parameter so tests inject fakes (`packages/jira-mcp/tests/fixtures/mocks.ts`). Tests never hit real Jira and never write to `~/.softspark/`.
+- **A `vi.mock` path that does not resolve is a silent no-op**: the real config loader then reads the developer's own `~/.softspark/jira-mcp/credentials.json`, and a failing assertion prints their live API token. This has happened twice. After moving a module, grep every `vi.mock` that referenced it.
 - **Prose style for generated content**: plain, workmanlike tone, no em dash and no `--` separator in comments, descriptions, or docs.
 
 ## MCP Tools
@@ -42,6 +64,11 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Delete (guarded)**: `delete_task`, `delete_comment`
 - **Templates**: `list_comment_templates`, `list_task_templates`
 
+30 Confluence tools registered in `src/confluence/tools/definitions.ts` (server: `src/confluence-server.ts`, bin: `confluence-mcp`):
+- **Read**: `list_spaces`, `get_space_language`, `search_pages`, `get_page`, `list_space_pages`, `get_page_children`, `get_page_comments`, `get_page_inline_comments`, `list_blog_posts`, `get_blog_post`, `get_page_restrictions`, `get_whiteboard`, `get_page_labels`, `list_attachments`
+- **Mutate**: `create_page`, `update_page`, `move_page`, `add_page_comment`, `add_page_inline_comment`, `create_blog_post`, `update_blog_post`, `create_whiteboard`, `add_page_labels`, `remove_page_label`, `upload_attachment`
+- **Guarded**: `delete_page`, `delete_page_comment`, `delete_blog_post`, `delete_whiteboard`, `set_page_restrictions`
+
 ## MCP Servers
 This repo *is* an MCP server (stdio, bin `jira-mcp`), so there is no `.mcp.json` to consume. When working in this repo the team relies on two servers:
 - **rag-mcp**: search the KB before answering technical questions (`smart_query` or `hybrid_search_kb`) and cite `[PATH: kb/...]`.
@@ -49,7 +76,7 @@ This repo *is* an MCP server (stdio, bin `jira-mcp`), so there is no `.mcp.json`
 
 ## Docs
 - `README.md`: install, configuration, full tool and CLI reference.
-- `kb/reference/`: architecture, api, adf, caching, configuration, templates.
+- `kb/reference/`: architecture, api, adf, caching, configuration, templates, confluence.
 - `kb/howto/`: setup, multi-instance, cli-usage.
 - `kb/procedures/`: sop-pre-commit, sop-release, sop-post-release-testing.
 - `AGENTS.md`, `rules/jira-mcp.md`: full agent rules (auto-generated by ai-toolkit, do not hand-edit).

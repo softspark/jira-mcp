@@ -25,8 +25,16 @@ jobs:
         run: npm whoami
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Publish to npm
-        run: npm publish --access public --provenance
+      # Both packages ship under one version and one tag. Publishing them in
+      # separate steps means a failure on the second leaves the first already
+      # on npm; the release SOP's rollback covers that by deprecating the
+      # orphan and re-releasing a patch.
+      - name: Publish @softspark/jira-mcp
+        run: npm publish --access public --provenance --workspace @softspark/jira-mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish @softspark/confluence-mcp
+        run: npm publish --access public --provenance --workspace @softspark/confluence-mcp
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create GitHub Release

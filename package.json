@@ -1,20 +1,8 @@
 {
-  "name": "@softspark/jira-mcp",
-  "version": "1.11.0",
-  "description": "MCP server for Jira integration — multi-instance routing, ADF formatting, task caching, and comment templates via the Model Context Protocol.",
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "jira",
-    "atlassian",
-    "claude",
-    "ai",
-    "developer-tools"
-  ],
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public"
-  },
+  "name": "@softspark/atlassian-mcp",
+  "version": "1.12.0",
+  "description": "Workspace root for the SoftSpark Atlassian MCP servers: @softspark/jira-mcp and @softspark/confluence-mcp.",
+  "private": true,
   "homepage": "https://github.com/softspark/jira-mcp",
   "repository": {
     "type": "git",
@@ -26,26 +14,10 @@
   "license": "Apache-2.0",
   "author": "SoftSpark <biuro@softspark.eu>",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "jira-mcp": "dist/cli.js"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist/*.js",
-    "dist/*.d.ts",
-    "hooks/**/*.json",
-    "templates-system/**/*.md",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE",
-    "NOTICE"
+  "workspaces": [
+    "packages/core",
+    "packages/jira-mcp",
+    "packages/confluence-mcp"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -55,16 +27,17 @@
     "ignore-scripts": true
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsx src/cli.ts",
+    "build": "npm run build --workspace @softspark/jira-mcp && npm run build --workspace @softspark/confluence-mcp",
+    "build:jira": "npm run build --workspace @softspark/jira-mcp",
+    "build:confluence": "npm run build --workspace @softspark/confluence-mcp",
+    "dev": "npm run dev --workspace @softspark/jira-mcp",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src/ tests/",
-    "lint:fix": "eslint src/ tests/ --fix",
+    "lint": "eslint packages/",
+    "lint:fix": "eslint packages/ --fix",
     "typecheck": "tsc --noEmit",
-    "validate:counts": "python3 scripts/validate_counts.py",
-    "prepublishOnly": "npm run build && npm run lint && npm run test"
+    "validate:counts": "python3 scripts/validate_counts.py"
   },
   "dependencies": {
     "commander": "^14.0.3"

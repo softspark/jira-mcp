@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
 
   lint:
     name: ESLint
@@ -79,7 +79,7 @@ jobs:
         run: |
           for f in LICENSE NOTICE CHANGELOG.md SECURITY.md CODE_OF_CONDUCT.md README.md CLAUDE.md \
             package.json package-lock.json .gitignore .npmignore .npmrc \
-            tsconfig.json tsup.config.ts vitest.config.ts eslint.config.mjs \
+            tsconfig.json tsconfig.base.json vitest.config.ts eslint.config.mjs \
             .github/CONTRIBUTING.md .github/PULL_REQUEST_TEMPLATE.md .github/CODEOWNERS \
             .github/FUNDING.yml .github/dependabot.yml .github/ISSUE_TEMPLATE/config.yml \
             .github/ISSUE_TEMPLATE/bug_report.md .github/ISSUE_TEMPLATE/feature_request.md \
@@ -87,6 +87,14 @@ jobs:
             kb/procedures/sop-pre-commit.md kb/procedures/sop-release.md \
             kb/procedures/sop-post-release-testing.md kb/reference/architecture.md \
             kb/reference/api.md kb/reference/configuration.md kb/reference/audit.md \
-            kb/howto/setup.md rules/jira-mcp.md hooks/jira-mcp-hooks.json; do
+            kb/reference/confluence.md kb/howto/setup.md rules/jira-mcp.md; do
             test -s "$f" || { echo "Missing or empty: $f"; exit 1; }
           done
+          # Every published package carries its own licence, notice, readme and build config.
+          for p in jira-mcp confluence-mcp; do
+            for f in package.json tsconfig.json tsup.config.ts README.md LICENSE NOTICE; do
+              test -s "packages/$p/$f" || { echo "Missing or empty: packages/$p/$f"; exit 1; }
+            done
+          done
+          test -s packages/core/package.json || { echo "Missing: packages/core/package.json"; exit 1; }
+          test -s packages/jira-mcp/hooks/jira-mcp-hooks.json || { echo "Missing: jira-mcp hooks manifest"; exit 1; }

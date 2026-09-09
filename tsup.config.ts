@@ -50,7 +50,9 @@ export default defineConfig([
     },
   },
   {
-    entry: { cli: 'src/cli.ts' },
+    // Both binaries build together: they share the config, ADF and error
+    // layers, so a change that breaks one must fail the build for both.
+    entry: { cli: 'src/cli.ts', 'confluence-cli': 'src/confluence-cli.ts' },
     format: ['esm'],
     sourcemap: true,
     clean: false,

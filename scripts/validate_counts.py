@@ -33,7 +33,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-README = ROOT / "README.md"
+
+# The workspace publishes two packages. Counts are a property of a package,
+# not of the repository, so every path below is package-relative. The Jira
+# package is the one whose README carries counted claims; the Confluence
+# README states no counts, by design -- its tool table is checked for
+# completeness instead (see check_confluence_tools).
+JIRA = ROOT / "packages" / "jira-mcp"
+CONFLUENCE = ROOT / "packages" / "confluence-mcp"
+CORE = ROOT / "packages" / "core"
+README = JIRA / "README.md"
 
 errors = 0
 
@@ -70,7 +79,7 @@ def check(label: str, readme_val: str | None, actual_val: int) -> None:
 
 def count_tools() -> int:
     """Count MCP tool files in src/tools/ (excluding non-handler modules)."""
-    tools_dir = ROOT / "src" / "tools"
+    tools_dir = JIRA / "src" / "tools"
     exclude = {
         "helpers.ts",
         "index.ts",
@@ -102,24 +111,25 @@ def count_cli_commands(readme_text: str) -> int:
 
 def count_templates() -> int:
     """Count built-in comment templates from markdown files."""
-    built_in_dir = ROOT / "templates-system" / "comments"
+    built_in_dir = JIRA / "templates-system" / "comments"
     return len(list(built_in_dir.glob("*.md")))
 
 
 def count_error_classes() -> int:
     """Count exported error classes in the error hierarchy."""
-    errors_file = ROOT / "src" / "errors" / "index.ts"
+    errors_file = CORE / "src" / "errors" / "index.ts"
     return len(re.findall(r"^export class", errors_file.read_text(), re.MULTILINE))
 
 
 def count_test_files() -> int:
     """Count .test.ts files in tests/."""
-    return len(list((ROOT / "tests").rglob("*.test.ts")))
+    return sum(len(list((pkg / "tests").rglob("*.test.ts")))
+               for pkg in (CORE, JIRA, CONFLUENCE))
 
 
 def get_bundle_size_kib() -> int | None:
     """Get dist/index.js size in KiB (rounded down)."""
-    bundle = ROOT / "dist" / "index.js"
+    bundle = JIRA / "dist" / "index.js"
     if not bundle.exists():
         return None
     return bundle.stat().st_size // 1024
@@ -127,14 +137,14 @@ def get_bundle_size_kib() -> int | None:
 
 def tool_names_from_definitions() -> list[str]:
     """Extract MCP tool names from src/tools/definitions.ts."""
-    definitions = (ROOT / "src" / "tools" / "definitions.ts").read_text()
+    definitions = (JIRA / "src" / "tools" / "definitions.ts").read_text()
     return re.findall(r"^\s+name: '([a-z_]+)',$", definitions, re.MULTILINE)
 
 
 def check_version_badge(readme_text: str) -> None:
     """README version badge must match package.json version."""
     global errors
-    pkg = (ROOT / "package.json").read_text()
+    pkg = (JIRA / "package.json").read_text()
     pkg_version = re.search(r'"version":\s*"([^"]+)"', pkg)
     badge_version = re.search(r"badge/version-([0-9.]+)-", readme_text)
     if pkg_version is None or badge_version is None:

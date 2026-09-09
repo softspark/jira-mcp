@@ -16,13 +16,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tests/**/*.ts'],
+    files: ['packages/*/tests/**/*.ts'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', '*.config.*', '*.config.mjs'],
+    ignores: ['**/dist/', 'node_modules/', '**/*.config.*', '**/*.config.mjs'],
   },
 );
