@@ -4,15 +4,16 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.14.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.14.1-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.14.0
+## What's New in v1.14.1
 
 - Polish versions of all eight built-in comment templates ship with the package. Until now a templated comment was English on every project, including one configured for another language.
 - `jira-mcp template list-locales` shows which languages are available, and `jira-mcp template install-locale pl` installs them. Add `--keep-english` to keep the originals reachable as `<id>-en`.
+- Fixed in 1.14.1: `jira-mcp --help` now lists both new commands.
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](../../CHANGELOG.md).
 
 ## Table of Contents
@@ -273,7 +274,7 @@ src/
 
 **Typed error hierarchy** -- 26 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 970 tests across 79 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 971 tests across 79 test files.
 
 ## Documentation
 

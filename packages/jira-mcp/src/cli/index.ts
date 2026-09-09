@@ -79,6 +79,8 @@ All commands:
   template list [type]           List active comment/task templates
   template show <type> <id>      Show the active template file content
   template remove <type> <id>    Remove a user-installed template override
+  template list-locales          List languages with shipped template translations
+  template install-locale <lang> Install the translated comment templates for a language
 
   config init                    Initialize global config at ~/.softspark/jira-mcp/
   config add-project <key> <url> Add a Jira project

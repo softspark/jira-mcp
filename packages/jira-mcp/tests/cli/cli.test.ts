@@ -300,3 +300,45 @@ describe('hook subcommands', () => {
     expect(subcommandNames(hook)).toEqual(['comment-approval']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The hand-written --help epilogue
+// ---------------------------------------------------------------------------
+
+describe('--help epilogue', () => {
+  /**
+   * `hook comment-approval` is invoked by the ai-toolkit hook, not by a person,
+   * and is deliberately left out of the listing.
+   */
+  const UNDOCUMENTED = ['hook'];
+
+  /** The help text as a user sees it, including the addHelpText epilogue. */
+  function helpText(): string {
+    const program = createProgram();
+    let out = '';
+    program.configureOutput({
+      writeOut: (str) => {
+        out += str;
+      },
+    });
+    program.outputHelp();
+    return out;
+  }
+
+  it('names every registered command', () => {
+    const program = createProgram();
+    const text = helpText();
+
+    const missing = program.commands
+      .filter((cmd) => !UNDOCUMENTED.includes(cmd.name()))
+      .flatMap((cmd) =>
+        cmd.commands.length === 0
+          ? [cmd.name()]
+          : cmd.commands.map((sub) => `${cmd.name()} ${sub.name()}`),
+      )
+      .filter((name) => !text.includes(name));
+
+    // The listing is hand-written, so adding a command silently leaves it out.
+    expect(missing).toEqual([]);
+  });
+});

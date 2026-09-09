@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.14.1 -- Help text lists the new commands (2026-09-09)
+
+### Fixed
+
+- **`jira-mcp --help` did not list `template list-locales` or
+  `template install-locale`.** The command listing under "All commands" is
+  hand-written, so the two commands added in 1.14.0 were invisible to anyone
+  reading the help. A test now walks the registered command tree and fails when
+  the listing misses one, which is what should have caught this.
+
 ## v1.14.0 -- Translated comment templates (2026-09-09)
 
 Both packages are released together under one version.

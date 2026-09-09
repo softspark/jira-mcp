@@ -3,14 +3,14 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.14.0-blue)](../../CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.14.1-blue)](../../CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
 
 ---
 
-## What's New in v1.14.0
+## What's New in v1.14.1
 
 - No behaviour change in this package: same 30 tools, same CLI, same config path. It ships because both packages are released together under one version.
 - The new work is in [`@softspark/jira-mcp`](../jira-mcp): translated comment templates and a command that installs them.
