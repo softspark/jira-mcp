@@ -3,7 +3,7 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.14.3-blue)](../../CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.14.3-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
@@ -185,7 +185,7 @@ Drop your own templates in `~/.softspark/jira-mcp/templates/pages/*.md`; one wit
 ## Documentation
 
 - [Confluence reference](../../kb/reference/confluence.md) -- architecture, API split, ADF and storage formats, restrictions, version conflicts.
-- [Changelog](../../CHANGELOG.md) -- shared with `@softspark/jira-mcp`; both packages are released together under one version.
+- [Changelog](CHANGELOG.md) -- shared with `@softspark/jira-mcp`; both packages are released together under one version.
 
 ## License
 

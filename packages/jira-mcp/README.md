@@ -15,7 +15,7 @@
 - `jira-mcp template list-locales` shows which languages are available, and `jira-mcp template install-locale pl` installs them. Add `--keep-english` to keep the originals reachable as `<id>-en`.
 - Fixed in 1.14.1: `jira-mcp --help` now lists both new commands. 1.14.2 adds the test that would have caught it, on both binaries.
 - 1.14.3 changes nothing in the package itself; it carries knowledge base work only.
-- Released together with `@softspark/confluence-mcp` under one version. See the [changelog](../../CHANGELOG.md).
+- Released together with `@softspark/confluence-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ## Table of Contents
 
@@ -275,7 +275,7 @@ src/
 
 **Typed error hierarchy** -- 26 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 972 tests across 79 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 991 tests across 80 test files.
 
 ## Documentation
 
