@@ -85,6 +85,39 @@ describe('createConfluenceProgram', () => {
   });
 });
 
+describe('--help epilogue', () => {
+  /** The help text as a user sees it, including the addHelpText epilogue. */
+  function helpText(): string {
+    const program = createConfluenceProgram();
+    let out = '';
+    program.configureOutput({
+      writeOut: (str) => {
+        out += str;
+      },
+    });
+    program.outputHelp();
+    return out;
+  }
+
+  it('names every registered command', () => {
+    const program = createConfluenceProgram();
+    const text = helpText();
+
+    const missing = program.commands
+      .flatMap((cmd) =>
+        cmd.commands.length === 0
+          ? [cmd.name()]
+          : cmd.commands.map((sub) => `${cmd.name()} ${sub.name()}`),
+      )
+      .filter((name) => !text.includes(name));
+
+    // The listing is hand-written, so adding a command silently leaves it out.
+    // That is exactly what happened to `jira-mcp template list-locales` in
+    // 1.14.0 and had to be fixed in 1.14.1.
+    expect(missing).toEqual([]);
+  });
+});
+
 describe('space command actions', () => {
   let dir: string;
   let program: Command;

@@ -274,7 +274,7 @@ src/
 
 **Typed error hierarchy** -- 26 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 971 tests across 79 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 972 tests across 79 test files.
 
 ## Documentation
 

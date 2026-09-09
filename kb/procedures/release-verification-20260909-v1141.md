@@ -43,7 +43,10 @@ text. Verified by deleting the `template list-locales` line: the test failed wit
 hook, not by a person, and is deliberately left out of the listing.
 
 The same epilogue exists in `packages/confluence-mcp/src/cli/program.ts`. It was
-checked by hand and is in sync; it has no drift guard.
+in sync, and it now has the same guard in
+`packages/confluence-mcp/tests/confluence/cli.test.ts`, verified the same way by
+deleting the `space set-format` line. That one needs no exclusion list: every
+command it registers is meant to be listed.
 
 ## Phase 7: publish verification
 
