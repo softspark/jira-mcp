@@ -1,6 +1,6 @@
 {
   "name": "@softspark/atlassian-mcp",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "description": "Workspace root for the SoftSpark Atlassian MCP servers: @softspark/jira-mcp and @softspark/confluence-mcp.",
   "private": true,
   "homepage": "https://github.com/softspark/jira-mcp",

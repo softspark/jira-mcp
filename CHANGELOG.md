@@ -7,6 +7,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.14.2 -- Drift guard on the Confluence help listing (2026-09-09)
+
+No behaviour change in either package. It ships the guard that the 1.14.1 fix
+left missing on the other half of the workspace.
+
+### Added
+
+- **A test that fails when `confluence-mcp --help` stops naming a registered
+  command.** The listing under "All commands" is a hand-written epilogue in
+  `packages/confluence-mcp/src/cli/program.ts`, the same construction that let
+  1.14.0 ship with two Jira commands missing from the help. The test walks the
+  registered command tree, renders the help through Commander and fails on
+  anything absent. Unlike the Jira one it needs no exclusion list: every command
+  the Confluence CLI registers is meant to be listed.
+
+### Fixed
+
+- **Corrected the Confluence tool count in the docs.** `CLAUDE.md` and the
+  package README said 30 while the server registers 31; the count went stale when
+  `list_page_templates` landed in 1.13.0.
+
 ## v1.14.1 -- Help text lists the new commands (2026-09-09)
 
 ### Fixed
