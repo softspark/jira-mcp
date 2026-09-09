@@ -190,6 +190,57 @@ Polish `status-update` template, time-logged, transitioned and deleted. DevOps
 still reports `storage`, page 769523713 still at version 18, markdown write still
 refused.
 
+## 1.14.4
+
+Ships the `CHANGELOG.md` both packages had listed in `files` since the 1.12.0
+workspace split and never actually included. Confirmed on the published
+tarballs: one CHANGELOG.md in each, opening on the 1.14.4 entry.
+
+### Two silent failures in one bug
+
+npm resolves `files` patterns inside the package directory. The changelog lives
+at the repository root because it covers both packages, so `"CHANGELOG.md"`
+matched nothing, and **npm drops a pattern that matches nothing without a
+warning**. Ten releases shipped a manifest promising a file the tarball did not
+have, and the README version badge linked to it.
+
+A symlink is not the fix: `npm pack` skips symlinks. Verified before writing
+anything else, by creating one and watching `npm pack --dry-run` omit the file.
+
+The second failure was in the first attempt at the fix. `prebuild` and `pretest`
+hooks looked right and never ran, because `.npmrc` sets `ignore-scripts=true` for
+supply-chain reasons, which disables **every** npm lifecycle hook in this
+repository, not just install scripts. `scripts/sync-changelog.mjs` is therefore
+called as an explicit command from `build`, `test` and `test:coverage`.
+
+### Why the sync is wired into `test` and not only `build`
+
+The build alone produces a correct tarball, since publish runs `npm run build`
+first. But the pre-commit gate is `typecheck && lint && test && build`, so a
+changelog edit failed packaging.test.ts once and passed on the next run, which
+reads as a flaky test rather than a missing step. Reproduced deliberately:
+editing the root changelog and running `npm test` now passes, and the copy is
+synced by the time vitest starts.
+
+### The guard
+
+`packages/core/tests/packaging.test.ts` asserts every `files` entry in both
+published packages matches at least one real file, and that each copied
+changelog equals the root one. Both failure modes were checked by breaking them:
+removing the copy fails the first, appending a line to the copy fails the second.
+
+Also fixed: `../../CHANGELOG.md` links in both READMEs, which resolve inside the
+repository but point outside a published tarball, so they were dead on npmjs.com
+for the same underlying reason.
+
+### Post-release run
+
+Both binaries at 1.14.4, CHANGELOG.md present in the installed package, 8 locale
+files, 19 and 31 tools over stdio, both help listings intact. KAN-12 created,
+commented with the Polish `bug-report` template, time-logged 25m against 30m,
+transitioned and deleted. DevOps still `storage`, page 769523713 still at version
+18, markdown write still refused. Tarballs answered 200 on the first attempt.
+
 ## Outcome
 
-All four releases published, verified and tested. Nothing outstanding.
+All five releases published, verified and tested. Nothing outstanding.

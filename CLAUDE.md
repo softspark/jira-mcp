@@ -54,6 +54,8 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Time format**: `"2h 30m"`, hours and minutes only, never days.
 - **Status transitions**: call `get_task_statuses` first; only the offered transitions are valid for that issue.
 - **Supply-chain hygiene**: `commander` is the only runtime dependency; everything else (Zod included) is bundled into `dist/` by tsup. No install scripts (`ignore-scripts`).
+- **`ignore-scripts=true` kills every npm lifecycle hook here, not just install ones**: a `prebuild` or `pretest` in package.json looks correct and never runs. Chain the step into the script itself (`"test": "node scripts/x.mjs && vitest run"`).
+- **`files` patterns resolve inside the package directory, and a pattern matching nothing is dropped silently**: that is why the root CHANGELOG.md is copied into each package by `scripts/sync-changelog.mjs` rather than merely listed. A symlink does not work, `npm pack` skips it. `packages/core/tests/packaging.test.ts` guards both.
 - **Layered, deps point down only**: types/config, then infrastructure (`connector`, `cache`, `adf`, `templates`), then business logic (`operations`, `bulk`), then entry points (`tools`, `cli`, `server.ts`).
 - **DI for tests**: handlers take an optional `deps` parameter so tests inject fakes (`packages/jira-mcp/tests/fixtures/mocks.ts`). Tests never hit real Jira and never write to `~/.softspark/`.
 - **A `vi.mock` path that does not resolve is a silent no-op**: the real config loader then reads the developer's own `~/.softspark/jira-mcp/credentials.json`, and a failing assertion prints their live API token. This has happened twice. After moving a module, grep every `vi.mock` that referenced it.
