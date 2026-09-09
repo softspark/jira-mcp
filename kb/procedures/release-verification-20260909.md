@@ -153,12 +153,14 @@ hand-maintained and are what `ai-toolkit add-rule` publishes, and
 Following the old note would have meant never updating a file that must track
 the tool surface.
 
-## Still open
+## Closed since
 
-Localised comment templates. The workaround is a user override with the same
-`id` in `~/.softspark/jira-mcp/templates/comments/`, which already works and
-needs no release. A shipped fix would mean a `language` field on templates and
-per-language variants of the eight built-ins; not started, no decision taken.
+Localised comment templates, open at the time of this run, shipped in 1.14.0.
+Not the `language` field this note guessed at: the package ships per-language
+variants of the eight built-ins under `templates-system/locales/<lang>/`, each
+keeping the English `id` and variable names so it overrides the original, and
+`jira-mcp template install-locale <lang>` installs them. See
+[the 1.14.x record](release-verification-20260909-v1141.md).
 
 ## Deviation on record
 
