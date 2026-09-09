@@ -11,6 +11,26 @@ description: "Reference for the file-backed template system: comment templates, 
 
 # Jira MCP Server - Templates Reference
 
+## Language and the catalog cache
+
+Two things that bite in practice.
+
+**Templates carry no language.** Their headings are fixed text in the template
+body, so a shipped template renders English regardless of the project's
+configured language, and `add_templated_comment` cannot honour the
+language-first rule on a non-English project. The supported answer is a user
+override with the same `id`, which wins globally. Installing translated
+overrides for every shipped id makes the default correct for that language;
+keep the originals reachable by installing them again under a suffixed id such
+as `status-update-en`, because an override replaces the shipped template
+rather than sitting beside it.
+
+**The catalog is read once, at server startup.** `loadTemplateCatalog()` runs
+in `startServer()`. `jira-mcp template add` writes the file and the CLI reports
+it immediately, but a running MCP server keeps the catalog it loaded when it
+started, and the next `add_templated_comment` renders the old template with no
+warning. Restart the MCP client after installing or editing a template.
+
 ## Overview
 
 The template system provides three related features:
