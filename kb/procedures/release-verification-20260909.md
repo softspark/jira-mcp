@@ -118,6 +118,48 @@ carrying macros, and that the page's version number does not move.
 
 All three are fixed in `sop-post-release-testing.md`.
 
+## What inspecting KAN-8 exposed
+
+The task itself is correct. Markdown reached Jira as real ADF structure: the
+plain comment became an `h2` heading, a paragraph with a bold mark and a
+two-item `bulletList`, and the templated comment rendered its `h2`/`h3`
+hierarchy. Fields, labels, status and the 900-second worklog all match what the
+steps set.
+
+The procedure around it was not:
+
+**The SOP prescribed an em dash.** Step 4.3's example summary read
+`[SMOKE TEST] Test task vX.Y.Z — do usunięcia`, and `rules/jira-mcp.md`
+forbids em dashes in generated summaries, comments and descriptions. Following
+one document broke the other. Changed to parentheses.
+
+**The SOP's comment steps omitted `user_approved`.** Steps 4.6 and 4.7 showed
+calls without it, and the comment guard rejects both. Anyone following the
+procedure literally hits `COMMENT_APPROVAL_REQUIRED` and has no way to know
+from the SOP that the flag exists.
+
+**Comment templates are English-only on a Polish project.** Step 4.7 posted a
+comment headed "Status Update / Completed / Next Steps / Blockers" to KAN,
+whose configured language is `pl`. Templates carry no language field and their
+headings are fixed text, so `add_templated_comment` cannot honour the
+language-first rule on any non-English project. Acceptable inside a smoke test,
+which is testing rendering rather than producing content anyone reads. Not
+acceptable in normal use, and now stated in `rules/jira-mcp.md`.
+
+**CLAUDE.md described `rules/jira-mcp.md` as auto-generated.** It is not.
+`AGENTS.md` is generated between `TOOLKIT:` markers; the rule files are
+hand-maintained and are what `ai-toolkit add-rule` publishes, and
+`validate_counts.py` treats the Jira one as a source of truth for tool names.
+Following the old note would have meant never updating a file that must track
+the tool surface.
+
+## Still open
+
+Localised comment templates. The workaround is a user override with the same
+`id` in `~/.softspark/jira-mcp/templates/comments/`, which already works and
+needs no release. A shipped fix would mean a `language` field on templates and
+per-language variants of the eight built-ins; not started, no decision taken.
+
 ## Deviation on record
 
 `@softspark/confluence-mcp` starts at 1.12.0 rather than the 1.0.0 the
