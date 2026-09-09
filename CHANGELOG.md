@@ -7,6 +7,90 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.12.0 -- Confluence support, split into two packages (2026-09-09)
+
+This release turns the repository into an npm workspace. `@softspark/jira-mcp`
+keeps its name, contents and CLI; Confluence ships as its own package. Both are
+released together under one version.
+
+### Added
+
+- **`@softspark/confluence-mcp`** -- a second published package and stdio MCP server
+  covering Confluence Cloud. It reads the same `config.json` and `credentials.json`
+  as the Jira server, because one Atlassian site serves both products from the same
+  host with the same API token. The tool lists stay separate: merging them would put
+  `search_tasks` beside `search_pages` and `get_task_details` beside `get_page`, and
+  near-homonyms in one list make tool selection worse. A workspace test asserts the
+  two lists never share a name.
+- **`@softspark/atlassian-mcp-core`** -- private, unpublished workspace package holding
+  the configuration loader, ADF conversion, HTTP transport, error hierarchy and MCP
+  response envelope. Both servers bundle it at build time, so it never reaches a
+  consumer as a separate dependency.
+- **Per-space body format** -- `format: "markdown" | "storage"` on a space in config.json,
+  with `default_format` as the global fallback and
+  `confluence-mcp space set-format <KEY> <format>` to set it. A `storage` space reads and
+  writes Confluence XHTML and refuses markdown writes; a `markdown` space accepts both,
+  because storage never loses anything. `get_space_language` reports the format alongside
+  the language, and `list_spaces` reports it per configured space.
+- **Storage-format support for Confluence pages** -- `get_page` accepts
+  `body_format: "storage"` and reports `has_storage_markup`; `create_page` and
+  `update_page` accept a `storage` body. Confluence stores macros, page links and
+  attachment references as XHTML that markdown cannot express, and a markdown round-trip
+  would keep the prose and silently delete the rest.
+- **`spaces` section in config.json** -- maps a Confluence space key to a site URL and
+  an optional content language, mirroring how `projects` maps Jira. Both keys are
+  optional, so a config written before this release still validates.
+- **`confluence-mcp space` commands** -- `add`, `remove`, `list`, `set-default`,
+  `set-language`, `set-format`. Credentials stay on `jira-mcp config set-credentials`.
+- **Pages** -- `search_pages` (plain text or raw CQL), `get_page`, `list_space_pages`,
+  `get_page_children`, `create_page`, `update_page`, `move_page`, `delete_page`.
+- **Comments** -- `get_page_comments`, `add_page_comment`, `delete_page_comment`,
+  plus `get_page_inline_comments` and `add_page_inline_comment` for anchored review
+  threads. An inline comment verifies its anchor text exists in the page before
+  writing, because a wrong occurrence count silently anchors to the wrong passage.
+- **Blog posts** -- `list_blog_posts`, `get_blog_post`, `create_blog_post`,
+  `update_blog_post`, `delete_blog_post`.
+- **Restrictions** -- `get_page_restrictions` and `set_page_restrictions`. Reads report
+  `inherits_space_permissions` so an empty result is not misread as "nobody has
+  access". Writes replace rather than merge and require `user_approved`, because
+  clearing restrictions exposes a page that was deliberately private.
+- **Whiteboards** -- `get_whiteboard`, `create_whiteboard`, `delete_whiteboard`.
+  Metadata only: whiteboard drawing content has no REST representation, and the tool
+  descriptions and results say so.
+- **Labels and attachments** -- `get_page_labels`, `add_page_labels`,
+  `remove_page_label`, `list_attachments`, `upload_attachment` (25 MB cap).
+- **Confluence error classes** -- `ConfluenceConnectionError`,
+  `ConfluenceAuthenticationError`, `ConfluencePermissionError`, `PageNotFoundError`,
+  `VersionConflictError` and `MarkupLossError`, each with its own code.
+
+### Changed
+
+- **Repository is an npm workspace** -- sources moved to `packages/core`,
+  `packages/jira-mcp` and `packages/confluence-mcp`. Typecheck, lint, tests and
+  coverage run once across all three; each published package builds its own bundle.
+  Nothing changes for consumers of `@softspark/jira-mcp`: same name, same binary,
+  same config path.
+- **Shared HTTP transport** -- auth, retry, exponential backoff, `Retry-After` and
+  empty-body handling now live in one client used by both products. Connectors inject
+  only a status-to-error mapper, removing a duplicated fetch loop.
+- **`update_page` no longer rewrites a body it was not asked to change** -- a
+  title-only rename or a re-parent writes the existing body back verbatim instead of
+  round-tripping it through markdown.
+- **`update_page` refuses a markdown body that would destroy markup** -- when the page
+  contains Confluence macros, page links or attachment references, the call fails with
+  `MARKUP_LOSS_REFUSED` and says to send `storage` instead. `allow_markup_loss: true`
+  overrides it after the user agrees.
+
+### Fixed
+
+- **`config add-project` and `config remove-project` no longer drop config fields** --
+  both rebuilt config.json from the fields they knew about, which already discarded
+  `default_language` and would have deleted the entire Confluence `spaces` section.
+  Both now spread the loaded object.
+- **Confluence links resolve against the `/wiki` context path** -- page, search-result
+  and attachment URLs are returned relative to `/wiki`, and resolving them against the
+  site origin dropped that segment and produced links that 404.
+
 ## v1.11.0 -- Local audits and private configuration (2026-09-06)
 
 - Add text, JSON and SARIF audits for local filesystem permissions and shipped hook ownership.
