@@ -7,6 +7,36 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.13.0 -- Page templates and real space keys (2026-09-09)
+
+Both packages are released together under one version. `@softspark/jira-mcp` has
+no behaviour change in this release; it ships because the shared template engine
+moved into the package both servers bundle.
+
+### Added
+
+- **Confluence page templates** -- `list_page_templates` lists what is usable in a
+  space, filtered to its body format, and `create_page` accepts `template_id` plus
+  `variables`. Three ship with the package: `runbook` and `incident-review` in
+  markdown, `decision-record` in storage using Confluence status and info macros.
+  User templates in `~/.softspark/jira-mcp/templates/pages/*.md` override a shipped
+  one by id; a malformed file is skipped rather than breaking startup.
+- **`rules/confluence-mcp.md`** -- agent rules for the Confluence server, registrable
+  with `ai-toolkit add-rule`, matching how `rules/jira-mcp.md` works.
+
+### Changed
+
+- **`renderTemplate` moved to the shared core package** -- the `{{variable}}` engine is
+  plain text substitution and is now used by Jira comment and task templates and by
+  Confluence page templates alike.
+
+### Fixed
+
+- **Confluence space keys are no longer forced to uppercase** -- the validator applied
+  Jira's project-key rule, which rejected real spaces: Confluence keeps the case a
+  space was created with (`DevOps`, `Puccini`, `MTPapp`) and personal space keys start
+  with `~`. Every one of those was rejected by `space add`.
+
 ## v1.12.0 -- Confluence support, split into two packages (2026-09-09)
 
 This release turns the repository into an npm workspace. `@softspark/jira-mcp`
