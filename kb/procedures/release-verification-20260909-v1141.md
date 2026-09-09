@@ -121,6 +121,46 @@ with `<ac:structured-macro`. `update_page` with a markdown `content` on that pag
 was refused with `MARKUP_LOSS_REFUSED` and the page stayed at version 18. The
 guard still protects a macro-bearing page.
 
+## 1.14.2
+
+Released the same day. No behaviour change: it ships the drift guard on the
+Confluence `--help` listing that the 1.14.1 fix left missing on the other half
+of the workspace, plus the corrected Confluence tool count.
+
+Gates green (79 files, 972 tests), provenance verified on both packages,
+GitHub release published, CI green on the release commit.
+
+### The registry served 404 for the new tarball
+
+Phase 7.2 failed for about seven minutes. `npm view` reported 1.14.2 with the
+right `fileCount`, signature and provenance, `dist-tags.latest` already pointed
+at it, and the tarball URL from that same metadata returned
+`{"error":"Not found"}`. Both packages. `npm install -g` failed with
+`404 tarball, folder, http url, or git url` for the whole window, so for those
+minutes `latest` named a version nobody could install.
+
+Polling both tarball URLs was the whole fix. jira-mcp came back first,
+confluence-mcp about a minute later, and everything downstream passed unchanged.
+1.14.1's tarball answered 200 throughout, which is what ruled out anything local.
+
+Nothing to do about it beyond knowing it happens: it is npm CDN propagation, not
+the package. A 404 here is only worth acting on if it outlives several minutes
+of polling, and the thing to check first is whether an older version still
+serves.
+
+### Post-release run
+
+Both binaries at 1.14.2, 8 locale files in the installed package, 19 Jira tools
+and 31 Confluence tools over stdio. `jira-mcp --help` names both locale commands,
+`confluence-mcp --help` names `space set-format`.
+
+KAN-10 created, commented with the `deployment-note` template (Polish:
+"Notatka z wdrożenia", "Zmiany", "Plan wycofania", "Co obserwować"),
+transitioned, time-logged 20m against a 30m estimate, then deleted; the JQL
+search returned 0 afterwards. Confluence: DevOps still reports `storage`,
+page 769523713 still reads at version 18, and a markdown write was still
+refused with `MARKUP_LOSS_REFUSED`.
+
 ## Outcome
 
-Both releases published, verified and tested. Nothing outstanding.
+All three releases published, verified and tested. Nothing outstanding.

@@ -638,19 +638,28 @@ Two things the literal commands above get wrong on the real instance:
 - **Workflow status names are localised.** Step 4.9 shows `"In Progress"`, but
   KAN's workflow is Polish: `Do zrobienia`, `W toku`, `In Review`, `Gotowe`.
   Always take the name from `get_task_statuses` rather than the example.
+- **A fresh tarball can 404 for several minutes.** Phase 1 installs the version
+  just published, and on 1.14.2 that failed with `404 tarball, folder, http url,
+  or git url` for about seven minutes while `npm view` already reported the
+  version, its `fileCount`, its signature and its provenance, and `dist-tags`
+  already pointed `latest` at it. It is npm CDN propagation, not the package.
+  Poll the tarball URL rather than re-publishing or rolling back, and check that
+  the previous version still serves 200 to confirm the problem is not local.
 - **Both packages must be installed globally.** Phase 1 covers
   `@softspark/jira-mcp`; since v1.12.0 it must also install
   `@softspark/confluence-mcp` at the same version. A smoke test run from a
   temporary directory validates the tarball, not the global install the CLI
   actually uses.
 
-## Verification on 2026-09-09 (1.14.0 and 1.14.1)
+## Verification on 2026-09-09 (1.14.0, 1.14.1 and 1.14.2)
 
 Published 1.14.0 (translated comment templates and the locale installer), then
 1.14.1 for what this run caught: `jira-mcp --help` did not list either new
 command, because the listing is a hand-written epilogue that nothing checked.
 A test now walks the registered command tree and fails on that drift. The run
 also found the Confluence tool count stale in `CLAUDE.md` (30 against 31 live).
+1.14.2 extends the same guard to `confluence-mcp`, which has the same
+hand-written listing, and is where the tarball 404 above was observed.
 See [the executed record](release-verification-20260909-v1141.md).
 
 ## Verification on 2026-09-09 (1.12.0 and 1.13.0)
