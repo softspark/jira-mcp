@@ -2,17 +2,19 @@
 title: "SOP: Post-Release Testing"
 category: procedures
 service: jira-mcp
-tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, provenance, supply-chain]
-version: "1.11.0"
+tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, confluence-api, provenance, supply-chain]
+version: "1.13.0"
 created: "2026-04-13"
-last_updated: "2026-09-06"
-description: "End-to-end smoke test after publishing a new @softspark/jira-mcp release — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN project, supply-chain verification (provenance, npm audit signatures), and cleanup."
+last_updated: "2026-09-09"
+description: "End-to-end smoke test after publishing a release of the Atlassian MCP workspace — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN, live Confluence API tests against the default space, supply-chain verification (provenance, npm audit signatures), and cleanup."
 ---
 
 # SOP: Post-Release Testing
 
-End-to-end smoke test after publishing a new `@softspark/jira-mcp` release.
-Verifies all critical paths from the user's perspective — including live Jira API operations.
+End-to-end smoke test after publishing a release. One tag ships both
+`@softspark/jira-mcp` and `@softspark/confluence-mcp`, so both are verified
+here. Covers all critical paths from the user's perspective, including live
+Jira and Confluence API operations.
 
 **Run this SOP after:**
 - The [Release Creation SOP](sop-release.md) completes and CI publishes to npm
@@ -41,9 +43,8 @@ Verifies all critical paths from the user's perspective — including live Jira 
 VERSION="X.Y.Z"
 
 # Phase 1: Install
-npm install -g @softspark/jira-mcp@$VERSION
-jira-mcp --version
-jira-mcp --help
+npm install -g @softspark/jira-mcp@$VERSION @softspark/confluence-mcp@$VERSION
+jira-mcp --version && confluence-mcp --version
 
 # Phase 2: CLI
 jira-mcp config list-projects  # KAN should be listed
@@ -62,7 +63,12 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | jira-mcp serve 2>/dev/nu
 npm view "@softspark/jira-mcp@$VERSION" --json | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"
 # Use the temporary project and lockfile from Step 5.2 for signature verification.
 
-# Phase 6: Cleanup (delete test task from KAN, keep jira-mcp installed)
+# Phase 4b: Live Confluence API (read-only plus one comment; never edits a page)
+# → get_space_language → list_page_templates → search_pages → get_page
+# → get_page (body_format: storage) → update_page with markdown MUST be refused
+# → get_page_comments → add_page_comment → inline anchor check → labels/attachments
+
+# Phase 6: Cleanup (test task to Done in KAN, keep both binaries installed)
 ```
 
 ---
@@ -351,6 +357,113 @@ search_tasks({
 
 ---
 
+## Phase 4b: Live Confluence API Tests
+
+The workspace publishes two packages and one tag releases both, so a release is
+not verified until both have been exercised against a live site. These steps
+mirror Phase 4 for `@softspark/confluence-mcp`.
+
+**Test space:** whichever space is configured as `default_space`. Unlike KAN
+there is no dedicated sandbox, so **every step below is non-destructive**: the
+only write is a comment, and the refusal checks deliberately fail before
+touching anything. Do not create or edit pages in a real space as a smoke test.
+
+### Step 4b.1: Space language and format
+
+```
+get_space_language({})
+```
+
+- [ ] Returns the configured `language` and `body_format`
+- [ ] `body_format` matches what `confluence-mcp space list` shows
+
+### Step 4b.2: List page templates
+
+```
+list_page_templates({ all_formats: true })
+```
+
+- [ ] Returns the shipped templates with their ids, formats and variables
+- [ ] Without `all_formats`, the list is filtered to the space's own format
+
+### Step 4b.3: Search
+
+```
+search_pages({ text: "<a word that exists in the space>" })
+```
+
+- [ ] Returns hits with absolute URLs under `/wiki/`
+- [ ] Excerpts carry no raw HTML tags
+
+### Step 4b.4: Read a page
+
+```
+get_page({ page_id: "<an existing page>" })
+```
+
+- [ ] Returns the body, the version number and `has_storage_markup`
+- [ ] A page authored in the Confluence editor reports `has_storage_markup: true`
+
+### Step 4b.5: Read the same page as storage
+
+```
+get_page({ page_id: "<same page>", body_format: "storage" })
+```
+
+- [ ] Returns Confluence XHTML, not markdown
+- [ ] The explicit `body_format` overrides the space setting
+
+### Step 4b.6: The markup guard refuses a destructive write
+
+```
+update_page({ page_id: "<a page with macros>", content: "# overwrite" })
+```
+
+- [ ] Fails with `MARKUP_LOSS_REFUSED`
+- [ ] The message names storage as the alternative
+- [ ] **Re-read the page and confirm its version number did not change**
+
+This is the most important assertion in this phase. The guard exists because a
+markdown round-trip keeps the prose and silently deletes every macro, page link
+and attachment reference. A release where this refusal stops working can
+destroy a space.
+
+### Step 4b.7: Comments
+
+```
+get_page_comments({ page_id: "<the same page>" })
+add_page_comment({ page_id: "...", comment: "Smoke test po wydaniu vX.Y.Z", user_approved: true })
+```
+
+- [ ] Existing comments come back as markdown
+- [ ] The new comment is created and returns an id
+
+### Step 4b.8: Inline comment anchor check
+
+```
+add_page_inline_comment({ page_id: "...", comment: "x", text_selection: "<text not on the page>", user_approved: true })
+```
+
+- [ ] Fails, saying the text does not appear in the page
+- [ ] No comment is created
+
+### Step 4b.9: Labels and attachments
+
+```
+get_page_labels({ page_id: "..." })
+list_attachments({ page_id: "..." })
+```
+
+- [ ] Both return without error
+- [ ] Attachment entries carry absolute download URLs
+
+### Step 4b.10: Cleanup
+
+- [ ] Delete the comment added in 4b.7, or leave it if the space tolerates it
+- [ ] No page was created, edited or deleted by this phase
+
+---
+
 ## Phase 5: Supply-Chain Verification (v2.8.0+)
 
 Every public `@softspark/*` release MUST ship with a SLSA provenance attestation
@@ -498,10 +611,30 @@ If any phase fails and the cause is not listed above:
 | CLI | `--help` displays commands, `config list-projects` shows KAN |
 | MCP Server | `serve` starts without crash, tool list matches `src/tools/definitions.ts` |
 | Live Jira API | Every task-management MCP tool executes successfully against KAN project |
+| Live Confluence API | Reads, templates and the markup guard verified against the default space, with no page created or edited |
 | Supply-chain | Provenance attestation present (SLSA v1), `npm audit signatures` passes |
-| Cleanup | Test task in Done/deleted, `jira-mcp` still installed globally |
+| Cleanup | Test task in Done/deleted, both binaries still installed globally |
 
-All six phases must pass for the release to be considered verified.
+All seven phases must pass for the release to be considered verified.
+
+## Notes from executed runs
+
+Two things the literal commands above get wrong on the real instance:
+
+- **Workflow status names are localised.** Step 4.9 shows `"In Progress"`, but
+  KAN's workflow is Polish: `Do zrobienia`, `W toku`, `In Review`, `Gotowe`.
+  Always take the name from `get_task_statuses` rather than the example.
+- **Both packages must be installed globally.** Phase 1 covers
+  `@softspark/jira-mcp`; since v1.12.0 it must also install
+  `@softspark/confluence-mcp` at the same version. A smoke test run from a
+  temporary directory validates the tarball, not the global install the CLI
+  actually uses.
+
+## Verification on 2026-09-09
+
+Published 1.12.0 (workspace split) and 1.13.0. First full post-release run
+since 1.6.0; it is what exposed the three drift items above. See
+[the executed record](release-verification-20260909.md).
 
 ## Verification on 2026-09-06
 
