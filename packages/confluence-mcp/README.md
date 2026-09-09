@@ -3,10 +3,17 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.12.0-blue)](../../CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.13.0-blue)](../../CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
+
+---
+
+## What's New in v1.13.0
+
+- Page templates: `list_page_templates` and `create_page` with `template_id` plus `variables`. Three ship with the package, and your own go in `~/.softspark/jira-mcp/templates/pages/`.
+- Fixed: `space add` rejected any space key that was not all uppercase, which is most of them. Confluence keeps the case a space was created with (`DevOps`, `MTPapp`), and personal spaces start with `~`.
 
 ---
 
@@ -66,6 +73,8 @@ Register it alongside the Jira server:
 | `confluence-mcp space set-language <key> <lang>` | Set the content language for a space |
 | `confluence-mcp space set-format <key> <format>` | Set the body format for a space (`markdown` or `storage`) |
 
+Space keys keep the case Confluence stored them with: `DevOps` is not `DEVOPS`. Personal space keys start with `~`.
+
 ## Confluence tools
 
 `space_key` is optional on every tool: it falls back to `default_space`, then to the only configured space. It becomes required only when several spaces are configured without a default, where guessing would risk writing into the wrong space.
@@ -78,7 +87,8 @@ Register it alongside the Jira server:
 | `get_page` | Read a page; body in the space format, or override with `body_format` | `page_id`, `body_format?`, `space_key?` |
 | `list_space_pages` | List the pages in a space | `space_key?`, `limit?` |
 | `get_page_children` | List direct child pages, for walking the tree | `page_id`, `space_key?`, `limit?` |
-| `create_page` | Create a page from markdown or storage XHTML | `title`, `content?`, `storage?`, `parent_id?`, `draft?` |
+| `list_page_templates` | List page templates usable in the space | `all_formats?`, `space_key?` |
+| `create_page` | Create a page from a template, markdown, or storage XHTML | `template_id?`, `variables?`, `title?`, `content?`, `storage?`, `parent_id?` |
 | `update_page` | Update title, body or parent; an untouched body is never rewritten | `page_id`, `title?`, `content?`, `storage?`, `parent_id?`, `allow_markup_loss?` |
 | `move_page` | Re-parent a page, across spaces with `cross_space` | `page_id`, `parent_id`, `position?`, `cross_space?` |
 | `delete_page` | Move a page to the trash | `page_id`, `user_approved`, `space_key?` |
@@ -155,6 +165,20 @@ In config.json, per space or as a global default:
 - **The escape hatch is explicit.** `allow_markup_loss: true` lets markdown through in a storage space, or over a macro-bearing page. Use it only after the user agrees the macros and links may go.
 
 If your space is managed as code (HTML files pushed via the REST API, as `sync.py` does), it is a `storage` space. Set it before pointing an assistant at it.
+
+## Page templates
+
+`list_page_templates` shows what is available for a space, filtered to its body format because a storage template cannot render into a markdown space or the reverse. `create_page` then takes `template_id` and `variables`; the template supplies the title, the body and the format, so do not also pass `title`, `content` or `storage`.
+
+| ID | Format | Use for |
+|----|--------|---------|
+| `runbook` | markdown | Operational procedure: when to run it, prerequisites, steps, verification, rollback |
+| `incident-review` | markdown | Blameless post-incident review: impact, timeline, root cause, actions |
+| `decision-record` | storage | ADR built from Confluence status and info macros |
+
+Variables use `{{name}}`, and `{{#name}}...{{/name}}` keeps a block only when the variable is supplied. Both the title and the body are rendered, so a variable can appear in either.
+
+Drop your own templates in `~/.softspark/jira-mcp/templates/pages/*.md`; one with the same `id` as a shipped template replaces it. A malformed file is skipped rather than breaking startup.
 
 ## Documentation
 

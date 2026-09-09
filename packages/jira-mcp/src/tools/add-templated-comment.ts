@@ -15,7 +15,7 @@
 import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
 import type { TemplateRegistry } from '../templates/registry.js';
-import { renderTemplate } from '../templates/renderer.js';
+import { renderTemplate } from '@softspark/atlassian-mcp-core';
 import type { ToolResult } from './helpers.js';
 import { success, failure, getOperations } from './helpers.js';
 import { assertCommentApproved } from '@softspark/atlassian-mcp-core';

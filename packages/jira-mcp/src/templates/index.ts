@@ -11,7 +11,8 @@
 
 export { BUILT_IN_TEMPLATES } from './built-in.js';
 export { BUILT_IN_TASK_TEMPLATES } from './task-built-in.js';
-export { renderTemplate } from './renderer.js';
+// renderTemplate moved to @softspark/atlassian-mcp-core: the two constructs it
+// supports are plain text substitution, shared with Confluence page templates.
 export { TemplateRegistry } from './registry.js';
 export { TaskTemplateRegistry } from './task-registry.js';
 export { loadTemplateCatalog } from './catalog.js';

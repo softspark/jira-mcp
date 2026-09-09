@@ -1,7 +1,7 @@
 {
   "name": "@softspark/confluence-mcp",
-  "version": "1.12.0",
-  "description": "MCP server for Confluence Cloud — pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.",
+  "version": "1.13.0",
+  "description": "MCP server for Confluence Cloud \u2014 pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -41,6 +41,7 @@
   "files": [
     "dist/*.js",
     "dist/*.d.ts",
+    "templates-system/**/*.md",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
@@ -49,7 +50,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "scripts_comments": "No postinstall/preinstall scripts by design — supply chain safety",
+  "scripts_comments": "No postinstall/preinstall scripts by design \u2014 supply chain safety",
   "installConfig": {
     "ignore-scripts": true
   },

@@ -1,5 +1,5 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { ConfluenceSpaceInstanceConfig, AdfDocument, ConfluenceConfig, ToolResult, ToolDefinition } from '@softspark/atlassian-mcp-core';
+import { ConfluenceSpaceInstanceConfig, AdfDocument, ConfluenceConfig, BodyFormat as BodyFormat$1, TemplateVariable, ToolResult, ToolDefinition } from '@softspark/atlassian-mcp-core';
 
 /**
  * Project-owned Confluence types.
@@ -483,6 +483,65 @@ declare class ConfluenceInstancePool {
 }
 
 /**
+ * Page template types.
+ *
+ * A page template carries a title and a body, both rendered with the shared
+ * `{{variable}}` engine. The body is markdown or Confluence storage XHTML,
+ * declared by `format`, because a template written in one is unusable in a
+ * space configured for the other.
+ *
+ * @module
+ */
+
+/** Where a template came from, for reporting in tool results. */
+type PageTemplateSource = 'system' | 'user';
+interface PageTemplate {
+    readonly id: string;
+    readonly name: string;
+    readonly description: string;
+    /** Body representation this template is written in. */
+    readonly format: BodyFormat$1;
+    readonly variables: readonly TemplateVariable[];
+    /** Page title, itself a template so it can carry variables. */
+    readonly title: string;
+    /** Page body in the declared format. */
+    readonly body: string;
+    readonly labels?: readonly string[];
+    readonly source?: PageTemplateSource;
+    readonly filePath?: string;
+}
+/** Result of rendering a page template into a ready-to-create page. */
+interface RenderedPage {
+    readonly title: string;
+    readonly body: string;
+    readonly format: BodyFormat$1;
+    readonly labels: readonly string[];
+}
+
+declare class PageTemplateRegistry {
+    private readonly byId;
+    constructor(templates: readonly PageTemplate[]);
+    /**
+     * Build a registry from the shipped and user template directories.
+     *
+     * User templates are loaded second so an id present in both resolves to the
+     * user's copy.
+     */
+    static load(systemDir: string, userDir: string): PageTemplateRegistry;
+    listTemplates(format?: BodyFormat$1): readonly PageTemplate[];
+    /** @throws {TemplateNotFoundError} If no template carries that id. */
+    getTemplate(id: string): PageTemplate;
+    /**
+     * Render a template's title and body with the supplied variables.
+     *
+     * Both go through the same engine, so a variable can appear in either.
+     *
+     * @throws {Error} If a required variable is missing, naming the ones needed.
+     */
+    render(id: string, variables: Readonly<Record<string, string>>): RenderedPage;
+}
+
+/**
  * Shared utilities for Confluence MCP tool handlers.
  *
  * Response formatting is reused from the Jira tool helpers so both servers
@@ -495,6 +554,8 @@ declare class ConfluenceInstancePool {
 interface ConfluenceDeps {
     readonly pool: ConfluenceInstancePool;
     readonly config: ConfluenceConfig;
+    /** Page templates, loaded once at startup. */
+    readonly pageTemplates?: PageTemplateRegistry;
 }
 
 /**

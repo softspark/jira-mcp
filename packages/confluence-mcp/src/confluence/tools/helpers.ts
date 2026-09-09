@@ -16,6 +16,7 @@ import type { ToolResult } from '@softspark/atlassian-mcp-core';
 import { failure, success } from '@softspark/atlassian-mcp-core';
 import type { ConfluenceInstancePool } from '../instance-pool.js';
 import { PageOperations } from '../page-operations.js';
+import type { PageTemplateRegistry } from '../../templates/registry.js';
 
 export type { ToolResult };
 export { success, failure };
@@ -24,6 +25,8 @@ export { success, failure };
 export interface ConfluenceDeps {
   readonly pool: ConfluenceInstancePool;
   readonly config: ConfluenceConfig;
+  /** Page templates, loaded once at startup. */
+  readonly pageTemplates?: PageTemplateRegistry;
 }
 
 /**

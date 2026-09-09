@@ -144,13 +144,40 @@ export const CONFLUENCE_TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   // Pages — write
   // -------------------------------------------------------------------
   {
-    name: 'create_page',
+    name: 'list_page_templates',
     description:
-      'Create a Confluence page. Provide content (markdown) or storage (Confluence XHTML), matching the space body_format from get_space_language. In a storage space, markdown is refused. Write the text in the language get_space_language returns.',
+      'List page templates usable with create_page. Filtered to the space body format by default, since a storage template cannot be used in a markdown space or the reverse. Returns each template id, its title pattern and its variables.',
     inputSchema: {
       type: 'object',
       properties: {
-        title: { type: 'string', description: 'Page title.' },
+        all_formats: {
+          type: 'boolean',
+          description: 'List templates for both formats instead of only the space one.',
+        },
+        space_key: SPACE_KEY_PROP,
+      },
+    },
+  },
+  {
+    name: 'create_page',
+    description:
+      'Create a Confluence page. Either pass template_id plus variables (see list_page_templates), or a title with content (markdown) or storage (Confluence XHTML) matching the space body_format. In a storage space, markdown is refused. Write the text in the language get_space_language returns.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Page title. Omit when template_id supplies one.',
+        },
+        template_id: {
+          type: 'string',
+          description:
+            'Page template to render, from list_page_templates. Supplies the title, body and format; do not also pass title, content or storage.',
+        },
+        variables: {
+          type: 'object',
+          description: 'Values for the template variables, as a flat string map.',
+        },
         content: {
           type: 'string',
           description:
@@ -177,7 +204,6 @@ export const CONFLUENCE_TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         },
         space_key: SPACE_KEY_PROP,
       },
-      required: ['title'],
     },
   },
   {

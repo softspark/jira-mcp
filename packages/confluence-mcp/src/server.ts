@@ -33,6 +33,7 @@ import { failure } from '@softspark/atlassian-mcp-core';
 import {
   asOptionalBoolean,
   asOptionalNumber,
+  asOptionalRecord,
   asOptionalString,
   asOptionalStringArray,
   requireString,
@@ -84,6 +85,12 @@ import {
   handleListAttachments,
   handleUploadAttachment,
 } from './confluence/tools/attachments.js';
+import { handleListPageTemplates } from './confluence/tools/templates.js';
+import { PageTemplateRegistry } from './templates/registry.js';
+import {
+  GLOBAL_PAGE_TEMPLATES_DIR,
+  SYSTEM_PAGE_TEMPLATES_DIR,
+} from './paths.js';
 
 // Re-export for tests and for consumers listing the tool surface.
 export { CONFLUENCE_TOOL_DEFINITIONS } from './confluence/tools/definitions.js';
@@ -195,10 +202,21 @@ async function routeConfluenceTool(
         deps,
       );
 
+    case 'list_page_templates':
+      return handleListPageTemplates(
+        {
+          all_formats: asOptionalBoolean(args['all_formats']),
+          space_key: asOptionalString(args['space_key']),
+        },
+        deps,
+      );
+
     case 'create_page':
       return handleCreatePage(
         {
-          title: requireString(args['title'], 'title'),
+          title: asOptionalString(args['title']),
+          template_id: asOptionalString(args['template_id']),
+          variables: asOptionalRecord(args['variables']),
           content: asOptionalString(args['content']),
           storage: asOptionalString(args['storage']),
           parent_id: asOptionalString(args['parent_id']),
@@ -473,7 +491,11 @@ async function routeConfluenceTool(
 export async function startConfluenceServer(): Promise<void> {
   const config = await loadConfluenceConfig();
   const pool = new ConfluenceInstancePool(config);
-  const deps: ConfluenceDeps = { pool, config };
+  const pageTemplates = PageTemplateRegistry.load(
+    SYSTEM_PAGE_TEMPLATES_DIR,
+    GLOBAL_PAGE_TEMPLATES_DIR,
+  );
+  const deps: ConfluenceDeps = { pool, config, pageTemplates };
 
   const server = createConfluenceServer();
 

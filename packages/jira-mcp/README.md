@@ -4,17 +4,16 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.12.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.13.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.12.0
+## What's New in v1.13.0
 
-- Nothing changes for this package: same name, same `jira-mcp` binary, same `~/.softspark/jira-mcp/` config path, same 19 tools.
-- The repository is now a workspace. Confluence ships separately as [`@softspark/confluence-mcp`](../confluence-mcp), released together with this package under one version.
-- Jira and Confluence share one HTTP layer for auth, retry and backoff; each keeps its own error vocabulary.
-- Fixed: `jira-mcp config add-project` and `remove-project` rebuilt `config.json` from a fixed field list, discarding `default_language` and, once Confluence spaces existed, the whole `spaces` section.
+- No behaviour change in this package: same 19 tools, same CLI, same config path. It ships because the `{{variable}}` template engine moved into the shared package both servers bundle.
+- All the new work is in [`@softspark/confluence-mcp`](../confluence-mcp): page templates and a fix for space keys that are not uppercase.
+- Released together with `@softspark/confluence-mcp` under one version. See the [changelog](../../CHANGELOG.md).
 
 ## Table of Contents
 
@@ -254,7 +253,7 @@ src/
 
 **Typed error hierarchy** -- 26 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 910 tests across 77 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 953 tests across 78 test files.
 
 ## Documentation
 

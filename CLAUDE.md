@@ -35,6 +35,8 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Fixed config path**: everything persistent is under `~/.softspark/jira-mcp/` via `GLOBAL_CONFIG_DIR` (src/config/paths.ts). No env vars and no manual paths in MCP client setup.
 - **Project key routes the instance**: the Jira project key selects which instance and credentials are used (multi-instance map in `config.json`). One key maps to exactly one instance.
 - **Space key routes Confluence**: a page id carries no space, so `space_key` routes instead, falling back to `default_space` then to the only configured space. Several spaces with no default is an error, never a guess.
+- **Confluence space keys are not Jira project keys**: they keep the case they were created with (`DevOps`, `Puccini`, `MTPapp`) and personal spaces start with `~`. Never apply the uppercase-only project-key rule to them.
+- **Page templates**: `templates-system/pages/*.md`, same JSON-frontmatter format as Jira's, plus a `format` field. `list_page_templates` filters to the space format, because a storage template cannot render into a markdown space.
 - **Config writers spread, never rebuild**: config.json holds both `projects` and `spaces`. A command that lists its fields explicitly when saving deletes the other product's section. Always `{ ...config, <field> }`.
 - **Confluence uses two API versions**: v2 for CRUD, v1 for CQL search, label writes, restrictions, multipart upload and cross-space moves. v2 does not expose those. Do not consolidate.
 - **One HTTP client for both products**: `src/http/atlassian-client.ts` owns auth, retry, backoff and empty bodies. Connectors inject only a status-to-error mapper. Do not reintroduce a private `fetch` loop in a connector.

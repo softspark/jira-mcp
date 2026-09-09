@@ -1,6 +1,6 @@
 {
   "name": "@softspark/atlassian-mcp",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Workspace root for the SoftSpark Atlassian MCP servers: @softspark/jira-mcp and @softspark/confluence-mcp.",
   "private": true,
   "homepage": "https://github.com/softspark/jira-mcp",
@@ -22,7 +22,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "scripts_comments": "No postinstall/preinstall scripts by design — supply chain safety",
+  "scripts_comments": "No postinstall/preinstall scripts by design \u2014 supply chain safety",
   "installConfig": {
     "ignore-scripts": true
   },

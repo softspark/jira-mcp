@@ -188,16 +188,25 @@ export async function handleGetPageChildren(
 // ---------------------------------------------------------------------------
 
 export interface CreatePageArgs {
-  readonly title: string;
+  readonly title?: string;
   readonly content?: string;
   readonly storage?: string;
+  readonly template_id?: string;
+  readonly variables?: Readonly<Record<string, string>>;
   readonly space_key?: string;
   readonly parent_id?: string;
   readonly draft?: boolean;
   readonly allow_markup_loss?: boolean;
 }
 
-/** Create a page from markdown, or from Confluence storage XHTML. */
+/**
+ * Create a page from markdown, from Confluence storage XHTML, or from a
+ * template.
+ *
+ * A template supplies the title, the body and its format, so mixing it with
+ * an explicit title or body is a contradiction rather than an override, and
+ * is rejected.
+ */
 export async function handleCreatePage(
   args: CreatePageArgs,
   deps: ConfluenceDeps,
@@ -209,12 +218,56 @@ export async function handleCreatePage(
       );
     }
 
+    const usingTemplate = args.template_id !== undefined;
+    if (
+      usingTemplate &&
+      (args.title !== undefined ||
+        args.content !== undefined ||
+        args.storage !== undefined)
+    ) {
+      throw new Error(
+        'When template_id is given, the template supplies the title and body. Pass variables instead of title/content/storage.',
+      );
+    }
+    if (!usingTemplate && args.title === undefined) {
+      throw new Error('Provide a title, or a template_id that supplies one.');
+    }
+
     const [spaceKey, ops] = getPageOperations(deps, args.space_key);
+
+    let title = args.title ?? '';
+    let markdown = args.content;
+    let storage = args.storage;
+    let templateInfo: Record<string, unknown> | undefined;
+    let labels: readonly string[] = [];
+
+    if (usingTemplate) {
+      const registry = deps.pageTemplates;
+      if (!registry) {
+        throw new Error('No page templates are loaded on this server.');
+      }
+      const rendered = registry.render(
+        args.template_id ?? '',
+        args.variables ?? {},
+      );
+      title = rendered.title;
+      if (rendered.format === 'storage') {
+        storage = rendered.body;
+      } else {
+        markdown = rendered.body;
+      }
+      labels = rendered.labels;
+      templateInfo = {
+        template_id: args.template_id,
+        format: rendered.format,
+      };
+    }
+
     const result = await ops.createPage({
       spaceKey,
-      title: args.title,
-      ...(args.content !== undefined ? { markdown: args.content } : {}),
-      ...(args.storage !== undefined ? { storage: args.storage } : {}),
+      title,
+      ...(markdown !== undefined ? { markdown } : {}),
+      ...(storage !== undefined ? { storage } : {}),
       ...(args.parent_id !== undefined ? { parentId: args.parent_id } : {}),
       ...(args.draft !== undefined ? { draft: args.draft } : {}),
       ...(args.allow_markup_loss !== undefined
@@ -222,9 +275,25 @@ export async function handleCreatePage(
         : {}),
     });
 
+    // A template's labels are applied after creation: the create endpoint has
+    // no labels field, so this is a second call and may fail on its own.
+    let appliedLabels: readonly string[] = [];
+    if (labels.length > 0) {
+      try {
+        await ops.addLabels(result.id, labels);
+        appliedLabels = labels;
+      } catch {
+        // The page exists and matters more than its labels; report the gap.
+      }
+    }
+
     return success({
       page: result,
       space_key: spaceKey,
+      ...(templateInfo ? { template: templateInfo } : {}),
+      ...(labels.length > 0
+        ? { labels_applied: appliedLabels, labels_requested: labels }
+        : {}),
       message: `Created page '${result.title}' in ${spaceKey}`,
     });
   } catch (error: unknown) {

@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 
 import { BUILT_IN_TEMPLATES } from '../../src/templates/built-in';
 import { TEMPLATE_CATEGORIES } from '../../src/templates/types';
-import { renderTemplate } from '../../src/templates/renderer';
+import { renderTemplate } from '@softspark/atlassian-mcp-core';
 
 const VALID_CATEGORIES = new Set<string>(Object.values(TEMPLATE_CATEGORIES));
 

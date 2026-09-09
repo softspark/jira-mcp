@@ -1,7 +1,7 @@
 {
   "name": "@softspark/jira-mcp",
-  "version": "1.12.0",
-  "description": "MCP server for Jira integration — multi-instance routing, ADF formatting, task caching, and comment templates via the Model Context Protocol.",
+  "version": "1.13.0",
+  "description": "MCP server for Jira integration \u2014 multi-instance routing, ADF formatting, task caching, and comment templates via the Model Context Protocol.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -51,7 +51,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "scripts_comments": "No postinstall/preinstall scripts by design — supply chain safety",
+  "scripts_comments": "No postinstall/preinstall scripts by design \u2014 supply chain safety",
   "installConfig": {
     "ignore-scripts": true
   },

@@ -14,7 +14,7 @@ import process from 'node:process';
 import type { Command } from 'commander';
 
 import { loadTemplateCatalog } from '../../../templates/catalog.js';
-import { renderTemplate } from '../../../templates/renderer.js';
+import { renderTemplate } from '@softspark/atlassian-mcp-core';
 import type { TemplateRegistry } from '../../../templates/registry.js';
 import {
   asOptionalBoolean,

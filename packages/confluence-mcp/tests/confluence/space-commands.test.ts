@@ -73,13 +73,31 @@ describe('space CLI commands', () => {
     expect((await readConfig())['default_space']).toBe('DOCS');
   });
 
-  it('rejects a lowercase space key', async () => {
-    await writeConfig(BASE_CONFIG);
+  it.each(['DevOps', 'DOCS', 'KB1', 'My_Space', 'docs', '~lukasz'])(
+    'accepts the real-world space key %s',
+    async (key) => {
+      // Confluence keeps the case a space was created with, unlike a Jira
+      // project key. Rejecting mixed case would reject real spaces.
+      await writeConfig({ projects: {}, default_project: '' });
 
-    await expect(
-      handleAddSpace(dir, 'docs', 'https://test.atlassian.net'),
-    ).rejects.toThrow(/Invalid space key/);
-  });
+      await handleAddSpace(dir, key, 'https://test.atlassian.net');
+
+      expect(Object.keys((await readConfig())['spaces'] as object)).toContain(
+        key,
+      );
+    },
+  );
+
+  it.each(['has space', 'DOCS!', 'a/b', ''])(
+    'rejects the malformed space key %j',
+    async (key) => {
+      await writeConfig(BASE_CONFIG);
+
+      await expect(
+        handleAddSpace(dir, key, 'https://test.atlassian.net'),
+      ).rejects.toThrow(/Invalid space key/);
+    },
+  );
 
   it('rejects a non-https URL', async () => {
     await writeConfig(BASE_CONFIG);

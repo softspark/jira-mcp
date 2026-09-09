@@ -177,7 +177,7 @@ describe('space command actions', () => {
   });
 
   it('reports a failed add and sets a non-zero exit code', async () => {
-    await program.parseAsync(['space', 'add', 'docs', 'https://x.com'], {
+    await program.parseAsync(['space', 'add', 'bad key!', 'https://x.com'], {
       from: 'user',
     });
 

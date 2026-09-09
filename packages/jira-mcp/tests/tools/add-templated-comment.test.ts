@@ -26,10 +26,13 @@ vi.mock('../../src/operations/task-operations', () => ({
   }),
 }));
 
-// We must also mock renderTemplate to control its output
-vi.mock('../../src/templates/renderer', () => ({
-  renderTemplate: vi.fn(),
-}));
+// renderTemplate lives in the shared core package. The mock MUST target that
+// specifier: an unresolved vi.mock path is a silent no-op, and the test would
+// then exercise the real renderer while claiming to control its output.
+vi.mock('@softspark/atlassian-mcp-core', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, renderTemplate: vi.fn() };
+});
 
 function parseResult(result: { content: Array<{ type: string; text?: string }> }): Record<string, unknown> {
   const first = result.content[0];
@@ -108,7 +111,7 @@ describe('handleAddTemplatedComment', () => {
     const template = createTestTemplate();
     registry.getTemplate.mockReturnValue(template);
 
-    const { renderTemplate } = await import('../../src/templates/renderer');
+    const { renderTemplate } = await import('@softspark/atlassian-mcp-core');
     vi.mocked(renderTemplate).mockReturnValue({
       success: true,
       markdown: 'Status: In Progress',
@@ -151,7 +154,7 @@ describe('handleAddTemplatedComment', () => {
 
     registry.getTemplate.mockReturnValue(createTestTemplate());
 
-    const { renderTemplate } = await import('../../src/templates/renderer');
+    const { renderTemplate } = await import('@softspark/atlassian-mcp-core');
     vi.mocked(renderTemplate).mockReturnValue({
       success: false,
       error: 'Missing required variables: status',

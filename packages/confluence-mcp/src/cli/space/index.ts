@@ -47,13 +47,20 @@ interface RawConfigFile {
   readonly default_format?: string;
 }
 
-/** Regex for valid space keys: uppercase letters and digits. */
-const SPACE_KEY_PATTERN = /^[A-Z][A-Z0-9]*$/;
+/**
+ * Regex for valid Confluence space keys.
+ *
+ * Deliberately looser than a Jira project key, which is uppercase-only.
+ * Confluence keeps the case the space was created with, so `DevOps` and
+ * `DOCS` are both ordinary keys, and a personal space key is `~` followed by
+ * an account id. Applying Jira's rule here rejects real spaces.
+ */
+const SPACE_KEY_PATTERN = /^~?[A-Za-z0-9_]+$/;
 
 function assertValidKey(key: string): void {
   if (!SPACE_KEY_PATTERN.test(key)) {
     throw new Error(
-      `Invalid space key "${key}": must be uppercase alphanumeric starting with a letter (e.g. DOCS, KB1).`,
+      `Invalid space key "${key}": letters, digits and underscores only, optionally prefixed with ~ for a personal space (e.g. DevOps, DOCS, KB1).`,
     );
   }
 }

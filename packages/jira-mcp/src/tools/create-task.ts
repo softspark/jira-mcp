@@ -18,7 +18,7 @@ import type { ToolResult } from './helpers.js';
 import { success, failure } from './helpers.js';
 import { markdownToAdf } from '@softspark/atlassian-mcp-core';
 import { parseTimeSpent } from '../connector/time-parser.js';
-import { renderTemplate } from '../templates/renderer.js';
+import { renderTemplate } from '@softspark/atlassian-mcp-core';
 import type { TaskTemplateRegistry } from '../templates/task-registry.js';
 
 // ---------------------------------------------------------------------------
@@ -111,15 +111,10 @@ export async function handleCreateTask(
     if (usingTemplate) {
       const template = deps.taskTemplateRegistry.getTemplate(args.template_id ?? '');
 
+      // renderTemplate needs only the variables and the body; the rest of the
+      // template describes it, it does not affect rendering.
       const renderedSummary = renderTemplate(
-        {
-          id: template.id,
-          name: `${template.name} Summary`,
-          description: template.description,
-          category: 'workflow',
-          variables: template.variables,
-          body: template.summary,
-        },
+        { variables: template.variables, body: template.summary },
         args.variables ?? {},
       );
       if (!renderedSummary.success) {
@@ -127,14 +122,7 @@ export async function handleCreateTask(
       }
 
       const renderedDescription = renderTemplate(
-        {
-          id: template.id,
-          name: template.name,
-          description: template.description,
-          category: 'workflow',
-          variables: template.variables,
-          body: template.body,
-        },
+        { variables: template.variables, body: template.body },
         args.variables ?? {},
       );
       if (!renderedDescription.success) {

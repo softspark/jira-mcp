@@ -107,6 +107,16 @@ export {
 export { assertCommentApproved } from './tools/comment-approval.js';
 export { assertDeletionApproved } from './tools/deletion-approval.js';
 
+// --- Template rendering --------------------------------------------------
+export { renderTemplate } from './templates/renderer.js';
+export type {
+  RenderableTemplate,
+  TemplateVariable,
+  RenderResult,
+  RenderError,
+  TemplateRenderOutput,
+} from './templates/renderer.js';
+
 // --- CLI + filesystem ----------------------------------------------------
 export { info, warn, error, table } from './cli/output.js';
 export {
