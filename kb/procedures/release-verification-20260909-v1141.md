@@ -161,6 +161,35 @@ search returned 0 afterwards. Confluence: DevOps still reports `storage`,
 page 769523713 still reads at version 18, and a markdown write was still
 refused with `MARKUP_LOSS_REFUSED`.
 
+## 1.14.3
+
+A documentation-only release, cut on request. Everything in it lives in `kb/`,
+which no tarball carries, so the published packages gain nothing at runtime.
+
+Worth recording because Phase 1 is where this should have stopped and did not:
+the SOP's bump table reads "Bugfix, typo, doc-only, patch", and "doc-only" there
+means documentation that ships, which `kb/` does not. Diffing the published
+1.14.2 and 1.14.3 tarballs, the only differences are the version itself: the
+`version` field in package.json, the string tsup bakes into `dist/cli.js` and
+`dist/index.js` from `src/version.ts`, and the badge and heading in README that
+Phase 3 requires. `templates-system/` and `hooks/` are byte-identical.
+
+The first CHANGELOG wording for it claimed the contents were identical to 1.14.2
+and that no README changed. Both were wrong, because Phase 3 edits README before
+Phase 5 commits it. Corrected after checking the actual tarball diff. Note that
+`CHANGELOG.md` is not in either tarball at all: `files` lists it, but it sits at
+the repository root while the pattern resolves inside the package directory.
+
+Gates green, provenance verified on both packages, GitHub release published, and
+the tarball answered 200 on the first attempt, so the seven-minute propagation
+lag on 1.14.2 was a one-off.
+
+Post-release run: both binaries at 1.14.3, 8 locale files installed, 19 and 31
+tools over stdio, both help listings intact. KAN-11 created, commented with the
+Polish `status-update` template, time-logged, transitioned and deleted. DevOps
+still reports `storage`, page 769523713 still at version 18, markdown write still
+refused.
+
 ## Outcome
 
-All three releases published, verified and tested. Nothing outstanding.
+All four releases published, verified and tested. Nothing outstanding.

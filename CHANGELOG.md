@@ -9,10 +9,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## v1.14.3 -- Knowledge base only (2026-09-09)
 
-**The published contents of both packages are identical to 1.14.2.** Nothing in
-`dist/`, `templates-system/`, `hooks/` or either README changed. Everything below
-lives in `kb/`, which no tarball carries, so upgrading from 1.14.2 gains nothing.
-The version exists to give the documentation below a release to sit against.
+**Behaviourally identical to 1.14.2.** Everything below lives in `kb/`, which no
+tarball carries, so upgrading from 1.14.2 gains nothing at runtime. The version
+exists to give the documentation below a release to sit against.
+
+Diffing the two published tarballs, what actually differs is the version and
+nothing else: the `version` field in package.json, the version string tsup bakes
+into `dist/cli.js` and `dist/index.js`, and the badge and "What's New" heading in
+README. `templates-system/` and `hooks/` are byte-identical.
 
 ### Added
 
