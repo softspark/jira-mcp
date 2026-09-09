@@ -12,7 +12,7 @@ Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jir
 
 ## What's New in v1.14.1
 
-- No behaviour change in this package: same 30 tools, same CLI, same config path. It ships because both packages are released together under one version.
+- No behaviour change in this package: same 31 tools, same CLI, same config path. It ships because both packages are released together under one version.
 - The new work is in [`@softspark/jira-mcp`](../jira-mcp): translated comment templates and a command that installs them.
 
 ---

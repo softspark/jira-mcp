@@ -66,7 +66,7 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Delete (guarded)**: `delete_task`, `delete_comment`
 - **Templates**: `list_comment_templates`, `list_task_templates`
 
-30 Confluence tools registered in `src/confluence/tools/definitions.ts` (server: `src/confluence-server.ts`, bin: `confluence-mcp`):
+31 Confluence tools registered in `packages/confluence-mcp/src/confluence/tools/definitions.ts` (server: `packages/confluence-mcp/src/server.ts`, bin: `confluence-mcp`):
 - **Read**: `list_spaces`, `get_space_language`, `search_pages`, `get_page`, `list_space_pages`, `get_page_children`, `get_page_comments`, `get_page_inline_comments`, `list_blog_posts`, `get_blog_post`, `get_page_restrictions`, `get_whiteboard`, `get_page_labels`, `list_attachments`
 - **Mutate**: `create_page`, `update_page`, `move_page`, `add_page_comment`, `add_page_inline_comment`, `create_blog_post`, `update_blog_post`, `create_whiteboard`, `add_page_labels`, `remove_page_label`, `upload_attachment`
 - **Guarded**: `delete_page`, `delete_page_comment`, `delete_blog_post`, `delete_whiteboard`, `set_page_restrictions`

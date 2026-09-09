@@ -644,7 +644,16 @@ Two things the literal commands above get wrong on the real instance:
   temporary directory validates the tarball, not the global install the CLI
   actually uses.
 
-## Verification on 2026-09-09
+## Verification on 2026-09-09 (1.14.0 and 1.14.1)
+
+Published 1.14.0 (translated comment templates and the locale installer), then
+1.14.1 for what this run caught: `jira-mcp --help` did not list either new
+command, because the listing is a hand-written epilogue that nothing checked.
+A test now walks the registered command tree and fails on that drift. The run
+also found the Confluence tool count stale in `CLAUDE.md` (30 against 31 live).
+See [the executed record](release-verification-20260909-v1141.md).
+
+## Verification on 2026-09-09 (1.12.0 and 1.13.0)
 
 Published 1.12.0 (workspace split) and 1.13.0. First full post-release run
 since 1.6.0; it is what exposed the three drift items above. See
