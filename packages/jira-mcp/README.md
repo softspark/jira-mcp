@@ -4,15 +4,15 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.13.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.14.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.13.0
+## What's New in v1.14.0
 
-- No behaviour change in this package: same 19 tools, same CLI, same config path. It ships because the `{{variable}}` template engine moved into the shared package both servers bundle.
-- All the new work is in [`@softspark/confluence-mcp`](../confluence-mcp): page templates and a fix for space keys that are not uppercase.
+- Polish versions of all eight built-in comment templates ship with the package. Until now a templated comment was English on every project, including one configured for another language.
+- `jira-mcp template list-locales` shows which languages are available, and `jira-mcp template install-locale pl` installs them. Add `--keep-english` to keep the originals reachable as `<id>-en`.
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](../../CHANGELOG.md).
 
 ## Table of Contents

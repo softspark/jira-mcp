@@ -7,7 +7,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v1.14.0 -- Translated comment templates (2026-09-09)
+
+Both packages are released together under one version.
+`@softspark/confluence-mcp` has no behaviour change in this release.
 
 ### Added
 
