@@ -69,6 +69,17 @@ Follow [Semantic Versioning](https://semver.org/):
 
 **Rule:** When in doubt, bump minor.
 
+**Both published packages share one version.** `@softspark/jira-mcp` and
+`@softspark/confluence-mcp` are bumped together and released from one tag, so a
+release that touches only one of them still bumps both. The semver decision is
+the union: a breaking change in either is a major for both. This is why
+`confluence-mcp` starts at 1.12.0 rather than the 1.0.0 the module template
+mandates for a new module. See
+[ADR-0002](../decisions/ADR-0002-shared-version-across-packages.md); do not
+"fix" the numbering without reading it.
+
+- [ ] Version bumped in all four `package.json` files (root, core, jira-mcp, confluence-mcp)
+
 ---
 
 ## Phase 2: Update Version
