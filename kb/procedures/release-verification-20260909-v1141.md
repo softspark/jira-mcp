@@ -241,6 +241,30 @@ commented with the Polish `bug-report` template, time-logged 25m against 30m,
 transitioned and deleted. DevOps still `storage`, page 769523713 still at version
 18, markdown write still refused. Tarballs answered 200 on the first attempt.
 
+## 1.14.5
+
+Cut on 2026-09-10 to carry `kb/reference/build-and-packaging.md`. No code change
+in either package.
+
+Unlike 1.14.3, which was the other documentation-only release in this run, a
+consumer does get something: the changelog inside the tarball now names 1.14.5,
+because 1.14.4 is what made `CHANGELOG.md` reach the tarball at all. Confirmed
+against the installed package rather than the repository.
+
+Gates green (80 files, 991 tests), provenance verified on both packages, GitHub
+release published, tarballs answered 200 on the first attempt.
+
+`gh run watch` dropped with a network error on the last step of the publish job.
+The job itself finished: `gh run view` reports `success`, and both Publish steps
+and Create GitHub Release had already shown green. A broken watch is not a broken
+run; check the run's own conclusion before reacting to it.
+
+Post-release run: both binaries at 1.14.5, 8 locale files, 19 and 31 tools over
+stdio, both help listings intact. KAN-13 created, commented with the Polish
+`deployment-note` template, time-logged 15m against 20m, transitioned and
+deleted. DevOps still `storage`, page 769523713 still at version 18, markdown
+write still refused.
+
 ## Outcome
 
-All five releases published, verified and tested. Nothing outstanding.
+All six releases published, verified and tested. Nothing outstanding.
