@@ -201,8 +201,8 @@ tarballs: one CHANGELOG.md in each, opening on the 1.14.4 entry.
 npm resolves `files` patterns inside the package directory. The changelog lives
 at the repository root because it covers both packages, so `"CHANGELOG.md"`
 matched nothing, and **npm drops a pattern that matches nothing without a
-warning**. Ten releases shipped a manifest promising a file the tarball did not
-have, and the README version badge linked to it.
+warning**. Six releases, 1.12.0 through 1.14.3, shipped a manifest promising a
+file the tarball did not have, and the README version badge linked to it.
 
 A symlink is not the fix: `npm pack` skips symlinks. Verified before writing
 anything else, by creating one and watching `npm pack --dry-run` omit the file.
