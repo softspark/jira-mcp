@@ -3,16 +3,17 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.14.4-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.14.5-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
 
 ---
 
-## What's New in v1.14.4
+## What's New in v1.14.5
 
-- This package finally contains the `CHANGELOG.md` it has been listing in `files` since 1.12.0, and the link to it in this README no longer points outside the tarball.
+- No code change since 1.14.4; this release carries documentation of how the workspace builds and packages.
+- 1.14.4 is where this package started actually containing the `CHANGELOG.md` it had been listing in `files` since 1.12.0, and where the link to it in this README stopped pointing outside the tarball.
 - No tool or CLI change: same 31 tools, same commands, same config path.
 - `confluence-mcp --help` now has a test behind it: the command listing is hand-written, and a registered command missing from it fails the build.
 - The rest of the work is in [`@softspark/jira-mcp`](../jira-mcp): translated comment templates and a command that installs them.

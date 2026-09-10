@@ -4,14 +4,15 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.14.4-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.14.5-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.14.4
+## What's New in v1.14.5
 
-- This package finally contains the `CHANGELOG.md` it has been listing in `files` since 1.12.0. The pattern resolved inside the package directory while the changelog sat at the repository root, so npm dropped it without a word.
+- No code change since 1.14.4; this release carries documentation of how the workspace builds and packages.
+- 1.14.4 is where this package started actually containing the `CHANGELOG.md` it had been listing in `files` since 1.12.0. The pattern resolved inside the package directory while the changelog sat at the repository root, so npm dropped it without a word.
 - Polish versions of all eight built-in comment templates ship with the package. Until now a templated comment was English on every project, including one configured for another language.
 - `jira-mcp template list-locales` shows which languages are available, and `jira-mcp template install-locale pl` installs them. Add `--keep-english` to keep the originals reachable as `<id>-en`.
 - Fixed in 1.14.1: `jira-mcp --help` now lists both new commands. 1.14.2 adds the test that would have caught it, on both binaries.

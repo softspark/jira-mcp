@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.14.5 -- Build and packaging documented (2026-09-10)
+
+No code change in either package. The one thing a consumer gets that 1.14.4 did
+not give them is this changelog entry, since 1.14.4 is what made `CHANGELOG.md`
+reach the tarball in the first place.
+
+### Added
+
+- **`kb/reference/build-and-packaging.md`**, covering the two npm behaviours that
+  fail without an error message here and cost a release each. `ignore-scripts` in
+  `.npmrc` disables every lifecycle script, not only install hooks, so a
+  `prebuild`, `pretest` or `prepack` in package.json looks right and never runs;
+  both were confirmed by adding a hook and watching nothing happen. And a `files`
+  pattern is matched inside the package directory, with anything matching nothing
+  dropped silently, which is what hid the missing changelog through six releases.
+
 ## v1.14.4 -- The changelog actually ships (2026-09-09)
 
 ### Fixed
