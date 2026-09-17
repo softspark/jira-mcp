@@ -207,10 +207,11 @@ Configuration is automatically loaded from `~/.softspark/jira-mcp/`. Run `jira-m
 If you use `@softspark/ai-toolkit`, register the Jira rules so that Claude Code automatically follows project conventions (language checks, sync-first workflow, time format, etc.):
 
 ```bash
-ai-toolkit rules add jira-mcp --path /path/to/jira-mcp/rules/jira-mcp.md
+ai-toolkit add-rule https://raw.githubusercontent.com/softspark/jira-mcp/main/rules/jira-mcp.md
+ai-toolkit update
 ```
 
-Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rules file covers:
+The URL form is re-fetched on every `ai-toolkit update`, so the rules follow releases. A local path works too (`ai-toolkit add-rule /path/to/jira-mcp/rules/jira-mcp.md`) but stays frozen at that copy. The rules file covers:
 - **Language first** -- always check project language before writing comments/descriptions
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
