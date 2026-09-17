@@ -153,3 +153,29 @@ export interface CreateIssueResult {
   readonly id: string;
   readonly url: string;
 }
+
+// ---------------------------------------------------------------------------
+// Issue and project references
+// ---------------------------------------------------------------------------
+
+/**
+ * The identity of an issue, resolved from either its id or its key.
+ *
+ * Tempo speaks numeric ids and people speak keys, so this is the bridge:
+ * a bulk lookup returns both plus the two fields a worklog line needs.
+ */
+export interface JiraIssueRef {
+  readonly id: string;
+  readonly key: string;
+  readonly summary: string;
+  readonly projectId: string;
+  readonly projectKey: string;
+  readonly issueType: string;
+}
+
+/** A Jira project's identity. */
+export interface JiraProject {
+  readonly id: string;
+  readonly key: string;
+  readonly name: string;
+}

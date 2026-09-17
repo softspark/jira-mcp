@@ -87,6 +87,7 @@ All commands:
   config remove-project <key>    Remove a project
   config list-projects           List configured projects
   config set-credentials         Set API credentials
+  config set-tempo-token         Set the Tempo API token (default site or --url <jira-url>)
   config set-default <key>       Set default project
   config set-language <lang>     Set default language (pl, en, de, es, fr, pt, it, nl)
   config set-project-language <key> <lang>  Set language for a specific project

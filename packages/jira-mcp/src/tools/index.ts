@@ -116,5 +116,17 @@ export type {
   CreateMonthlyTasksDeps,
 } from './create-monthly-tasks.js';
 
+export { handleSearchTempoWorklogs } from './search-tempo-worklogs.js';
+export type {
+  SearchTempoWorklogsArgs,
+  SearchTempoWorklogsDeps,
+} from './search-tempo-worklogs.js';
+
+export { handleGetTempoReport } from './get-tempo-report.js';
+export type {
+  GetTempoReportArgs,
+  GetTempoReportDeps,
+} from './get-tempo-report.js';
+
 export type { ToolResult } from './helpers.js';
 export { success, failure } from './helpers.js';

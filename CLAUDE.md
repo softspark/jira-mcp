@@ -53,6 +53,7 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Guarded destructive ops**: dry-run is the default and the CLI needs `--execute`. `delete_task` (creator only) and `delete_comment` (author only) also require `user_approved=true`.
 - **Time format**: `"2h 30m"`, hours and minutes only, never days.
 - **Status transitions**: call `get_task_statuses` first; only the offered transitions are valid for that issue.
+- **Tempo speaks ids, people speak keys**: Tempo REST API v4 returns only `issue.id` and `author.accountId`, so `TempoOperations` joins every result against Jira (`issue/bulkfetch`, `user/bulk`) and resolves filters the other way before asking Tempo. The Tempo token lives in credentials.json as `tempo_token` beside the Jira token it belongs to and is never inherited across entries; `InstancePool.getTempoClient` raises `TEMPO_NOT_CONFIGURED` before any network call. `TempoClient` reuses `AtlassianHttpClient` with a Bearer header, and its paths are relative without a leading slash so the `/4` version segment survives URL resolution.
 - **Supply-chain hygiene**: `commander` is the only runtime dependency; everything else (Zod included) is bundled into `dist/` by tsup. No install scripts (`ignore-scripts`).
 - **`ignore-scripts=true` kills every npm lifecycle hook here, not just install ones**: a `prebuild` or `pretest` in package.json looks correct and never runs. Chain the step into the script itself (`"test": "node scripts/x.mjs && vitest run"`).
 - **`files` patterns resolve inside the package directory, and a pattern matching nothing is dropped silently**: that is why the root CHANGELOG.md is copied into each package by `scripts/sync-changelog.mjs` rather than merely listed. A symlink does not work, `npm pack` skips it. `packages/core/tests/packaging.test.ts` guards both. See `kb/reference/build-and-packaging.md`.
@@ -62,8 +63,8 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Prose style for generated content**: plain, workmanlike tone, no em dash and no `--` separator in comments, descriptions, or docs.
 
 ## MCP Tools
-19 tools registered in `src/tools/definitions.ts`:
-- **Read**: `sync_tasks`, `read_cached_tasks`, `search_tasks`, `get_task_details`, `get_task_statuses`, `get_project_language`, `get_task_time_tracking`
+21 tools registered in `src/tools/definitions.ts`:
+- **Read**: `sync_tasks`, `read_cached_tasks`, `search_tasks`, `get_task_details`, `get_task_statuses`, `get_project_language`, `get_task_time_tracking`, `search_tempo_worklogs`, `get_tempo_report`
 - **Mutate**: `update_task`, `update_task_status`, `reassign_task`, `add_task_comment`, `add_templated_comment`, `log_task_time`, `create_task`, `create_monthly_tasks`
 - **Delete (guarded)**: `delete_task`, `delete_comment`
 - **Templates**: `list_comment_templates`, `list_task_templates`

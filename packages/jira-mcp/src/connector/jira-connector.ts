@@ -29,6 +29,8 @@ import type {
   JiraUser,
   ProjectIssueTypeStatus,
   CreateIssueResult,
+  JiraIssueRef,
+  JiraProject,
 } from './types.js';
 import {
   JiraAuthenticationError,
@@ -42,6 +44,12 @@ import {
 
 /** Default max results for JQL search. */
 const DEFAULT_MAX_RESULTS = 1000;
+
+/** Issues per `issue/bulkfetch` call; the endpoint rejects more than 100. */
+const BULK_FETCH_CHUNK = 100;
+
+/** Account ids per `user/bulk` call; the endpoint caps the list at 128. */
+const USER_BULK_CHUNK = 100;
 
 /** Fields requested during JQL search (lightweight). */
 const SEARCH_FIELDS = [
@@ -75,7 +83,7 @@ interface RawJiraIssueFields {
   readonly issueType?: { readonly name?: string };
   readonly created: string;
   readonly updated: string;
-  readonly project?: { readonly key?: string };
+  readonly project?: { readonly id?: string; readonly key?: string };
   readonly description?: AdfDocument;
   readonly comment?: {
     readonly comments?: readonly RawJiraComment[];
@@ -155,6 +163,31 @@ interface RawJiraIssueType {
 interface RawJiraCreateResult {
   readonly key: string;
   readonly id: string;
+}
+
+/** `issue/bulkfetch` returns a partial `fields` block and never `created`. */
+interface RawJiraBulkIssue {
+  readonly id: string;
+  readonly key: string;
+  readonly fields?: {
+    readonly summary?: string;
+    readonly project?: { readonly id?: string; readonly key?: string };
+    readonly issuetype?: { readonly name?: string };
+  };
+}
+
+interface RawJiraBulkFetchResult {
+  readonly issues?: readonly RawJiraBulkIssue[];
+}
+
+interface RawJiraProject {
+  readonly id: string;
+  readonly key: string;
+  readonly name?: string;
+}
+
+interface RawJiraUserBulkResult {
+  readonly values?: readonly RawJiraUser[];
 }
 
 // ---------------------------------------------------------------------------
@@ -633,6 +666,108 @@ export class JiraConnector {
         active: u.active,
       }),
     );
+  }
+
+  /**
+   * Look up users by account id, in chunks of {@link USER_BULK_CHUNK}.
+   *
+   * Ids Jira does not know are left out of the result rather than raising,
+   * because a worklog whose author has since been deactivated is still a
+   * worklog. `emailAddress` is null whenever the user's privacy settings
+   * hide it, which is the default on many sites.
+   */
+  async getUsersByAccountIds(
+    accountIds: readonly string[],
+  ): Promise<JiraUser[]> {
+    const users: JiraUser[] = [];
+
+    for (let i = 0; i < accountIds.length; i += USER_BULK_CHUNK) {
+      const params = new URLSearchParams({
+        maxResults: String(USER_BULK_CHUNK),
+      });
+      for (const id of accountIds.slice(i, i + USER_BULK_CHUNK)) {
+        params.append('accountId', id);
+      }
+
+      const result = await this.request<RawJiraUserBulkResult>(
+        'GET',
+        `/rest/api/3/user/bulk?${params.toString()}`,
+      );
+
+      for (const u of result.values ?? []) {
+        users.push({
+          accountId: u.accountId,
+          emailAddress: u.emailAddress ?? null,
+          displayName: u.displayName ?? 'Unknown',
+          active: u.active,
+        });
+      }
+    }
+
+    return users;
+  }
+
+  // -----------------------------------------------------------------------
+  // Issue and project references
+  // -----------------------------------------------------------------------
+
+  /**
+   * Resolve issue ids or keys to their identity, in chunks of
+   * {@link BULK_FETCH_CHUNK}.
+   *
+   * Accepts a mix of numeric ids and keys because `issue/bulkfetch` does.
+   * Ids that do not resolve (deleted issue, no browse permission) are
+   * silently absent from the result; the caller decides what a missing
+   * issue means for its report.
+   */
+  async getIssuesByIdsOrKeys(
+    idsOrKeys: readonly string[],
+  ): Promise<JiraIssueRef[]> {
+    const refs: JiraIssueRef[] = [];
+
+    for (let i = 0; i < idsOrKeys.length; i += BULK_FETCH_CHUNK) {
+      const result = await this.request<RawJiraBulkFetchResult>(
+        'POST',
+        '/rest/api/3/issue/bulkfetch',
+        {
+          issueIdsOrKeys: idsOrKeys.slice(i, i + BULK_FETCH_CHUNK),
+          fields: ['summary', 'project', 'issuetype'],
+        },
+      );
+
+      for (const issue of result.issues ?? []) {
+        const f = issue.fields;
+        refs.push({
+          id: issue.id,
+          key: issue.key,
+          summary: f?.summary ?? '',
+          projectId: f?.project?.id ?? '',
+          projectKey: f?.project?.key ?? issue.key.split('-')[0] ?? '',
+          issueType: f?.issuetype?.name ?? 'Unknown',
+        });
+      }
+    }
+
+    return refs;
+  }
+
+  /**
+   * Get a project's identity by key.
+   *
+   * Tempo filters by numeric project id, and the id is not derivable from
+   * the key, so any project-scoped Tempo query starts here.
+   */
+  async getProject(projectKey: string): Promise<JiraProject> {
+    const project = await this.request<RawJiraProject>(
+      'GET',
+      `/rest/api/3/project/${encodeURIComponent(projectKey)}`,
+    );
+
+    return {
+      id: project.id,
+      key: project.key,
+      name: project.name ?? project.key,
+    };
   }
 
   // -----------------------------------------------------------------------

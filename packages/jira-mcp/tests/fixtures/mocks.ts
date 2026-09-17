@@ -12,6 +12,7 @@
 import { vi } from 'vitest';
 
 import type { JiraConnector } from '../../src/connector/jira-connector';
+import type { TempoClient } from '../../src/connector/tempo-client';
 import type { CacheManager } from '../../src/cache/manager';
 import type { InstancePool } from '../../src/connector/instance-pool';
 import type { TemplateRegistry } from '../../src/templates/registry';
@@ -41,6 +42,9 @@ interface MockJiraConnector {
   updateIssue: ReturnType<typeof vi.fn>;
   getFields: ReturnType<typeof vi.fn>;
   searchUsers: ReturnType<typeof vi.fn>;
+  getUsersByAccountIds: ReturnType<typeof vi.fn>;
+  getIssuesByIdsOrKeys: ReturnType<typeof vi.fn>;
+  getProject: ReturnType<typeof vi.fn>;
   getProjectStatuses: ReturnType<typeof vi.fn>;
   instanceUrl: string;
 }
@@ -65,8 +69,29 @@ export function createMockConnector(
     updateIssue: vi.fn(),
     getFields: vi.fn(),
     searchUsers: vi.fn(),
+    getUsersByAccountIds: vi.fn(),
+    getIssuesByIdsOrKeys: vi.fn(),
+    getProject: vi.fn(),
     getProjectStatuses: vi.fn(),
     instanceUrl,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// TempoClient
+// ---------------------------------------------------------------------------
+
+interface MockTempoClient {
+  getWorklogs: ReturnType<typeof vi.fn>;
+  apiUrl: string;
+}
+
+export function createMockTempoClient(
+  apiUrl = 'https://api.tempo.io/4/',
+): MockTempoClient {
+  return {
+    getWorklogs: vi.fn(),
+    apiUrl,
   };
 }
 
@@ -114,6 +139,7 @@ interface MockInstancePool {
   getConnector: ReturnType<typeof vi.fn>;
   getConnectorForTask: ReturnType<typeof vi.fn>;
   getInstances: ReturnType<typeof vi.fn>;
+  getTempoClient: ReturnType<typeof vi.fn>;
 }
 
 export function createMockInstancePool(): MockInstancePool {
@@ -121,6 +147,7 @@ export function createMockInstancePool(): MockInstancePool {
     getConnector: vi.fn(),
     getConnectorForTask: vi.fn(),
     getInstances: vi.fn(),
+    getTempoClient: vi.fn(),
   };
 }
 
@@ -224,6 +251,10 @@ export function asCacheManager(mock: MockCacheManager): CacheManager {
 
 export function asConnector(mock: MockJiraConnector): JiraConnector {
   return mock as unknown as JiraConnector;
+}
+
+export function asTempoClient(mock: MockTempoClient): TempoClient {
+  return mock as unknown as TempoClient;
 }
 
 export function asPool(mock: MockInstancePool): InstancePool {

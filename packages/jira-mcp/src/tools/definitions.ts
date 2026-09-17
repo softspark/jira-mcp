@@ -472,4 +472,79 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       },
     },
   },
+  {
+    name: 'search_tempo_worklogs',
+    description:
+      'List Tempo worklogs in a date range, with issue keys and user names resolved. Filter by project, task and/or user; filters combine. Needs a Tempo API token (jira-mcp config set-tempo-token). Use get_tempo_report for totals.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from: {
+          type: 'string',
+          description: 'Inclusive start date, YYYY-MM-DD.',
+        },
+        to: {
+          type: 'string',
+          description: 'Inclusive end date, YYYY-MM-DD.',
+        },
+        project_key: {
+          type: 'string',
+          description:
+            'Restrict to one project (e.g. "DEVOPS"). Also selects the Jira instance. Defaults to the configured default project for routing only.',
+        },
+        task_key: {
+          type: 'string',
+          description: 'Restrict to one task (e.g. "DEVOPS-37").',
+        },
+        user_email: {
+          type: 'string',
+          description: 'Restrict to worklogs logged by this user.',
+        },
+        limit: {
+          type: 'number',
+          description:
+            'Maximum worklogs to return (default 200, max 2000). Totals always cover the full match.',
+        },
+      },
+      required: ['from', 'to'],
+    },
+  },
+  {
+    name: 'get_tempo_report',
+    description:
+      'Sum Tempo hours in a date range by project, user and/or task. Answers "how many hours went into project X, and from whom" or "what did user Y log, on which tasks". Needs a Tempo API token (jira-mcp config set-tempo-token).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from: {
+          type: 'string',
+          description: 'Inclusive start date, YYYY-MM-DD.',
+        },
+        to: {
+          type: 'string',
+          description: 'Inclusive end date, YYYY-MM-DD.',
+        },
+        group_by: {
+          type: 'array',
+          items: { type: 'string', enum: ['project', 'user', 'task'] },
+          description:
+            'Dimensions to group by, in order. Default ["project", "user"]. Examples: ["user"] for hours per person, ["user", "task"] for what each person worked on, ["task"] for hours per task.',
+        },
+        project_key: {
+          type: 'string',
+          description:
+            'Restrict to one project (e.g. "DEVOPS"). Also selects the Jira instance.',
+        },
+        task_key: {
+          type: 'string',
+          description: 'Restrict to one task (e.g. "DEVOPS-37").',
+        },
+        user_email: {
+          type: 'string',
+          description: 'Restrict to worklogs logged by this user.',
+        },
+      },
+      required: ['from', 'to'],
+    },
+  },
 ];

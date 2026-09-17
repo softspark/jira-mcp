@@ -30,10 +30,17 @@ import {
 } from '@softspark/atlassian-mcp-core';
 import { info, error } from '@softspark/atlassian-mcp-core';
 
+/** One credential slot on disk: the Jira pair plus an optional Tempo token. */
+export interface StoredCredential {
+  readonly username: string;
+  readonly api_token: string;
+  readonly tempo_token?: string;
+}
+
 /** Shape of the Format B credentials file on disk. */
-interface CredentialsFileB {
-  readonly default: { readonly username: string; readonly api_token: string };
-  readonly instances?: Record<string, { readonly username: string; readonly api_token: string }>;
+export interface CredentialsFileB {
+  readonly default: StoredCredential;
+  readonly instances?: Record<string, StoredCredential>;
 }
 
 /**
@@ -42,7 +49,7 @@ interface CredentialsFileB {
  * @param value - The string to mask.
  * @returns Masked string (e.g. "abcd****").
  */
-function maskToken(value: string): string {
+export function maskToken(value: string): string {
   if (value.length <= 4) {
     return '****';
   }
@@ -50,11 +57,26 @@ function maskToken(value: string): string {
 }
 
 /**
+ * Carry a slot's Tempo token over when its Jira credential is replaced.
+ *
+ * The two tokens are rotated independently, so writing a new Jira token
+ * must not silently log the site out of Tempo.
+ */
+function withTempoToken(
+  credential: StoredCredential,
+  previous: StoredCredential | undefined,
+): StoredCredential {
+  return previous?.tempo_token !== undefined
+    ? { ...credential, tempo_token: previous.tempo_token }
+    : credential;
+}
+
+/**
  * Read existing credentials.json and normalize to Format B.
  *
  * Returns `undefined` when the file does not exist yet.
  */
-async function readExistingCredentials(
+export async function readExistingCredentials(
   credentialsPath: string,
 ): Promise<CredentialsFileB | undefined> {
   if (!(await pathExists(credentialsPath))) {
@@ -111,15 +133,21 @@ export async function handleSetCredentials(
 
   if (url) {
     // Instance-specific credential
-    const base = existing ?? { default: credential, instances: {} };
+    const base: CredentialsFileB = existing ?? {
+      default: credential,
+      instances: {},
+    };
     result = {
       default: base.default,
-      instances: { ...base.instances, [url]: credential },
+      instances: {
+        ...base.instances,
+        [url]: withTempoToken(credential, base.instances?.[url]),
+      },
     };
   } else {
     // Default credential — preserve existing instances
     result = {
-      default: credential,
+      default: withTempoToken(credential, existing?.default),
       instances: existing?.instances ?? {},
     };
   }

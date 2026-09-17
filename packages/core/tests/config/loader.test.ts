@@ -203,6 +203,68 @@ describe('loadConfig', () => {
     expect(result.credentials.username).toBe('single@example.com');
   });
 
+  it('carries tempo_token from the winning credential only', async () => {
+    const configData = {
+      projects: {
+        PROJ_A: { url: 'https://team-a.atlassian.net' },
+        PROJ_B: { url: 'https://team-b.atlassian.net' },
+      },
+      default_project: 'PROJ_A',
+    };
+    const credsData = createMultiCredentials({
+      default: { ...createCredentials('default@example.com', 'default-token'), tempo_token: 'tempo-default' },
+      instances: {
+        'https://team-b.atlassian.net': createCredentials('team-b@example.com', 'team-b-token'),
+      },
+    });
+
+    mockedAccess.mockResolvedValue(undefined);
+    mockedReadFile
+      .mockResolvedValueOnce(JSON.stringify(configData))
+      .mockResolvedValueOnce(JSON.stringify(credsData));
+
+    const result = await loadConfig({
+      configPath: '/fake/config.json',
+      credentialsPath: '/fake/credentials.json',
+    });
+
+    // PROJ_A resolves to the default credential and gets its Tempo token
+    expect(result.projects['PROJ_A']?.tempo_token).toBe('tempo-default');
+    // PROJ_B has its own credential without one and must not borrow the default's
+    expect(result.projects['PROJ_B']).not.toHaveProperty('tempo_token');
+    expect(result.credentials.tempo_token).toBe('tempo-default');
+  });
+
+  it('defaults tempo_api_url to the global Tempo host', async () => {
+    mockedAccess.mockResolvedValue(undefined);
+    mockedReadFile
+      .mockResolvedValueOnce(JSON.stringify(createConfigFile(1)))
+      .mockResolvedValueOnce(JSON.stringify(createCredentials()));
+
+    const result = await loadConfig({
+      configPath: '/fake/config.json',
+      credentialsPath: '/fake/credentials.json',
+    });
+
+    expect(result.tempo_api_url).toBe('https://api.tempo.io/4');
+  });
+
+  it('honours a tempo_api_url override from config.json', async () => {
+    mockedAccess.mockResolvedValue(undefined);
+    mockedReadFile
+      .mockResolvedValueOnce(
+        JSON.stringify({ ...createConfigFile(1), tempo_api_url: 'https://api.eu.tempo.io/4' }),
+      )
+      .mockResolvedValueOnce(JSON.stringify(createCredentials()));
+
+    const result = await loadConfig({
+      configPath: '/fake/config.json',
+      credentialsPath: '/fake/credentials.json',
+    });
+
+    expect(result.tempo_api_url).toBe('https://api.eu.tempo.io/4');
+  });
+
   it('uses env vars for path resolution when no explicit paths', async () => {
     const configData = createConfigFile(1);
     const credsData = createCredentials();

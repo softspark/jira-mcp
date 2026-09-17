@@ -2,11 +2,11 @@
 title: "Jira MCP Server - Configuration Reference"
 category: reference
 service: jira-mcp
-tags: [configuration, config, credentials, multi-instance, environment-variables]
-version: "1.11.0"
+tags: [configuration, config, credentials, multi-instance, environment-variables, tempo]
+version: "1.15.0"
 created: "2026-04-13"
-last_updated: "2026-09-06"
-description: "Full reference for config.json, credentials.json, path resolution order, environment variables, and multi-instance setup."
+last_updated: "2026-09-17"
+description: "Full reference for config.json, credentials.json, the Tempo token, path resolution order, environment variables, and multi-instance setup."
 ---
 
 # Jira MCP Server - Configuration Reference
@@ -44,6 +44,7 @@ In this example `DEVOPS` uses `"en"` and `ADMIN` inherits `"pl"` from `default_l
 | `projects.<KEY>.language` | `LanguageCode` | No | Language override for this project. Overrides `default_language`. |
 | `default_project` | string | Yes | Must reference a key present in `projects`. |
 | `default_language` | `LanguageCode` | No | Global language default. Applied to any project that has no `language` field. Defaults to `"pl"` when omitted. |
+| `tempo_api_url` | string (URL) | No | Tempo Cloud REST API base URL, version segment included. Defaults to `https://api.tempo.io/4`. Sites pinned to a Tempo region use `https://api.eu.tempo.io/4` or `https://api.us.tempo.io/4`. |
 
 **`LanguageCode` enum values:** `pl`, `en`, `de`, `es`, `fr`, `pt`, `it`, `nl`.
 
@@ -94,11 +95,15 @@ Two formats are supported. The loader auto-detects which is in use.
 | `default` | object | Yes | Default credential used for instances without a specific override. |
 | `default.username` | string (email) | Yes | Jira account email address. |
 | `default.api_token` | string | Yes | Jira API token (non-empty). |
+| `default.tempo_token` | string | No | Tempo API token for the site the default credential serves. |
 | `instances` | object | No | Map of Jira instance URL → credential override. |
 | `instances.<URL>.username` | string (email) | Yes | Instance-specific email. |
 | `instances.<URL>.api_token` | string | Yes | Instance-specific API token. |
+| `instances.<URL>.tempo_token` | string | No | Tempo API token for that instance. Never inherited from `default`. |
 
-**Credential resolution order:** `instances[project.url]` → `default`.
+**Credential resolution order:** `instances[project.url]` → `default`. The Tempo token travels with whichever entry wins and is not borrowed from `default` by an instance override: a Tempo token is bound to one site, and the wrong one only produces a confusing 401.
+
+Format A accepts `tempo_token` as a third top-level field.
 
 **CLI commands:**
 
@@ -108,9 +113,13 @@ jira-mcp config set-credentials user@example.com --token TOKEN
 
 # Set credentials for a specific Jira instance
 jira-mcp config set-credentials other@example.com --token TOKEN --url https://other.atlassian.net
+
+# Store the Tempo token on the default credential, or on one instance
+jira-mcp config set-tempo-token --token TEMPO_TOKEN
+jira-mcp config set-tempo-token --token TEMPO_TOKEN --url https://other.atlassian.net
 ```
 
-The CLI automatically migrates Format A → Format B on first use of `--url`.
+The CLI automatically migrates Format A → Format B on first use of `--url`. `set-credentials` keeps a stored `tempo_token` when the Jira token in the same slot is rotated, and `set-tempo-token --url` creates the instance entry from `default` when none exists yet.
 
 ---
 
@@ -222,18 +231,20 @@ After loading, credentials are merged into each project entry to produce the run
     "PROJ": {
       url: "https://your-org.atlassian.net",
       username: "user@example.com",
-      api_token: "..."
+      api_token: "...",
+      tempo_token: "..."        // only when the winning credential has one
     }
   },
   default_project: "PROJ",
   credentials: {
     username: "user@example.com",
     api_token: "..."
-  }
+  },
+  tempo_api_url: "https://api.tempo.io/4"
 }
 ```
 
-This merged object is what `InstancePool` and `TaskSyncer` receive at startup.
+This merged object is what `InstancePool` and `TaskSyncer` receive at startup. `InstancePool.getTempoClient(projectKey)` builds a Tempo client lazily from the project's `tempo_token` and the shared `tempo_api_url`, and throws `TempoNotConfiguredError` (`TEMPO_NOT_CONFIGURED`) for a site without a token.
 
 ---
 
@@ -244,6 +255,18 @@ This merged object is what `InstancePool` and `TaskSyncer` receive at startup.
 3. Copy the token and paste it into `credentials.json` as `api_token`.
 
 The `username` must be the email address associated with the Atlassian account.
+
+---
+
+## Obtaining a Tempo API Token
+
+Tempo is a Marketplace app with its own token store; the Jira token never reaches it.
+
+1. In Jira open **Tempo > Settings > API Integration** (requires Tempo administrator rights, or a Tempo admin can issue one for you).
+2. Click **New Token**, name it, pick an expiry and grant at least the **View worklogs** scope. To report on other people's time the token owner also needs Tempo's "View all worklogs" permission.
+3. Copy the token and store it with `jira-mcp config set-tempo-token --token <TOKEN>`.
+
+Tempo tokens are issued per Jira site. A multi-site install stores one per instance with `--url`.
 
 ---
 

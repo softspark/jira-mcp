@@ -70,6 +70,22 @@ describe('AtlassianHttpClient', () => {
       expect(client.authorization).toBe(`Basic ${expected}`);
     });
 
+    it('builds a Bearer auth header from a bearer token', async () => {
+      const bearer = new AtlassianHttpClient(
+        { url: 'https://api.tempo.io/4/', bearer_token: 'tempo-secret' },
+        ({ status, detail }) => new TestError(status, detail),
+      );
+      mockFetch.mockResolvedValue(mockResponse({}));
+
+      await bearer.requestJson('GET', 'worklogs');
+
+      expect(bearer.authorization).toBe('Bearer tempo-secret');
+      const headers = (mockFetch.mock.calls[0]?.[1] as RequestInit)
+        .headers as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer tempo-secret');
+      expect(mockFetch.mock.calls[0]?.[0]).toBe('https://api.tempo.io/4/worklogs');
+    });
+
     it('appends query parameters to the URL', async () => {
       mockFetch.mockResolvedValue(mockResponse({}));
 

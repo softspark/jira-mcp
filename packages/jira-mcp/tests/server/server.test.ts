@@ -39,12 +39,14 @@ const EXPECTED_TOOL_NAMES: readonly string[] = [
   'get_task_details',
   'get_task_statuses',
   'get_task_time_tracking',
+  'get_tempo_report',
   'list_comment_templates',
   'list_task_templates',
   'log_task_time',
   'read_cached_tasks',
   'reassign_task',
   'search_tasks',
+  'search_tempo_worklogs',
   'sync_tasks',
   'update_task',
   'update_task_status',
@@ -72,8 +74,8 @@ describe('createServer', () => {
 // ---------------------------------------------------------------------------
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has exactly 19 tool definitions', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(19);
+  it('has exactly 21 tool definitions', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(21);
   });
 
   it('contains all expected tool names', () => {

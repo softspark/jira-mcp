@@ -2,10 +2,10 @@
 title: "Jira MCP Server - Architecture Overview"
 category: reference
 service: jira-mcp
-tags: [architecture, mcp, jira, typescript, design-patterns]
-version: "1.0.0"
+tags: [architecture, mcp, jira, tempo, typescript, design-patterns]
+version: "1.15.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-09-17"
 description: "System architecture, module layout, data flow, and key design patterns for the Jira MCP server."
 ---
 
@@ -29,6 +29,7 @@ The Jira MCP server exposes Jira operations as MCP (Model Context Protocol) tool
 | Language | TypeScript (ESM) |
 | MCP SDK | `@modelcontextprotocol/sdk` |
 | Jira client | Built-in `fetch` (Jira REST API v3) |
+| Tempo client | Same transport, Bearer token (Tempo Cloud REST API v4) |
 | Schema validation | Zod |
 | Markdown -> ADF | Built-in (zero-dependency) |
 | ADF -> Markdown | Built-in (zero-dependency) |
@@ -50,9 +51,11 @@ src/
 │
 ├── connector/
 │   ├── jira-connector.ts  # JiraConnector using built-in fetch (REST API v3)
-│   ├── instance-pool.ts   # InstancePool: deduplicates connectors by URL
-│   ├── time-parser.ts     # parseTimeSpent("2h 30m") -> seconds
-│   └── types.ts           # JiraIssue, JiraIssueDetail, JiraTransition, ...
+│   ├── tempo-client.ts    # TempoClient: Bearer auth, worklog pagination (Tempo v4)
+│   ├── tempo-types.ts     # TempoWorklog, TempoWorklogQuery
+│   ├── instance-pool.ts   # InstancePool: deduplicates connectors and Tempo clients by URL
+│   ├── time-parser.ts     # parseTimeSpent("2h 30m") <-> formatTimeSpent(seconds)
+│   └── types.ts           # JiraIssue, JiraIssueDetail, JiraIssueRef, JiraProject, ...
 │
 ├── cache/
 │   ├── manager.ts         # CacheManager: CRUD + atomic writes for tasks
@@ -70,7 +73,8 @@ src/
 │   └── types.ts           # AdfDocument, AdfNode, AdfMark interfaces
 │
 ├── operations/
-│   └── task-operations.ts # TaskOperations: status, comment, assign, time log
+│   ├── task-operations.ts  # TaskOperations: status, comment, assign, time log
+│   └── tempo-operations.ts # TempoOperations: Tempo worklogs joined with Jira, reports
 │
 ├── templates/
 │   ├── built-in.ts        # Built-in CommentTemplates
@@ -102,7 +106,9 @@ src/
     ├── create-task.ts
     ├── search-tasks.ts
     ├── update-task.ts
-    └── get-project-language.ts
+    ├── get-project-language.ts
+    ├── search-tempo-worklogs.ts
+    └── get-tempo-report.ts
 ```
 
 ## Layer Diagram
@@ -156,6 +162,26 @@ src/
 7. server.ts returns { content: [{ type: "text", text: "..." }] }
 ```
 
+## Data Flow: Tempo Report
+
+```
+1. MCP client calls get_tempo_report({ from, to, project_key, group_by })
+2. server.ts extracts args; group_by accepts an array or "user,task"
+3. helpers.resolveTempoProjectKey() picks the routing project
+   (project_key, else task_key prefix, else default_project)
+4. pool.getTempoClient(projectKey)  -> TempoNotConfiguredError if no tempo_token
+   pool.getConnector(projectKey)    -> the same site's JiraConnector
+5. TempoOperations.report():
+   a. jira.getProject(key)                    -> numeric projectId
+   b. tempo.getWorklogs({ from, to, projectIds }) -> GET /4/worklogs, paginated
+   c. jira.getIssuesByIdsOrKeys(issueIds)     -> POST issue/bulkfetch (100 per call)
+      jira.getUsersByAccountIds(accountIds)   -> GET user/bulk (100 per call)
+   d. aggregate by group_by, sort largest first
+6. Tool handler flattens rows to snake_case and returns the envelope
+```
+
+Tempo is asked with ids and answers with ids; every key or name in the response comes from step 5c. A user filter routes step 5b to `worklogs/user/{accountId}`, which takes no other filter, so project and task filters are applied again after 5c.
+
 ## Key Design Patterns
 
 ### InstancePool — Connector Deduplication
@@ -202,10 +228,14 @@ All errors extend `JiraMcpError` and carry a machine-readable `code` string alon
 JiraMcpError (code: string)
 ├── ConfigError (CONFIG_ERROR)
 │   ├── ConfigNotFoundError (CONFIG_NOT_FOUND)
-│   └── ConfigValidationError (CONFIG_VALIDATION)
+│   ├── ConfigValidationError (CONFIG_VALIDATION)
+│   └── TempoNotConfiguredError (TEMPO_NOT_CONFIGURED)
 ├── JiraConnectionError (JIRA_CONNECTION)
 │   ├── JiraAuthenticationError (JIRA_AUTH)
 │   └── JiraPermissionError (JIRA_PERMISSION)
+├── TempoConnectionError (TEMPO_CONNECTION)
+│   ├── TempoAuthenticationError (TEMPO_AUTH)
+│   └── TempoPermissionError (TEMPO_PERMISSION)
 ├── CacheError (CACHE_ERROR)
 │   ├── CacheNotFoundError (CACHE_NOT_FOUND)
 │   ├── CacheCorruptionError (CACHE_CORRUPTION)

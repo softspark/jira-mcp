@@ -8,12 +8,20 @@
  * Multiple project keys may map to the same Jira instance URL. This pool
  * deduplicates connectors so each unique instance is only created once.
  *
+ * Tempo clients live here too, keyed the same way, because a Tempo token is
+ * issued per Jira site. They are created lazily: most calls never touch
+ * Tempo, and a site without a token must still serve every Jira tool.
+ *
  * @module
  */
 
 import type { JiraConfig } from '@softspark/atlassian-mcp-core';
-import { ConfigValidationError } from '@softspark/atlassian-mcp-core';
+import {
+  ConfigValidationError,
+  TempoNotConfiguredError,
+} from '@softspark/atlassian-mcp-core';
 import { JiraConnector } from './jira-connector.js';
+import { TempoClient } from './tempo-client.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,6 +42,8 @@ export class InstancePool {
   private readonly byProject = new Map<string, JiraConnector>();
   /** Deduplicated instances keyed by URL. */
   private readonly byUrl = new Map<string, PooledInstance>();
+  /** Tempo clients keyed by Jira URL, created on first use. */
+  private readonly tempoByUrl = new Map<string, TempoClient>();
   private readonly config: JiraConfig;
 
   constructor(config: JiraConfig) {
@@ -84,6 +94,41 @@ export class InstancePool {
    */
   getInstances(): ReadonlyMap<string, PooledInstance> {
     return this.byUrl;
+  }
+
+  /**
+   * Get the Tempo client for the site that owns a project key.
+   *
+   * @throws {ConfigValidationError} If the project key is not configured.
+   * @throws {TempoNotConfiguredError} If that site has no `tempo_token`.
+   */
+  getTempoClient(projectKey: string): TempoClient {
+    const instance = this.config.projects[projectKey];
+    if (!instance) {
+      throw new ConfigValidationError(
+        `Project '${projectKey}' not found in configuration`,
+      );
+    }
+
+    const existing = this.tempoByUrl.get(instance.url);
+    if (existing) {
+      return existing;
+    }
+
+    if (instance.tempo_token === undefined) {
+      throw new TempoNotConfiguredError(
+        `No Tempo API token configured for ${instance.url}. ` +
+          'Run: jira-mcp config set-tempo-token --token <token>' +
+          ' (add --url <jira-url> for a per-instance credential).',
+      );
+    }
+
+    const client = new TempoClient({
+      apiUrl: this.config.tempo_api_url,
+      token: instance.tempo_token,
+    });
+    this.tempoByUrl.set(instance.url, client);
+    return client;
   }
 
   // -----------------------------------------------------------------------

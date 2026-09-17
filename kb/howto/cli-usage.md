@@ -2,10 +2,10 @@
 title: "Jira MCP CLI Reference"
 category: howto
 service: jira-mcp
-tags: [cli, commands, reference, config, cache, bulk-create]
-version: "1.11.0"
+tags: [cli, commands, reference, config, cache, bulk-create, tempo]
+version: "1.15.0"
 created: "2026-04-13"
-last_updated: "2026-09-09"
+last_updated: "2026-09-17"
 description: "Complete reference for all jira-mcp CLI commands, options, and usage examples."
 ---
 
@@ -119,6 +119,31 @@ jira-mcp config set-credentials user@example.com ATATT3xFfGF0...
 ```
 
 The credentials file is stored at `~/.softspark/jira-mcp/credentials.json`. Never commit this file to version control.
+
+---
+
+### `config set-tempo-token`
+
+Store the Tempo API token next to the Jira credential in `credentials.json`. Needed only for `search_tempo_worklogs` and `get_tempo_report`.
+
+```bash
+jira-mcp config set-tempo-token --token <TEMPO_TOKEN> [--url <JIRA_URL>]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--token` | Tempo API token. Falls back to the `TEMPO_API_TOKEN` environment variable. |
+| `--url` | Jira instance URL whose credential gets the token. Omit for the default credential. |
+
+```bash
+# Default site
+jira-mcp config set-tempo-token --token tmp_...
+
+# One instance of several. The entry is created from the default credential when it does not exist yet.
+jira-mcp config set-tempo-token --token tmp_... --url https://other.atlassian.net
+```
+
+Requires Jira credentials to exist already, because the site a Tempo call goes to is resolved through the Jira project map. A Tempo token is bound to one site and an instance override never inherits the default's token, so a multi-site install sets one per instance. Rotating the Jira token with `config set-credentials` keeps the stored Tempo token.
 
 ---
 

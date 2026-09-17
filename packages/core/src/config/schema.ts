@@ -82,6 +82,19 @@ export const SpaceConfigSchema = z.object({
   format: BodyFormatSchema.optional(),
 });
 
+// ---------------------------------------------------------------------------
+// Tempo
+// ---------------------------------------------------------------------------
+
+/**
+ * Tempo Cloud REST API base URL used when config.json names none.
+ *
+ * Tempo also serves region-pinned hosts (`api.eu.tempo.io`, `api.us.tempo.io`)
+ * for sites with a data residency requirement; the global host answers for
+ * everyone else. The trailing `/4` is the API version and belongs to the URL.
+ */
+export const DEFAULT_TEMPO_API_URL = 'https://api.tempo.io/4';
+
 /** Schema for the entire config.json file. */
 export const ConfigFileSchema = z
   .object({
@@ -91,6 +104,7 @@ export const ConfigFileSchema = z
     spaces: z.record(z.string(), SpaceConfigSchema).optional(),
     default_space: z.string().optional(),
     default_format: BodyFormatSchema.optional(),
+    tempo_api_url: z.string().url().optional(),
   })
   .refine((c) => c.default_project in c.projects, {
     message: 'default_project must reference a configured project',
@@ -104,10 +118,17 @@ export const ConfigFileSchema = z
 // credentials.json schemas
 // ---------------------------------------------------------------------------
 
-/** Schema for a single credential pair (username + API token). */
+/**
+ * Schema for a single credential pair (username + API token).
+ *
+ * `tempo_token` is the separate Tempo API token for the same site. Tempo is a
+ * Marketplace app with its own token store, so the Jira token never reaches
+ * it; the field is optional because most installations never call Tempo.
+ */
 export const SingleCredentialsSchema = z.object({
   username: z.string().email(),
   api_token: z.string().min(1),
+  tempo_token: z.string().min(1).optional(),
 });
 
 /** Schema for per-instance credentials with a default fallback. */
@@ -138,6 +159,7 @@ export const JiraInstanceConfigSchema = z.object({
   username: z.string().email(),
   api_token: z.string().min(1),
   language: LanguageCodeSchema,
+  tempo_token: z.string().min(1).optional(),
 });
 
 /** Schema for the complete, merged configuration used at runtime. */
@@ -146,6 +168,7 @@ export const JiraConfigSchema = z.object({
   default_project: z.string(),
   default_language: LanguageCodeSchema,
   credentials: SingleCredentialsSchema,
+  tempo_api_url: z.string().url(),
 });
 
 /** Schema for a fully-resolved Confluence space (site URL + credentials). */

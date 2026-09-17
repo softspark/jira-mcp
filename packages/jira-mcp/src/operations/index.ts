@@ -7,6 +7,8 @@
  */
 
 export { TaskOperations } from './task-operations.js';
+export { TempoOperations, assertGroupBy } from './tempo-operations.js';
+export { TEMPO_GROUP_KEYS } from './types.js';
 export type {
   TaskUpdateResult,
   CommentResult,
@@ -15,4 +17,10 @@ export type {
   MarkdownComment,
   WorklogResult,
   TimeTrackingResult,
+  TempoWorklogFilter,
+  TempoUserRef,
+  TempoWorklogEntry,
+  TempoGroupKey,
+  TempoReportRow,
+  TempoReport,
 } from './types.js';

@@ -42,6 +42,7 @@ import {
   JiraInstanceConfigSchema,
   DEFAULT_LANGUAGE,
   DEFAULT_BODY_FORMAT,
+  DEFAULT_TEMPO_API_URL,
 } from './schema.js';
 import {
   ConfigNotFoundError,
@@ -278,11 +279,18 @@ export async function loadConfig(
   const mergedProjects: Record<string, JiraInstanceConfig> = {};
   for (const [key, project] of Object.entries(config.projects)) {
     const cred = resolveCredentialForUrl(normalized, project.url);
+    // The Tempo token travels with the credential that won for this URL and
+    // never falls back across entries: a Tempo token is bound to one site, so
+    // borrowing the default's token for an overridden instance would only
+    // produce a confusing 401 from the wrong site.
     const instance = {
       url: project.url,
       username: cred.username,
       api_token: cred.api_token,
       language: project.language ?? globalLanguage,
+      ...(cred.tempo_token !== undefined
+        ? { tempo_token: cred.tempo_token }
+        : {}),
     };
 
     // Validate the merged instance
@@ -301,6 +309,7 @@ export async function loadConfig(
     default_project: config.default_project,
     default_language: globalLanguage,
     credentials: normalized.default,
+    tempo_api_url: config.tempo_api_url ?? DEFAULT_TEMPO_API_URL,
   };
 }
 

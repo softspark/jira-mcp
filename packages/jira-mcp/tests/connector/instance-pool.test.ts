@@ -9,7 +9,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { InstancePool } from '../../src/connector/instance-pool';
-import { ConfigValidationError } from '@softspark/atlassian-mcp-core';
+import {
+  ConfigValidationError,
+  TempoNotConfiguredError,
+} from '@softspark/atlassian-mcp-core';
 import {
   createMergedConfig,
   createInstanceConfig,
@@ -21,6 +24,18 @@ vi.mock('../../src/connector/jira-connector', () => ({
     this.instanceUrl = config.url;
     this.searchIssues = vi.fn();
     this.getIssue = vi.fn();
+  }),
+}));
+
+// Same for TempoClient: the pool is about routing, not transport
+vi.mock('../../src/connector/tempo-client', () => ({
+  TempoClient: vi.fn().mockImplementation(function (
+    this: Record<string, unknown>,
+    config: { apiUrl: string; token: string },
+  ) {
+    this.apiUrl = config.apiUrl;
+    this.token = config.token;
+    this.getWorklogs = vi.fn();
   }),
 }));
 
@@ -113,5 +128,56 @@ describe('InstancePool', () => {
     const other = instances.get('https://other.atlassian.net');
     expect(other).toBeDefined();
     expect(other!.projectKeys).toEqual(['PROJ_C']);
+  });
+
+  describe('getTempoClient', () => {
+    it('builds a client from the site token and the configured API URL', () => {
+      const config = createMergedConfig({
+        projects: {
+          PROJ_A: createInstanceConfig({ tempo_token: 'tempo-a' }),
+        },
+        tempo_api_url: 'https://api.eu.tempo.io/4',
+      });
+      const pool = new InstancePool(config);
+
+      const client = pool.getTempoClient('PROJ_A') as unknown as {
+        apiUrl: string;
+        token: string;
+      };
+
+      expect(client.apiUrl).toBe('https://api.eu.tempo.io/4');
+      expect(client.token).toBe('tempo-a');
+    });
+
+    it('reuses one client for projects sharing a URL', () => {
+      const config = createMergedConfig({
+        projects: {
+          PROJ_A: createInstanceConfig({ url: 'https://shared.atlassian.net', tempo_token: 't' }),
+          PROJ_B: createInstanceConfig({ url: 'https://shared.atlassian.net', tempo_token: 't' }),
+        },
+      });
+      const pool = new InstancePool(config);
+
+      expect(pool.getTempoClient('PROJ_A')).toBe(pool.getTempoClient('PROJ_B'));
+    });
+
+    it('throws TempoNotConfiguredError when the site has no token', () => {
+      const pool = new InstancePool(createMergedConfig());
+
+      expect(() => pool.getTempoClient('PROJ0')).toThrow(TempoNotConfiguredError);
+      expect(() => pool.getTempoClient('PROJ0')).toThrow(/set-tempo-token/);
+    });
+
+    it('throws ConfigValidationError for an unknown project key', () => {
+      const pool = new InstancePool(createMergedConfig());
+
+      expect(() => pool.getTempoClient('UNKNOWN')).toThrow(ConfigValidationError);
+    });
+
+    it('does not create a Tempo client until one is asked for', () => {
+      const pool = new InstancePool(createMergedConfig());
+
+      expect(() => pool.getConnector('PROJ0')).not.toThrow();
+    });
   });
 });

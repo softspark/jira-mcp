@@ -2,10 +2,10 @@
 title: "How to Set Up Jira MCP Server"
 category: howto
 service: jira-mcp
-tags: [setup, install, configuration, quickstart]
-version: "1.0.0"
+tags: [setup, install, configuration, quickstart, tempo]
+version: "1.15.0"
 created: "2026-04-13"
-last_updated: "2026-04-14"
+last_updated: "2026-09-17"
 description: "Quick start guide for installing and configuring the Jira MCP server."
 ---
 
@@ -72,6 +72,16 @@ jira-mcp config set-credentials your@email.com YOUR_API_TOKEN
 ```
 
 This writes to `~/.softspark/jira-mcp/credentials.json`. Never commit this file.
+
+#### Optional: Tempo
+
+If the site runs Tempo Timesheets and you want `search_tempo_worklogs` and `get_tempo_report`, create a Tempo API token (Tempo > Settings > API Integration, scope "View worklogs") and store it beside the Jira credential:
+
+```bash
+jira-mcp config set-tempo-token --token YOUR_TEMPO_TOKEN
+```
+
+Skip this step otherwise. Every other tool works without it, and the two Tempo tools answer `TEMPO_NOT_CONFIGURED` until a token is set. See [Configuration](../reference/configuration.md#obtaining-a-tempo-api-token) for region hosts and multi-site tokens.
 
 ### 5. Add a project
 

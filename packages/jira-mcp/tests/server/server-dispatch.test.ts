@@ -97,6 +97,7 @@ vi.mock('@softspark/atlassian-mcp-core', async (importOriginal) => {
       default_project: 'PROJ0',
       default_language: 'pl',
       credentials: { username: 'user@example.com', api_token: 'test-api-token-123' },
+      tempo_api_url: 'https://api.tempo.io/4',
     }),
     GLOBAL_CACHE_DIR: '/tmp/test-jira-mcp-cache',
     GLOBAL_CONFIG_DIR: '/tmp/test-jira-mcp-config',
@@ -235,6 +236,16 @@ vi.mock('../../src/tools/add-templated-comment.js', () => ({
 }));
 vi.mock('../../src/tools/create-task.js', () => ({
   handleCreateTask: vi.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"success":true}' }],
+  }),
+}));
+vi.mock('../../src/tools/search-tempo-worklogs.js', () => ({
+  handleSearchTempoWorklogs: vi.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"success":true}' }],
+  }),
+}));
+vi.mock('../../src/tools/get-tempo-report.js', () => ({
+  handleGetTempoReport: vi.fn().mockResolvedValue({
     content: [{ type: 'text', text: '{"success":true}' }],
   }),
 }));
@@ -391,6 +402,101 @@ describe('requireString via tool dispatch', () => {
         params: { name: 'search_tasks', arguments: {} },
       }),
     ).rejects.toThrow('Missing required parameter: jql');
+  });
+
+  it('throws for a missing date range on the Tempo tools', async () => {
+    await expect(
+      callToolHandler({
+        params: { name: 'search_tempo_worklogs', arguments: { to: '2026-09-30' } },
+      }),
+    ).rejects.toThrow('Missing required parameter: from');
+    await expect(
+      callToolHandler({
+        params: { name: 'get_tempo_report', arguments: { from: '2026-09-01' } },
+      }),
+    ).rejects.toThrow('Missing required parameter: to');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tempo argument coercion (via CallTool dispatch)
+// ---------------------------------------------------------------------------
+
+describe('Tempo tool dispatch', () => {
+  it('passes group_by through as an array', async () => {
+    const { handleGetTempoReport } = await import('../../src/tools/get-tempo-report.js');
+
+    await callToolHandler({
+      params: {
+        name: 'get_tempo_report',
+        arguments: { from: '2026-09-01', to: '2026-09-30', group_by: ['user'] },
+      },
+    });
+
+    expect(vi.mocked(handleGetTempoReport)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ group_by: ['user'] }),
+      expect.objectContaining({ pool: expect.anything(), config: expect.anything() }),
+    );
+  });
+
+  it('splits a comma-separated group_by string', async () => {
+    const { handleGetTempoReport } = await import('../../src/tools/get-tempo-report.js');
+
+    await callToolHandler({
+      params: {
+        name: 'get_tempo_report',
+        arguments: { from: '2026-09-01', to: '2026-09-30', group_by: 'user, task' },
+      },
+    });
+
+    expect(vi.mocked(handleGetTempoReport)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ group_by: ['user', 'task'] }),
+      expect.anything(),
+    );
+  });
+
+  it('leaves group_by undefined when it is absent', async () => {
+    const { handleGetTempoReport } = await import('../../src/tools/get-tempo-report.js');
+
+    await callToolHandler({
+      params: {
+        name: 'get_tempo_report',
+        arguments: { from: '2026-09-01', to: '2026-09-30' },
+      },
+    });
+
+    const [args] = vi.mocked(handleGetTempoReport).mock.lastCall as [Record<string, unknown>];
+    expect(args['group_by']).toBeUndefined();
+  });
+
+  it('forwards the optional filters and limit on search_tempo_worklogs', async () => {
+    const { handleSearchTempoWorklogs } = await import('../../src/tools/search-tempo-worklogs.js');
+
+    await callToolHandler({
+      params: {
+        name: 'search_tempo_worklogs',
+        arguments: {
+          from: '2026-09-01',
+          to: '2026-09-30',
+          project_key: 'PROJ0',
+          task_key: 'PROJ0-1',
+          user_email: 'a@example.com',
+          limit: 5,
+        },
+      },
+    });
+
+    expect(vi.mocked(handleSearchTempoWorklogs)).toHaveBeenLastCalledWith(
+      {
+        from: '2026-09-01',
+        to: '2026-09-30',
+        project_key: 'PROJ0',
+        task_key: 'PROJ0-1',
+        user_email: 'a@example.com',
+        limit: 5,
+      },
+      expect.anything(),
+    );
   });
 });
 

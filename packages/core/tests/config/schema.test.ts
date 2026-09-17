@@ -226,4 +226,71 @@ describe('JiraConfigSchema', () => {
     const result = JiraConfigSchema.safeParse(withoutCreds);
     expect(result.success).toBe(false);
   });
+
+  it('rejects config without a resolved tempo_api_url', () => {
+    const config = createMergedConfig();
+    const { tempo_api_url: _url, ...withoutTempo } = config;
+    const result = JiraConfigSchema.safeParse(withoutTempo);
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('Tempo fields', () => {
+  it('accepts a credential with a tempo_token', () => {
+    const result = SingleCredentialsSchema.safeParse({
+      ...createCredentials(),
+      tempo_token: 'tempo-secret',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a credential without a tempo_token', () => {
+    const result = SingleCredentialsSchema.safeParse(createCredentials());
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an empty tempo_token', () => {
+    const result = SingleCredentialsSchema.safeParse({
+      ...createCredentials(),
+      tempo_token: '',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a per-instance credential with a tempo_token', () => {
+    const result = MultiCredentialsSchema.safeParse(
+      createMultiCredentials({
+        instances: {
+          'https://b.atlassian.net': {
+            ...createCredentials(),
+            tempo_token: 'tempo-b',
+          },
+        },
+      }),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a merged instance with a tempo_token', () => {
+    const result = JiraInstanceConfigSchema.safeParse(
+      createInstanceConfig({ tempo_token: 'tempo-secret' }),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts tempo_api_url in config.json', () => {
+    const result = ConfigFileSchema.safeParse({
+      ...createConfigFile(),
+      tempo_api_url: 'https://api.eu.tempo.io/4',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a tempo_api_url that is not a URL', () => {
+    const result = ConfigFileSchema.safeParse({
+      ...createConfigFile(),
+      tempo_api_url: 'eu',
+    });
+    expect(result.success).toBe(false);
+  });
 });

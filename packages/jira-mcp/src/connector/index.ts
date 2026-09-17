@@ -9,7 +9,10 @@
 export { JiraConnector } from './jira-connector.js';
 export { InstancePool } from './instance-pool.js';
 export type { PooledInstance } from './instance-pool.js';
-export { parseTimeSpent } from './time-parser.js';
+export { TempoClient } from './tempo-client.js';
+export type { TempoClientConfig } from './tempo-client.js';
+export type { TempoWorklog, TempoWorklogQuery } from './tempo-types.js';
+export { parseTimeSpent, formatTimeSpent } from './time-parser.js';
 export type {
   JiraIssue,
   JiraIssueDetail,
@@ -17,4 +20,6 @@ export type {
   JiraTransition,
   JiraWorklog,
   JiraTimeTracking,
+  JiraIssueRef,
+  JiraProject,
 } from './types.js';

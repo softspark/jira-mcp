@@ -8,7 +8,38 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { parseTimeSpent } from '../../src/connector/time-parser';
+import { parseTimeSpent, formatTimeSpent } from '../../src/connector/time-parser';
+
+describe('formatTimeSpent', () => {
+  it('formats whole hours: 7200 -> "2h"', () => {
+    expect(formatTimeSpent(7200)).toBe('2h');
+  });
+
+  it('formats minutes only: 1800 -> "30m"', () => {
+    expect(formatTimeSpent(1800)).toBe('30m');
+  });
+
+  it('formats hours and minutes: 9000 -> "2h 30m"', () => {
+    expect(formatTimeSpent(9000)).toBe('2h 30m');
+  });
+
+  it('never rolls hours into days: 36000 -> "10h"', () => {
+    expect(formatTimeSpent(36000)).toBe('10h');
+  });
+
+  it('drops seconds that do not fill a minute', () => {
+    expect(formatTimeSpent(3659)).toBe('1h');
+  });
+
+  it('formats zero and negatives as "0m"', () => {
+    expect(formatTimeSpent(0)).toBe('0m');
+    expect(formatTimeSpent(-60)).toBe('0m');
+  });
+
+  it('round-trips through parseTimeSpent', () => {
+    expect(parseTimeSpent(formatTimeSpent(9000))).toBe(9000);
+  });
+});
 
 describe('parseTimeSpent', () => {
   describe('valid inputs', () => {

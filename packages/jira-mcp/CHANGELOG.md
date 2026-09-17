@@ -7,6 +7,37 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+### Added
+
+- **Tempo worklogs and reports.** Two new tools read Tempo Timesheets through
+  the Tempo Cloud REST API v4: `search_tempo_worklogs` lists worklogs in a date
+  range with issue keys and user names resolved, and `get_tempo_report` sums
+  hours by project, user and/or task in the order asked. Filters combine, so
+  "this person's hours on this project last month" is one call. Tempo v4
+  answers in numeric ids only, so every result is joined against Jira
+  (`issue/bulkfetch` for keys and summaries, `user/bulk` for names); an issue
+  the token cannot browse keeps its hours under `#<id>` rather than vanishing
+  from a total. A query past 50 000 worklogs fails instead of truncating.
+- **`jira-mcp config set-tempo-token`** stores the Tempo token next to the Jira
+  credential, on the default entry or per instance with `--url`. The token is
+  read from `--token` or `TEMPO_API_TOKEN`. An instance override never inherits
+  the default's Tempo token, because a Tempo token is bound to one site.
+  `tempo_api_url` in config.json selects a region host (`api.eu.tempo.io`,
+  `api.us.tempo.io`); the global host is the default.
+- **Bearer auth in the shared HTTP client.** `AtlassianHttpClient` takes a
+  `bearer_token` config alongside the Basic pair, so Tempo rides the same retry
+  and backoff loop as Jira and Confluence instead of a second `fetch` loop.
+- Four error classes: `TempoConnectionError`, `TempoAuthenticationError`,
+  `TempoPermissionError` and `TempoNotConfiguredError`. The last one is raised
+  before any network call when a site has no token.
+
+### Fixed
+
+- `config set-credentials` no longer drops a stored Tempo token when the Jira
+  token in the same slot is rotated.
+
 ## v1.14.5 -- Build and packaging documented (2026-09-10)
 
 No code change in either package. The one thing a consumer gets that 1.14.4 did

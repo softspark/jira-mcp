@@ -2,10 +2,10 @@
 title: "Jira MCP Server - API Reference"
 category: reference
 service: jira-mcp
-tags: [api, mcp, tools, jira]
-version: "1.0.0"
+tags: [api, mcp, tools, jira, tempo]
+version: "1.15.0"
 created: "2026-04-13"
-last_updated: "2026-06-10"
+last_updated: "2026-09-17"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
@@ -698,6 +698,172 @@ To install or update a `monthly_admin.json` template, use the CLI command `jira-
 
 ---
 
+## Tempo Tools (2)
+
+Both tools read Tempo Timesheets through the Tempo Cloud REST API v4 and need a Tempo API token on the site's credential (`jira-mcp config set-tempo-token`). Without one they fail with `TEMPO_NOT_CONFIGURED` before any network call. Tempo answers in numeric ids only, so every result is joined against Jira: issue ids become keys and summaries through `issue/bulkfetch`, account ids become names through `user/bulk`. An issue the token cannot browse keeps its hours under `#<id>` with the summary `(issue not visible)` rather than dropping out of a total.
+
+Dates are `YYYY-MM-DD` and inclusive. `project_key`, `task_key` and `user_email` combine; the project key (or the task key's prefix, or the default project) also selects the Jira instance. A `task_key` outside the given `project_key` is rejected.
+
+### search_tempo_worklogs
+
+List Tempo worklogs in a date range. The whole match is fetched and summed, so `total_time_spent` is right even when `limit` trims the list.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `from` | string | Yes | — | Inclusive start date, `YYYY-MM-DD`. |
+| `to` | string | Yes | — | Inclusive end date, `YYYY-MM-DD`. |
+| `project_key` | string | No | — | Restrict to one project. |
+| `task_key` | string | No | — | Restrict to one task. |
+| `user_email` | string | No | — | Restrict to worklogs logged by this user. |
+| `limit` | number | No | `200` | Maximum worklogs returned (max 2000). |
+
+**Input example**
+
+```json
+{
+  "from": "2026-09-01",
+  "to": "2026-09-30",
+  "project_key": "DEVOPS",
+  "user_email": "ann@example.com"
+}
+```
+
+**Output example**
+
+```json
+{
+  "success": true,
+  "from": "2026-09-01",
+  "to": "2026-09-30",
+  "filters": { "project_key": "DEVOPS", "task_key": null, "user_email": "ann@example.com" },
+  "count": 2,
+  "total_available": 2,
+  "truncated": false,
+  "total_time_spent": "3h 30m",
+  "total_seconds": 12600,
+  "worklogs": [
+    {
+      "worklog_id": "50123",
+      "task_key": "DEVOPS-37",
+      "summary": "Rotate the backup keys",
+      "project_key": "DEVOPS",
+      "user": { "account_id": "5b10ac8d82e05b22cc7d4ef5", "display_name": "Ann Kowalska", "email": "ann@example.com" },
+      "date": "2026-09-02",
+      "start_time": "09:00:00",
+      "time_spent": "2h",
+      "time_spent_seconds": 7200,
+      "billable_seconds": 7200,
+      "description": "Rotated and verified restore"
+    },
+    {
+      "worklog_id": "50140",
+      "task_key": "DEVOPS-41",
+      "summary": "Monthly patching",
+      "project_key": "DEVOPS",
+      "user": { "account_id": "5b10ac8d82e05b22cc7d4ef5", "display_name": "Ann Kowalska", "email": "ann@example.com" },
+      "date": "2026-09-03",
+      "start_time": null,
+      "time_spent": "1h 30m",
+      "time_spent_seconds": 5400,
+      "billable_seconds": 0,
+      "description": ""
+    }
+  ],
+  "message": "Found 2 Tempo worklog(s) between 2026-09-01 and 2026-09-30"
+}
+```
+
+`user.email` is `null` when Jira's privacy settings hide it or the account is unknown.
+
+---
+
+### get_tempo_report
+
+Sum Tempo hours in a date range by one or more dimensions, in the order given. Rows come back largest first.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `from` | string | Yes | — | Inclusive start date, `YYYY-MM-DD`. |
+| `to` | string | Yes | — | Inclusive end date, `YYYY-MM-DD`. |
+| `group_by` | string[] | No | `["project", "user"]` | Any order of `project`, `user`, `task`, each at most once. A comma-separated string is accepted too. |
+| `project_key` | string | No | — | Restrict to one project. |
+| `task_key` | string | No | — | Restrict to one task. |
+| `user_email` | string | No | — | Restrict to worklogs logged by this user. |
+
+Common shapes: `["user"]` for hours per person, `["user", "task"]` for what each person worked on, `["task"]` for hours per task, `["project"]` for hours per project across a site.
+
+**Input example**
+
+```json
+{
+  "from": "2026-09-01",
+  "to": "2026-09-30",
+  "project_key": "DEVOPS",
+  "group_by": ["user", "task"]
+}
+```
+
+**Output example**
+
+```json
+{
+  "success": true,
+  "from": "2026-09-01",
+  "to": "2026-09-30",
+  "group_by": ["user", "task"],
+  "filters": { "project_key": "DEVOPS", "task_key": null, "user_email": null },
+  "total_time_spent": "5h 30m",
+  "total_hours": 5.5,
+  "total_seconds": 19800,
+  "billable_seconds": 14400,
+  "worklog_count": 3,
+  "rows": [
+    {
+      "user": "Ann Kowalska",
+      "user_email": "ann@example.com",
+      "task": "DEVOPS-37",
+      "summary": "Rotate the backup keys",
+      "time_spent": "2h",
+      "hours": 2,
+      "time_spent_seconds": 7200,
+      "billable_seconds": 7200,
+      "worklog_count": 1
+    },
+    {
+      "user": "Bob Nowak",
+      "user_email": null,
+      "task": "DEVOPS-40",
+      "summary": "Upgrade the runners",
+      "time_spent": "2h",
+      "hours": 2,
+      "time_spent_seconds": 7200,
+      "billable_seconds": 7200,
+      "worklog_count": 1
+    },
+    {
+      "user": "Ann Kowalska",
+      "user_email": "ann@example.com",
+      "task": "DEVOPS-41",
+      "summary": "Monthly patching",
+      "time_spent": "1h 30m",
+      "hours": 1.5,
+      "time_spent_seconds": 5400,
+      "billable_seconds": 0,
+      "worklog_count": 1
+    }
+  ],
+  "message": "5h 30m logged in Tempo between 2026-09-01 and 2026-09-30 across 3 row(s)"
+}
+```
+
+Only the grouped dimensions appear on a row: `project` for `project`, `user` plus `user_email` for `user`, `task` plus `summary` for `task`. `hours` is decimal to two places for spreadsheets; `time_spent` is the same value as `"2h 30m"`.
+
+---
+
 ## Error Codes
 
 | Code | Class | Trigger |
@@ -707,6 +873,10 @@ To install or update a `monthly_admin.json` template, use the CLI command `jira-
 | `JIRA_AUTH` | `JiraAuthenticationError` | HTTP 401 from Jira |
 | `JIRA_PERMISSION` | `JiraPermissionError` | HTTP 403 from Jira |
 | `JIRA_CONNECTION` | `JiraConnectionError` | Any other Jira API error |
+| `TEMPO_NOT_CONFIGURED` | `TempoNotConfiguredError` | A Tempo tool was called for a site with no `tempo_token` |
+| `TEMPO_AUTH` | `TempoAuthenticationError` | HTTP 401 from Tempo |
+| `TEMPO_PERMISSION` | `TempoPermissionError` | HTTP 403 from Tempo |
+| `TEMPO_CONNECTION` | `TempoConnectionError` | Any other Tempo API error, or a query past the 50 000 worklog cap |
 | `CACHE_NOT_FOUND` | `CacheNotFoundError` | Cache file missing (run `sync_tasks` first) |
 | `CACHE_CORRUPTION` | `CacheCorruptionError` | Cache has invalid JSON or fails schema validation |
 | `TASK_NOT_FOUND` | `TaskNotFoundError` | Task key not in cache |

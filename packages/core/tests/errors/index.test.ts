@@ -24,6 +24,10 @@ import {
   TemplateNotFoundError,
   TemplateMissingVariableError,
   AdfConversionError,
+  TempoConnectionError,
+  TempoAuthenticationError,
+  TempoPermissionError,
+  TempoNotConfiguredError,
 } from '../../src/errors/index';
 
 describe('JiraMcpError', () => {
@@ -144,5 +148,37 @@ describe('AdfConversionError', () => {
     expect(err).toBeInstanceOf(JiraMcpError);
     expect(err.code).toBe('ADF_CONVERSION');
     expect(err.name).toBe('AdfConversionError');
+  });
+});
+
+describe('Tempo error hierarchy', () => {
+  it('TempoConnectionError is instanceof JiraMcpError but not JiraConnectionError', () => {
+    const err = new TempoConnectionError('down');
+    expect(err).toBeInstanceOf(JiraMcpError);
+    expect(err).not.toBeInstanceOf(JiraConnectionError);
+    expect(err.code).toBe('TEMPO_CONNECTION');
+    expect(err.name).toBe('TempoConnectionError');
+  });
+
+  it('TempoAuthenticationError is instanceof TempoConnectionError', () => {
+    const err = new TempoAuthenticationError('bad token');
+    expect(err).toBeInstanceOf(TempoConnectionError);
+    expect(err.code).toBe('TEMPO_AUTH');
+    expect(err.name).toBe('TempoAuthenticationError');
+  });
+
+  it('TempoPermissionError is instanceof TempoConnectionError', () => {
+    const err = new TempoPermissionError('no access');
+    expect(err).toBeInstanceOf(TempoConnectionError);
+    expect(err.code).toBe('TEMPO_PERMISSION');
+    expect(err.name).toBe('TempoPermissionError');
+  });
+
+  it('TempoNotConfiguredError is a ConfigError, not a connection error', () => {
+    const err = new TempoNotConfiguredError('no token');
+    expect(err).toBeInstanceOf(ConfigError);
+    expect(err).not.toBeInstanceOf(TempoConnectionError);
+    expect(err.code).toBe('TEMPO_NOT_CONFIGURED');
+    expect(err.name).toBe('TempoNotConfiguredError');
   });
 });

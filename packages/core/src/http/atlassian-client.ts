@@ -53,6 +53,19 @@ export interface AtlassianSiteConfig {
   readonly api_token: string;
 }
 
+/**
+ * A host that authenticates with a bearer token instead of Basic auth.
+ *
+ * Tempo is the one such host in this workspace. Its REST API lives off-site
+ * (`api.tempo.io`) and issues its own tokens, but it rate-limits and answers
+ * like the Atlassian products, so it shares the transport and differs only in
+ * the `Authorization` header.
+ */
+export interface BearerSiteConfig {
+  readonly url: string;
+  readonly bearer_token: string;
+}
+
 /** Context handed to an error mapper when a request fails. */
 export interface HttpFailure {
   readonly status: number;
@@ -83,19 +96,22 @@ export interface RetryPolicy {
 
 export class AtlassianHttpClient {
   readonly instanceUrl: string;
-  private readonly authToken: string;
+  private readonly authorizationHeader: string;
   private readonly mapError: HttpErrorMapper;
   private readonly retryable: ReadonlySet<number>;
 
   constructor(
-    config: AtlassianSiteConfig,
+    config: AtlassianSiteConfig | BearerSiteConfig,
     mapError: HttpErrorMapper,
     policy?: RetryPolicy,
   ) {
     this.instanceUrl = config.url;
-    this.authToken = Buffer.from(
-      `${config.username}:${config.api_token}`,
-    ).toString('base64');
+    this.authorizationHeader =
+      'bearer_token' in config
+        ? `Bearer ${config.bearer_token}`
+        : `Basic ${Buffer.from(
+            `${config.username}:${config.api_token}`,
+          ).toString('base64')}`;
     this.mapError = mapError;
     this.retryable =
       policy?.extraRetryable === undefined
@@ -105,7 +121,7 @@ export class AtlassianHttpClient {
 
   /** The `Authorization` header value used on every request. */
   get authorization(): string {
-    return `Basic ${this.authToken}`;
+    return this.authorizationHeader;
   }
 
   /**

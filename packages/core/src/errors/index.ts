@@ -13,12 +13,16 @@
  *   +-- ConfigError
  *   |   +-- ConfigNotFoundError
  *   |   +-- ConfigValidationError
+ *   |   +-- TempoNotConfiguredError
  *   +-- JiraConnectionError
  *   |   +-- JiraAuthenticationError
  *   |   +-- JiraPermissionError
  *   +-- ConfluenceConnectionError
  *   |   +-- ConfluenceAuthenticationError
  *   |   +-- ConfluencePermissionError
+ *   +-- TempoConnectionError
+ *   |   +-- TempoAuthenticationError
+ *   |   +-- TempoPermissionError
  *   +-- PageNotFoundError
  *   +-- VersionConflictError
  *   +-- MarkupLossError
@@ -209,6 +213,59 @@ export class VersionConflictError extends JiraMcpError {
   constructor(message: string) {
     super(message, 'VERSION_CONFLICT');
     this.name = 'VersionConflictError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tempo errors
+// ---------------------------------------------------------------------------
+
+/**
+ * Base class for Tempo connectivity errors.
+ *
+ * Tempo is a third product with a third token, so its failures get their own
+ * branch for the same reason Confluence did: a 401 has to name the token that
+ * was rejected, and a Jira token that works says nothing about Tempo.
+ */
+export class TempoConnectionError extends JiraMcpError {
+  constructor(message: string, code = 'TEMPO_CONNECTION') {
+    super(message, code);
+    this.name = 'TempoConnectionError';
+  }
+}
+
+/** Raised when Tempo rejects the supplied API token. */
+export class TempoAuthenticationError extends TempoConnectionError {
+  constructor(message: string) {
+    super(message, 'TEMPO_AUTH');
+    this.name = 'TempoAuthenticationError';
+  }
+}
+
+/**
+ * Raised when the Tempo token lacks the permission the call needs.
+ *
+ * Tempo tokens carry scopes and the "View all worklogs" permission is a
+ * separate Tempo setting, so a token that reads its owner's worklogs can still
+ * be refused another user's.
+ */
+export class TempoPermissionError extends TempoConnectionError {
+  constructor(message: string) {
+    super(message, 'TEMPO_PERMISSION');
+    this.name = 'TempoPermissionError';
+  }
+}
+
+/**
+ * Raised when a Tempo tool is called for a site with no Tempo token.
+ *
+ * A configuration error rather than a connection error: nothing was sent, and
+ * the fix is `jira-mcp config set-tempo-token`, not a retry.
+ */
+export class TempoNotConfiguredError extends ConfigError {
+  constructor(message: string) {
+    super(message, 'TEMPO_NOT_CONFIGURED');
+    this.name = 'TempoNotConfiguredError';
   }
 }
 

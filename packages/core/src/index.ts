@@ -31,6 +31,7 @@ export {
   DEFAULT_LANGUAGE,
   BODY_FORMATS,
   DEFAULT_BODY_FORMAT,
+  DEFAULT_TEMPO_API_URL,
   BodyFormatSchema,
   LanguageCodeSchema,
   ProjectConfigSchema,
@@ -88,6 +89,7 @@ export type { AdfDocument, AdfNode, AdfMark } from './adf/types.js';
 export { AtlassianHttpClient } from './http/atlassian-client.js';
 export type {
   AtlassianSiteConfig,
+  BearerSiteConfig,
   HttpErrorMapper,
   HttpFailure,
   RetryPolicy,

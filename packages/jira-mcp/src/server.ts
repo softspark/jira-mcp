@@ -59,6 +59,8 @@ import { handleCreateTask } from './tools/create-task.js';
 import { handleUpdateTask } from './tools/update-task.js';
 import { handleSearchTasks } from './tools/search-tasks.js';
 import { handleCreateMonthlyTasks } from './tools/create-monthly-tasks.js';
+import { handleSearchTempoWorklogs } from './tools/search-tempo-worklogs.js';
+import { handleGetTempoReport } from './tools/get-tempo-report.js';
 
 import type { JiraConnector } from './connector/jira-connector.js';
 
@@ -345,6 +347,32 @@ export async function startServer(): Promise<void> {
           project: asOptionalString(args['project']),
         });
 
+      case 'search_tempo_worklogs':
+        return handleSearchTempoWorklogs(
+          {
+            from: requireString(args['from'], 'from'),
+            to: requireString(args['to'], 'to'),
+            project_key: asOptionalString(args['project_key']),
+            task_key: asOptionalString(args['task_key']),
+            user_email: asOptionalString(args['user_email']),
+            limit: asOptionalNumber(args['limit']),
+          },
+          { pool, config },
+        );
+
+      case 'get_tempo_report':
+        return handleGetTempoReport(
+          {
+            from: requireString(args['from'], 'from'),
+            to: requireString(args['to'], 'to'),
+            group_by: asGroupBy(args['group_by']),
+            project_key: asOptionalString(args['project_key']),
+            task_key: asOptionalString(args['task_key']),
+            user_email: asOptionalString(args['user_email']),
+          },
+          { pool, config },
+        );
+
       default:
         return failure(new Error(`Unknown tool: ${name}`));
     }
@@ -353,6 +381,30 @@ export async function startServer(): Promise<void> {
   // 5. Connect via stdio
   const transport = new StdioServerTransport();
   await server.connect(transport);
+}
+
+// ---------------------------------------------------------------------------
+// Argument helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Read `group_by` as an array, accepting the comma-separated string a
+ * client sends when it flattens the schema. Validation of the values
+ * happens in the handler, where it can answer with a proper failure.
+ */
+function asGroupBy(value: unknown): readonly string[] | undefined {
+  const list = asOptionalStringArray(value);
+  if (list !== undefined) {
+    return list;
+  }
+  const text = asOptionalString(value);
+  if (text === undefined) {
+    return undefined;
+  }
+  return text
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 // ---------------------------------------------------------------------------

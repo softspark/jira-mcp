@@ -157,16 +157,17 @@ describe('config subcommands', () => {
     'remove-project',
     'list-projects',
     'set-credentials',
+    'set-tempo-token',
     'set-default',
     'set-language',
     'set-project-language',
   ] as const;
 
-  it('has exactly 8 config subcommands', () => {
+  it('has exactly 9 config subcommands', () => {
     const program = createProgram();
     const config = findCommand(program, 'config')!;
 
-    expect(config.commands).toHaveLength(8);
+    expect(config.commands).toHaveLength(9);
   });
 
   it.each(EXPECTED_CONFIG_SUBCOMMANDS)(
@@ -239,7 +240,7 @@ describe('cache subcommands', () => {
 // ---------------------------------------------------------------------------
 
 describe('total command count', () => {
-  it('has 27 total commands (8 top-level + 8 config + 4 cache + 6 template + 1 hook)', () => {
+  it('has 28 total commands (8 top-level + 9 config + 4 cache + 6 template + 1 hook)', () => {
     const program = createProgram();
     const config = findCommand(program, 'config')!;
     const cache = findCommand(program, 'cache')!;
@@ -254,11 +255,11 @@ describe('total command count', () => {
     const total = topLevel + configSubs + cacheSubs + templateSubs + hookSubs;
 
     expect(topLevel).toBe(8);
-    expect(configSubs).toBe(8);
+    expect(configSubs).toBe(9);
     expect(cacheSubs).toBe(4);
     expect(templateSubs).toBe(6);
     expect(hookSubs).toBe(1);
-    expect(total).toBe(27);
+    expect(total).toBe(28);
   });
 });
 describe('template subcommands', () => {

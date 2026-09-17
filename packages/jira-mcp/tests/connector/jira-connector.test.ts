@@ -967,6 +967,142 @@ describe('JiraConnector', () => {
     });
   });
 
+  describe('getIssuesByIdsOrKeys', () => {
+    it('POSTs to bulkfetch and maps the identity fields', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          issues: [
+            {
+              id: '10001',
+              key: 'PROJ-1',
+              fields: {
+                summary: 'First',
+                project: { id: '100', key: 'PROJ' },
+                issuetype: { name: 'Bug' },
+              },
+            },
+          ],
+        }),
+      );
+
+      const refs = await connector.getIssuesByIdsOrKeys(['10001']);
+
+      const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('https://test.atlassian.net/rest/api/3/issue/bulkfetch');
+      expect(options.method).toBe('POST');
+      expect(JSON.parse(options.body as string)).toEqual({
+        issueIdsOrKeys: ['10001'],
+        fields: ['summary', 'project', 'issuetype'],
+      });
+      expect(refs).toEqual([
+        {
+          id: '10001',
+          key: 'PROJ-1',
+          summary: 'First',
+          projectId: '100',
+          projectKey: 'PROJ',
+          issueType: 'Bug',
+        },
+      ]);
+    });
+
+    it('falls back to the key prefix and defaults when fields are missing', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({ issues: [{ id: '10002', key: 'PROJ-2' }] }),
+      );
+
+      const [ref] = await connector.getIssuesByIdsOrKeys(['PROJ-2']);
+
+      expect(ref).toEqual({
+        id: '10002',
+        key: 'PROJ-2',
+        summary: '',
+        projectId: '',
+        projectKey: 'PROJ',
+        issueType: 'Unknown',
+      });
+    });
+
+    it('chunks more than 100 ids into several calls', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ issues: [] }));
+      const ids = Array.from({ length: 150 }, (_, i) => String(10000 + i));
+
+      await connector.getIssuesByIdsOrKeys(ids);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const first = JSON.parse(
+        (mockFetch.mock.calls[0]?.[1] as RequestInit).body as string,
+      ) as { issueIdsOrKeys: string[] };
+      const second = JSON.parse(
+        (mockFetch.mock.calls[1]?.[1] as RequestInit).body as string,
+      ) as { issueIdsOrKeys: string[] };
+      expect(first.issueIdsOrKeys).toHaveLength(100);
+      expect(second.issueIdsOrKeys).toHaveLength(50);
+    });
+
+    it('makes no call for an empty list', async () => {
+      await expect(connector.getIssuesByIdsOrKeys([])).resolves.toEqual([]);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getUsersByAccountIds', () => {
+    it('repeats accountId in the query and maps the users', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          values: [
+            { accountId: 'acc-1', emailAddress: 'a@example.com', displayName: 'Ann', active: true },
+            { accountId: 'acc-2', displayName: 'Bob', active: false },
+          ],
+        }),
+      );
+
+      const users = await connector.getUsersByAccountIds(['acc-1', 'acc-2']);
+
+      const url = new URL(mockFetch.mock.calls[0]?.[0] as string);
+      expect(url.pathname).toBe('/rest/api/3/user/bulk');
+      expect(url.searchParams.getAll('accountId')).toEqual(['acc-1', 'acc-2']);
+      expect(users).toEqual([
+        { accountId: 'acc-1', emailAddress: 'a@example.com', displayName: 'Ann', active: true },
+        { accountId: 'acc-2', emailAddress: null, displayName: 'Bob', active: false },
+      ]);
+    });
+
+    it('chunks more than 100 ids into several calls', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ values: [] }));
+      const ids = Array.from({ length: 101 }, (_, i) => `acc-${String(i)}`);
+
+      await connector.getUsersByAccountIds(ids);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const second = new URL(mockFetch.mock.calls[1]?.[0] as string);
+      expect(second.searchParams.getAll('accountId')).toEqual(['acc-100']);
+    });
+  });
+
+  describe('getProject', () => {
+    it('GETs the project by key and maps it', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({ id: '100', key: 'PROJ', name: 'Project' }),
+      );
+
+      const project = await connector.getProject('PROJ');
+
+      expect(mockFetch.mock.calls[0]?.[0]).toBe(
+        'https://test.atlassian.net/rest/api/3/project/PROJ',
+      );
+      expect(project).toEqual({ id: '100', key: 'PROJ', name: 'Project' });
+    });
+
+    it('falls back to the key when the name is missing', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ id: '100', key: 'PROJ' }));
+
+      const project = await connector.getProject('PROJ');
+
+      expect(project.name).toBe('PROJ');
+    });
+  });
+
   describe('getCurrentUser', () => {
     it('returns the authenticated Jira user', async () => {
       mockFetch.mockResolvedValue(

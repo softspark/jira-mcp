@@ -1,12 +1,13 @@
 # Jira MCP Server
 
-Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `add_task_comment`, `delete_task`, `delete_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `get_project_language`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `list_task_templates`, `create_task`, `create_monthly_tasks`, `search_tasks`
+Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `add_task_comment`, `delete_task`, `delete_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `get_project_language`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `list_task_templates`, `create_task`, `create_monthly_tasks`, `search_tasks`, `search_tempo_worklogs`, `get_tempo_report`
 
 ## Key Rules
 
 - **Always `sync_tasks` first** before reading, because the cache may be stale.
 - **Language first:** before writing ANY comment, description, or task content, call `get_project_language(project_key)` or check the `language` field in `get_task_details` response. Write ALL content in the project's configured language. Never assume Polish or English. Always check first.
 - **Time format:** `"2h 30m"`, using hours and minutes only, never days.
+- **Tempo hours are Tempo's, not Jira's:** `get_task_time_tracking` reads Jira's own time tracking. `search_tempo_worklogs` and `get_tempo_report` read Tempo Timesheets and need a Tempo token (`jira-mcp config set-tempo-token`), otherwise they fail with `TEMPO_NOT_CONFIGURED`. Dates are `YYYY-MM-DD` and inclusive. Use `get_tempo_report` for totals (`group_by` any order of `project`, `user`, `task`; default project then user) and `search_tempo_worklogs` only when the individual entries matter. Filters combine: `project_key` + `user_email` is one person's time on one project.
 - **Status changes:** call `get_task_statuses` first to check valid transitions.
 - **Multi-instance:** project key determines which Jira instance is used (mapped in config.json).
 - **Comments are ADF:** `add_task_comment` converts markdown to ADF (Atlassian Document Format) automatically.
@@ -31,6 +32,27 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 2. `read_cached_tasks()` to work offline
 3. `get_task_details(task_key="PROJ-123")` for a deep dive into description and comments as markdown
 4. `update_task_status(...)` / `add_task_comment(...)` / `log_task_time(...)` to mutate data
+
+## Tempo Reporting
+
+Read-only. Needs `tempo_token` on the site's credential (`jira-mcp config set-tempo-token`); without it the two tools answer `TEMPO_NOT_CONFIGURED` and nothing else is affected.
+
+| Question | Call |
+|----------|------|
+| Hours in project X in a period, by person | `get_tempo_report(from, to, project_key="X")` |
+| What user Y logged, on which projects and tasks | `get_tempo_report(from, to, user_email="y@…", group_by=["project", "task"])` |
+| Who logged how much on task Z | `get_tempo_report(from, to, task_key="Z", group_by=["user"])` |
+| Hours per task in project X | `get_tempo_report(from, to, project_key="X", group_by=["task"])` |
+| Hours per project across the site | `get_tempo_report(from, to, group_by=["project"])` |
+| The individual entries (dates, descriptions, start times) | `search_tempo_worklogs(from, to, …)` |
+
+1. Ask for the period when it is missing; never guess a month. Dates are `YYYY-MM-DD`, inclusive, `from <= to`.
+2. `project_key`, else the `task_key` prefix, else the default project picks the Jira instance. A `task_key` outside `project_key` is an error, not a re-route.
+3. Prefer `get_tempo_report`. `search_tempo_worklogs` returns at most 2000 entries (`limit`, default 200), but `total_time_spent` always covers the full match and `truncated: true` says the list was cut.
+4. `task_key: "#12345"` with summary `(issue not visible)` means Tempo has the hours but the Jira token cannot browse the issue. Report the hours and say the issue is hidden; do not drop the row.
+5. `user_email: null` on a row is Atlassian privacy, not an unknown user. Grouping uses the account id, so the per-person totals are still right.
+6. Tempo totals and `get_task_time_tracking` differ by design: Tempo is the timesheet, Jira's field is native worklogs. Never add the two.
+7. `hours` is decimal (two places) for spreadsheets; `time_spent` is the same value as `"2h 30m"`. Quote whichever the user asked for, not both.
 
 ## Comment Templates (built-in)
 
@@ -64,6 +86,7 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 | `jira-mcp config remove-project <key>` | Remove a project |
 | `jira-mcp config list-projects` | Show configured projects with language |
 | `jira-mcp config set-credentials` | Set API credentials |
+| `jira-mcp config set-tempo-token` | Set the Tempo API token (default site or `--url`) |
 | `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-language <lang>` | Set global default language |
 | `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |

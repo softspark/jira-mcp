@@ -64,6 +64,16 @@ jira-mcp config add-project
 
 All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config init`). This is the standard config directory for all SoftSpark open-source tools.
 
+### 3. Tempo (optional)
+
+If the site runs Tempo Timesheets, create a Tempo API token (Tempo > Settings > API Integration) and store it next to the Jira credential:
+
+```bash
+jira-mcp config set-tempo-token --token TEMPO_TOKEN
+```
+
+That unlocks `search_tempo_worklogs` and `get_tempo_report`. Without it every other tool works as before. Sites pinned to a Tempo region set `tempo_api_url` in `config.json` (`https://api.eu.tempo.io/4` or `https://api.us.tempo.io/4`).
+
 ## CLI Commands
 
 | Command | Description |
@@ -84,6 +94,7 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `jira-mcp config remove-project <key>` | Remove a project from config |
 | `jira-mcp config list-projects` | List all configured projects with language |
 | `jira-mcp config set-credentials` | Set API credentials |
+| `jira-mcp config set-tempo-token` | Set the Tempo API token (default site or `--url <jira-url>`) |
 | `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-language <lang>` | Set global default language |
 | `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |
@@ -114,6 +125,8 @@ All configuration lives in `~/.softspark/jira-mcp/` (created by `jira-mcp config
 | `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?`, `user_approved` |
 | `create_task` | Create a new Jira issue with explicit fields or a task template | `project_key`, `summary?`, `template_id?`, `variables?`, `description?`, `assignee_email?`, `labels?`, `epic_key?`, `parent_key?`, `original_estimate?` |
 | `search_tasks` | Search Jira issues with JQL (no caching) | `jql`, `max_results?`, `project_key?` |
+| `search_tempo_worklogs` | List Tempo worklogs in a date range, issue keys and user names resolved | `from`, `to`, `project_key?`, `task_key?`, `user_email?`, `limit?` |
+| `get_tempo_report` | Sum Tempo hours by project, user and/or task | `from`, `to`, `group_by?`, `project_key?`, `task_key?`, `user_email?` |
 
 ## Comment Templates
 
@@ -203,7 +216,7 @@ Or copy `rules/jira-mcp.md` to your ai-toolkit rules directory manually. The rul
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 19 MCP tools** and **23 CLI commands** reference
+- **All 21 MCP tools** and **24 CLI commands** reference
 
 ### AI Toolkit Hooks
 
@@ -246,11 +259,11 @@ src/
       create.ts   Bulk task creation command
       create-monthly.ts  Monthly admin task automation
   config/         Configuration loading and Zod validation
-  connector/      Jira API client (built-in fetch, instance pool)
+  connector/      Jira and Tempo API clients (built-in fetch, instance pool)
   errors/         Typed error hierarchy
-  operations/     Business logic (status, comments, time tracking)
+  operations/     Business logic (status, comments, time tracking, Tempo reports)
   templates/      File-backed comment/task template loading and registries
-  tools/          MCP tool handlers (19 tools, one file per tool)
+  tools/          MCP tool handlers (21 tools, one file per tool)
   types/          Shared TypeScript types
   server.ts       MCP server setup and tool registration
   cli.ts          CLI entry point
@@ -272,11 +285,13 @@ src/
 
 **Per-instance credentials** -- different API tokens per Jira instance URL. Single-credential format still works (backward compatible). See [Configuration](kb/reference/configuration.md).
 
-**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 548KB library bundle, 1 runtime dep (commander).
+**Tempo worklogs and reports** -- `search_tempo_worklogs` and `get_tempo_report` read Tempo Timesheets (Cloud REST API v4) for hours per project, user or task over a date range, with Tempo's numeric ids resolved to issue keys and names through Jira. Needs a Tempo API token (`jira-mcp config set-tempo-token`); nothing else depends on it. See [API Reference](kb/reference/api.md).
 
-**Typed error hierarchy** -- 26 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 561KB library bundle, 1 runtime dep (commander).
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 991 tests across 80 test files.
+**Typed error hierarchy** -- 30 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1093 tests across 85 test files.
 
 ## Documentation
 
@@ -284,7 +299,7 @@ src/
 |----------|-------------|
 | [Architecture](kb/reference/architecture.md) | System design and module overview |
 | [Local audit](kb/reference/audit.md) | JSON/SARIF formats, filesystem checks and hook permissions |
-| [API Reference](kb/reference/api.md) | All 19 MCP tools with schemas |
+| [API Reference](kb/reference/api.md) | All 21 MCP tools with schemas |
 | [Configuration](kb/reference/configuration.md) | Config files, env vars, multi-instance |
 | [ADF Format](kb/reference/adf.md) | Atlassian Document Format conversion |
 | [Caching](kb/reference/caching.md) | Task, workflow, and user caching |

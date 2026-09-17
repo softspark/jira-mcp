@@ -81,6 +81,7 @@ export function createMergedConfig(
     default_project: 'PROJ0',
     default_language: 'pl',
     credentials: createCredentials(),
+    tempo_api_url: 'https://api.tempo.io/4',
     ...overrides,
   };
 }

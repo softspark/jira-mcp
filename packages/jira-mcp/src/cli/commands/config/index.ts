@@ -11,6 +11,7 @@
  *  - remove-project  -- remove a project mapping
  *  - list-projects   -- show all projects
  *  - set-credentials -- set API credentials
+ *  - set-tempo-token -- set the Tempo API token
  *  - set-default     -- set default project
  *  - set-language    -- set default language
  *
@@ -24,6 +25,7 @@ import { registerAddProjectCommand } from './add-project.js';
 import { registerRemoveProjectCommand } from './remove-project.js';
 import { registerListProjectsCommand } from './list-projects.js';
 import { registerSetCredentialsCommand } from './set-credentials.js';
+import { registerSetTempoTokenCommand } from './set-tempo-token.js';
 import { registerSetDefaultCommand } from './set-default.js';
 import { registerSetLanguageCommand } from './set-language.js';
 
@@ -38,6 +40,7 @@ export function registerConfigCommands(parent: Command): void {
   registerRemoveProjectCommand(config);
   registerListProjectsCommand(config);
   registerSetCredentialsCommand(config);
+  registerSetTempoTokenCommand(config);
   registerSetDefaultCommand(config);
   registerSetLanguageCommand(config);
 }
