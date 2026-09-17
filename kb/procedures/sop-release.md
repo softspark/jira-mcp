@@ -3,9 +3,9 @@ title: "SOP: Release Creation"
 category: procedures
 service: jira-mcp
 tags: [sop, release, version, publish, changelog, semver, npm, tag, provenance, supply-chain]
-version: "1.11.0"
+version: "1.15.0"
 created: "2026-04-13"
-last_updated: "2026-09-06"
+last_updated: "2026-09-17"
 description: "Step-by-step release procedure for @softspark/jira-mcp — version bump, changelog, quality gates, supply-chain gates (provenance + id-token), tagging, npm publish via CI, and rollback instructions."
 ---
 
@@ -39,9 +39,10 @@ python3 scripts/validate_counts.py
 grep -q -- '--provenance' .github/workflows/publish.yml
 grep -q 'id-token: write' .github/workflows/publish.yml
 # 4.7. Licensing gate (v1.7.0+) -- headers, LICENSE, NOTICE, dist banner
-npx vitest run tests/licensing.test.ts
-# 5. Commit
-git add package.json package-lock.json CHANGELOG.md README.md
+npx vitest run packages/jira-mcp/tests/licensing.test.ts
+# 5. Commit (all four package.json files, the lockfile, the root changelog and its
+#    synced copies, both READMEs, and the rebuilt dist/ that carries the version)
+git add package.json package-lock.json packages/*/package.json CHANGELOG.md packages/*/CHANGELOG.md packages/*/README.md packages/*/dist
 git commit -m "chore: release vX.Y.Z"
 # 6. Tag, assert, push
 git tag vX.Y.Z
@@ -258,7 +259,7 @@ The project is Apache-2.0. Attribution only counts if it reaches the artifact,
 and for this package that is not automatic.
 
 ```bash
-npx vitest run tests/licensing.test.ts
+npx vitest run packages/jira-mcp/tests/licensing.test.ts
 ```
 
 Eight assertions, and why each exists:
@@ -302,10 +303,14 @@ Full convention: [Licensing](../reference/licensing.md).
 
 ## Phase 5: Commit Release
 
-Stage only the release files (lockfile included — see Phase 2):
+Stage only the release files (lockfile included — see Phase 2). In the
+workspace that means all four `package.json` files, the root `CHANGELOG.md` and
+the copies `scripts/sync-changelog.mjs` writes into each package, both package
+READMEs, and the rebuilt `dist/`, because the version is injected at build time:
 
 ```bash
-git add package.json package-lock.json CHANGELOG.md README.md
+git add package.json package-lock.json packages/*/package.json \
+  CHANGELOG.md packages/*/CHANGELOG.md packages/*/README.md packages/*/dist
 ```
 
 Commit with the conventional commit format:
@@ -314,7 +319,7 @@ Commit with the conventional commit format:
 git commit -m "chore: release vX.Y.Z"
 ```
 
-- [ ] `package.json`, `package-lock.json`, `CHANGELOG.md`, and `README.md` are staged
+- [ ] All four `package.json` files, `package-lock.json`, the changelog and its copies, both READMEs and `dist/` are staged
 - [ ] Commit message follows format: `chore: release vX.Y.Z`
 - [ ] Working tree is clean after commit
 
