@@ -44,9 +44,9 @@ npx vitest run packages/jira-mcp/tests/licensing.test.ts
 #    synced copies, both READMEs, and the rebuilt dist/ that carries the version)
 git add package.json package-lock.json packages/*/package.json CHANGELOG.md packages/*/CHANGELOG.md packages/*/README.md packages/*/dist
 git commit -m "chore: release vX.Y.Z"
-# 6. Tag, assert, push
-git tag vX.Y.Z
-test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
+# 6. Tag (annotated: tag.gpgSign rejects a bare tag), assert, push
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+test "$(git rev-parse 'vX.Y.Z^{commit}')" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
 git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
 git push origin main
 git push origin refs/tags/vX.Y.Z   # single tag by full ref, never --tags
@@ -335,14 +335,18 @@ git log --oneline -1
 
 ## Phase 6: Tag and Push
 
-Create an annotated tag and push:
+Create an annotated tag and push. Annotated, because a bare `git tag vX.Y.Z`
+fails with "no tag message?" once `tag.gpgSign` is on, which it is in the
+maintainer's checkout. The first assertion dereferences with `^{commit}` for
+the same reason: `git rev-parse` on an annotated tag returns the tag object,
+not the commit, and would report a correct tag as "not on HEAD".
 
 ```bash
-git tag vX.Y.Z
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
 
 # Assert before pushing. Both checks are one line and both have caught a real
 # broken release in a sibling repository on the same day.
-test "$(git rev-parse vX.Y.Z)" = "$(git rev-parse HEAD)" \
+test "$(git rev-parse 'vX.Y.Z^{commit}')" = "$(git rev-parse HEAD)" \
   || { echo "FAIL: tag is not on HEAD"; exit 1; }
 git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
   || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }

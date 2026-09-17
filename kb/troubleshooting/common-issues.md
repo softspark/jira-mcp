@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [troubleshooting, errors, authentication, cache, configuration, npm, release]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-09-09"
+last_updated: "2026-09-17"
 description: "Diagnosis and resolution for the most common errors encountered with the Jira MCP server."
 ---
 
@@ -290,6 +290,13 @@ on both `@softspark/jira-mcp` and `@softspark/confluence-mcp`. It is not
 something the publish workflow did wrong: the same workflow run reported
 "Publish" green for both packages and emitted valid provenance.
 
+The packument can lag as well. On 2026-09-17 for 1.15.0, `npm view
+@softspark/jira-mcp version` kept answering the previous version for nine
+minutes after the publish step went green, while the sibling package already
+showed the new one, and the jira-mcp tarball answered 200 only after thirteen.
+A stale `version` right after a green run is the same propagation, not a
+failed publish.
+
 **Resolution:** wait and poll. Do not re-publish, do not `npm deprecate`, and do
 not roll the tag back.
 
@@ -313,7 +320,7 @@ curl -sIL -o /dev/null -w '%{http_code}\n' \
 ```
 
 The two packages propagate independently, so expect one to come back before the
-other. Escalate only if the 404 outlives several minutes of polling, or if the
+other. Escalate only if the 404 outlives fifteen minutes of polling, or if the
 previous version 404s too, which points at the registry or the network rather
 than at propagation.
 
