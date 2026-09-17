@@ -7,7 +7,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v1.15.0 -- Tempo worklogs and reports (2026-09-17)
+
+`@softspark/confluence-mcp` has no behaviour change in this release; it is bumped
+together with `@softspark/jira-mcp` per ADR-0002 and picks up the shared HTTP
+client's Bearer support without using it.
 
 ### Added
 

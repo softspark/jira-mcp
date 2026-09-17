@@ -4,18 +4,17 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.14.5-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.15.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.14.5
+## What's New in v1.15.0
 
-- No code change since 1.14.4; this release carries documentation of how the workspace builds and packages.
-- 1.14.4 is where this package started actually containing the `CHANGELOG.md` it had been listing in `files` since 1.12.0. The pattern resolved inside the package directory while the changelog sat at the repository root, so npm dropped it without a word.
-- Polish versions of all eight built-in comment templates ship with the package. Until now a templated comment was English on every project, including one configured for another language.
-- `jira-mcp template list-locales` shows which languages are available, and `jira-mcp template install-locale pl` installs them. Add `--keep-english` to keep the originals reachable as `<id>-en`.
-- Fixed in 1.14.1: `jira-mcp --help` now lists both new commands. 1.14.2 adds the test that would have caught it, on both binaries.
+- **Tempo worklogs and reports.** `search_tempo_worklogs` lists Tempo Timesheets entries in a date range with issue keys and user names resolved; `get_tempo_report` sums hours by project, user and/or task. Filters combine, so "this person's hours on this project last month" is one call.
+- Tempo REST API v4 answers in numeric ids only, so every result is joined against Jira. An issue the token cannot browse keeps its hours under `#<id>` instead of vanishing from a total.
+- `jira-mcp config set-tempo-token` stores the Tempo token next to the Jira credential, per site with `--url`. Nothing else needs it: without a token the two Tempo tools answer `TEMPO_NOT_CONFIGURED` and every other tool works as before.
+- Fixed: `config set-credentials` no longer drops a stored Tempo token when the Jira token is rotated.
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ## Table of Contents
