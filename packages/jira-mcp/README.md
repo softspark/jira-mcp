@@ -4,17 +4,16 @@
 
 [![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.15.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.16.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.15.0
+## What's New in v1.16.0
 
-- **Tempo worklogs and reports.** `search_tempo_worklogs` lists Tempo Timesheets entries in a date range with issue keys and user names resolved; `get_tempo_report` sums hours by project, user and/or task. Filters combine, so "this person's hours on this project last month" is one call.
-- Tempo REST API v4 answers in numeric ids only, so every result is joined against Jira. An issue the token cannot browse keeps its hours under `#<id>` instead of vanishing from a total.
-- `jira-mcp config set-tempo-token` stores the Tempo token next to the Jira credential, per site with `--url`. Nothing else needs it: without a token the two Tempo tools answer `TEMPO_NOT_CONFIGURED` and every other tool works as before.
-- Fixed: `config set-credentials` no longer drops a stored Tempo token when the Jira token is rotated.
+- **`creator` and `reporter` on every task read.** `search_tasks`, `get_task_details`, `sync_tasks` and `read_cached_tasks` now say who filed an issue and who it is reported by. Before, neither field reached a response, so "who raised this bug" had no answer.
+- Both hold the email, or the display name when Atlassian privacy settings hide the email, and `null` when Jira returns none. To filter by them, use JQL: `creator = "pm@example.com"` or `reporter = currentUser()`.
+- An existing task cache keeps loading. Rows cached before the upgrade read `null` for both fields until the next `sync_tasks`.
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ## Table of Contents

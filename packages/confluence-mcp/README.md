@@ -3,19 +3,17 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.15.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.16.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
 
 ---
 
-## What's New in v1.15.0
+## What's New in v1.16.0
 
 - No behaviour change in this package: same 31 tools, same commands, same config path.
-- The shared HTTP client it bundles now also supports Bearer auth. Confluence keeps using Basic auth; the addition serves Tempo in the sibling package.
-- `credentials.json` may now carry an optional `tempo_token` beside each Jira credential. The Confluence loader ignores it.
-- The work is in [`@softspark/jira-mcp`](../jira-mcp): Tempo worklog search and hour reports, plus `jira-mcp config set-tempo-token`.
+- The work is in [`@softspark/jira-mcp`](../jira-mcp): task reads now return the issue's `creator` and `reporter`. Both packages share one version, so this one is bumped with it.
 
 ---
 

@@ -7,6 +7,37 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.16.0 -- Creator and reporter on every task read (2026-09-18)
+
+`@softspark/confluence-mcp` has no behaviour change in this release; it is bumped
+together with `@softspark/jira-mcp` per ADR-0002.
+
+### Added
+
+- **`creator` and `reporter` in task reads.** `search_tasks`,
+  `get_task_details`, `sync_tasks` and `read_cached_tasks` now return who filed
+  an issue and who it is reported by. Until now the connector fetched `creator`
+  only for the `delete_task` ownership guard and never asked Jira for
+  `reporter`, so an agent asked "who raised this bug" had nothing to answer
+  from and went looking for a way around the server. Both fields hold the
+  email, or the display name when Atlassian privacy settings hide the email,
+  and `null` when Jira returns none. `reporter` is editable in Jira and can be
+  empty; `creator` never changes.
+- The `search_tasks` and `get_task_details` tool descriptions name the fields a
+  result carries, so a client can tell what is available without a trial call.
+
+### Changed
+
+- **Task cache rows carry `creator` and `reporter`.** The schema defaults both
+  to `null`, so a cache file written by an older version still loads and
+  `CACHE_VERSION` stays `1.0`. Rows cached before the upgrade read `null` until
+  the next `sync_tasks`.
+
+### Fixed
+
+- `kb/reference/api.md` showed `get_task_details` answering in a plain-text
+  layout the tool never produced. The example is now the JSON it returns.
+
 ## v1.15.0 -- Tempo worklogs and reports (2026-09-17)
 
 `@softspark/confluence-mcp` has no behaviour change in this release; it is bumped
