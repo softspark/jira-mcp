@@ -191,7 +191,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'get_task_details',
     description:
-      'Get full task details from Jira including description and all comments, with ADF content converted to markdown.',
+      'Get full task details from Jira including creator, reporter, description and all comments, with ADF content converted to markdown.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -431,7 +431,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'search_tasks',
     description:
-      'Search Jira issues using JQL. Returns results directly without caching.',
+      'Search Jira issues using JQL. Each result carries status, assignee, creator, reporter, priority, type and dates. Returns results directly without caching.',
     inputSchema: {
       type: 'object',
       properties: {

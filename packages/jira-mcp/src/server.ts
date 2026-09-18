@@ -96,6 +96,9 @@ function createFetcherAdapter(
             assignee: issue.assignee
               ? { emailAddress: issue.assignee }
               : null,
+            // The connector already collapsed each person to one label.
+            creator: issue.creator ? { displayName: issue.creator } : null,
+            reporter: issue.reporter ? { displayName: issue.reporter } : null,
             priority: issue.priority
               ? { name: issue.priority }
               : null,

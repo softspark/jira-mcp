@@ -3,9 +3,9 @@ title: "Jira MCP Server - API Reference"
 category: reference
 service: jira-mcp
 tags: [api, mcp, tools, jira, tempo]
-version: "1.15.0"
+version: "1.16.0"
 created: "2026-04-13"
-last_updated: "2026-09-17"
+last_updated: "2026-09-18"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
@@ -67,6 +67,8 @@ Read tasks from the local cache without hitting the Jira API. Returns all tasks 
   "summary": "Implement login page",
   "status": "In Progress",
   "assignee": "user@example.com",
+  "creator": "pm@example.com",
+  "reporter": "client@example.com",
   "priority": "High",
   "issue_type": "Story",
   "created": "2026-03-01T10:00:00.000Z",
@@ -105,13 +107,28 @@ Search Jira issues with raw JQL, hitting the API directly. Results are returned 
 ```json
 {
   "results": [
-    { "key": "PROJ-123", "summary": "Implement login page", "status": "In Progress" }
+    {
+      "key": "PROJ-123",
+      "summary": "Implement login page",
+      "status": "In Progress",
+      "assignee": "user@example.com",
+      "creator": "pm@example.com",
+      "reporter": "client@example.com",
+      "priority": "High",
+      "issueType": "Story",
+      "created": "2026-04-01T09:00:00.000+0000",
+      "updated": "2026-04-10T14:30:00.000+0000",
+      "projectKey": "PROJ",
+      "epicLink": null
+    }
   ],
   "count": 1,
   "total_available": 23,
   "message": "Found 1 issue(s) matching JQL query"
 }
 ```
+
+`creator` is the account that filed the issue and never changes. `reporter` is the editable "reported by" field and is `null` when empty. Both hold the email, or the display name when Atlassian privacy settings hide the email. To filter by them, put it in the JQL: `creator = "pm@example.com"` or `reporter = currentUser()`.
 
 ---
 
@@ -255,22 +272,36 @@ Get full task details from Jira, including description and all comments. ADF con
 
 **Output example**
 
+```json
+{
+  "success": true,
+  "task": {
+    "key": "PROJ-123",
+    "summary": "Implement login page",
+    "description": "Implement the login page with JWT authentication.",
+    "status": "In Progress",
+    "assignee": "user@example.com",
+    "creator": "pm@example.com",
+    "reporter": "client@example.com",
+    "priority": "High",
+    "issueType": "Story",
+    "created": "2026-04-01T09:00:00.000+0000",
+    "updated": "2026-04-10T14:30:00.000+0000",
+    "comments": [
+      {
+        "id": "10001",
+        "author": "reviewer@example.com",
+        "body": "Looks good, please add refresh token support.",
+        "created": "2026-04-01T11:00:00.000+0000"
+      }
+    ]
+  },
+  "language": "en",
+  "message": "Retrieved details for PROJ-123"
+}
 ```
-PROJ-123: Implement login page
-Status: In Progress | Type: Story | Priority: High
-Assignee: user@example.com
-Language: en
 
-## Description
-Implement the login page with JWT authentication.
-
-## Comments (2)
-[2026-04-01 by reviewer@example.com]
-Looks good, please add refresh token support.
-
-[2026-04-10 by user@example.com]
-Added refresh token, ready for review.
-```
+`creator` is the account that filed the issue. `reporter` is the editable "reported by" field. Either is `null` when Jira returns none. Both hold the email, or the display name when Atlassian privacy settings hide the email.
 
 **Note:** The response includes a `language` field containing the project's configured language (see `get_project_language`). AI assistants should use this value when writing content for the task.
 

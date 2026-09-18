@@ -3,9 +3,9 @@ title: "Jira MCP Server - Caching Reference"
 category: reference
 service: jira-mcp
 tags: [cache, storage, sync, workflow, users, tasks]
-version: "1.11.0"
+version: "1.16.0"
 created: "2026-04-13"
-last_updated: "2026-09-06"
+last_updated: "2026-09-18"
 description: "Reference for the three cache subsystems: task cache, workflow cache, and user cache — including formats, file paths, atomic writes, and invalidation strategies."
 ---
 
@@ -54,6 +54,8 @@ user@example.com  ->  tasks_user_at_example_com.json
       "summary": "Implement login page",
       "status": "In Progress",
       "assignee": "user@example.com",
+      "creator": "pm@example.com",
+      "reporter": "client@example.com",
       "priority": "High",
       "issue_type": "Story",
       "created": "2026-03-01T10:00:00.000Z",
@@ -74,6 +76,8 @@ user@example.com  ->  tasks_user_at_example_com.json
 | `summary` | string | No | Issue title |
 | `status` | string | No | Current status name |
 | `assignee` | string | Yes | Assignee email, or `null` if unassigned |
+| `creator` | string | Yes | Who filed the issue: email, or display name when Jira hides the email. `null` in a row cached before v1.16.0, until the next `sync_tasks` |
+| `reporter` | string | Yes | The editable "reported by" person, same format. `null` when empty or not yet re-synced |
 | `priority` | string | No | Priority name |
 | `issue_type` | string | No | Issue type name |
 | `created` | string | No | ISO timestamp |

@@ -31,6 +31,10 @@ export const TaskDataSchema = z.object({
   summary: z.string(),
   status: z.string(),
   assignee: z.string().nullable(),
+  // Added after 1.0 shipped. The default keeps a cache written before then
+  // loadable, so this needs no CACHE_VERSION bump: a missing key reads as null.
+  creator: z.string().nullable().default(null),
+  reporter: z.string().nullable().default(null),
   priority: z.string(),
   issue_type: z.string(),
   created: z.string(),

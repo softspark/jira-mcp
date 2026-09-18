@@ -22,6 +22,17 @@ import type { CacheManager } from './manager.js';
 // Jira fetcher abstraction (dependency injection point)
 // ---------------------------------------------------------------------------
 
+/** A person on an issue. Jira hides the email under some privacy settings. */
+export interface JiraPersonRef {
+  readonly emailAddress?: string;
+  readonly displayName?: string;
+}
+
+/** Email when Jira shows it, display name otherwise, null when unset. */
+function personLabel(person: JiraPersonRef | null | undefined): string | null {
+  return person?.emailAddress ?? person?.displayName ?? null;
+}
+
 /**
  * Minimal representation of a Jira issue returned by the search API.
  *
@@ -34,6 +45,9 @@ export interface JiraIssue {
     readonly summary: string;
     readonly status: { readonly name: string };
     readonly assignee: { readonly emailAddress: string } | null;
+    /** Absent when the fetcher did not ask Jira for it. */
+    readonly creator?: JiraPersonRef | null;
+    readonly reporter?: JiraPersonRef | null;
     readonly priority: { readonly name: string } | null;
     readonly issuetype: { readonly name: string };
     readonly created: string;
@@ -160,6 +174,8 @@ export class TaskSyncer {
       summary: issue.fields.summary,
       status: issue.fields.status.name,
       assignee,
+      creator: personLabel(issue.fields.creator),
+      reporter: personLabel(issue.fields.reporter),
       priority,
       issue_type: issue.fields.issuetype.name,
       created: issue.fields.created,

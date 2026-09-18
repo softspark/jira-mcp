@@ -96,6 +96,43 @@ describe('handleSearchTasks', () => {
     expect(results).toHaveLength(2);
   });
 
+  it('asks Jira for creator and reporter and passes them through', async () => {
+    const { pool, connector, config } = setupDeps();
+    connector.searchIssues.mockResolvedValue([
+      {
+        key: 'PROJ-1',
+        summary: 'Reported bug',
+        status: 'To Do',
+        assignee: null,
+        creator: 'creator@example.com',
+        reporter: 'reporter@example.com',
+        priority: 'High',
+        issueType: 'Bug',
+        created: '2026-01-01T00:00:00.000Z',
+        updated: '2026-01-02T00:00:00.000Z',
+        projectKey: 'PROJ',
+        epicLink: null,
+      },
+    ]);
+
+    const result = await handleSearchTasks(
+      { jql: 'project = PROJ', project_key: 'PROJ' },
+      { pool: asPool(pool), config },
+    );
+
+    const requestedFields = connector.searchIssues.mock.calls[0]![1] as string[];
+    expect(requestedFields).toEqual(
+      expect.arrayContaining(['creator', 'reporter']),
+    );
+    const results = parseResult(result)['results'] as Record<string, unknown>[];
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        creator: 'creator@example.com',
+        reporter: 'reporter@example.com',
+      }),
+    );
+  });
+
   it('uses project_key to select the correct instance', async () => {
     const { pool, connector, config } = setupDeps();
     connector.searchIssues.mockResolvedValue([]);

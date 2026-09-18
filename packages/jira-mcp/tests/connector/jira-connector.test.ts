@@ -169,6 +169,121 @@ describe('JiraConnector', () => {
         }),
       );
     });
+
+    it('returns creator and reporter from searchIssues, by email or display name', async () => {
+      // Arrange
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          issues: [
+            {
+              key: 'PROJ-3',
+              id: '10003',
+              fields: {
+                summary: 'Reported bug',
+                creator: { accountId: 'a-1', emailAddress: 'creator@example.com' },
+                // Atlassian privacy hides the email, only the name comes back
+                reporter: { accountId: 'a-2', displayName: 'Rita Reporter' },
+                created: '2024-01-01T00:00:00.000Z',
+                updated: '2024-01-01T00:00:00.000Z',
+              },
+            },
+          ],
+        }),
+      );
+
+      // Act
+      const issues = await connector.searchIssues('project = PROJ');
+
+      // Assert
+      expect(issues[0]).toEqual(
+        expect.objectContaining({
+          creator: 'creator@example.com',
+          reporter: 'Rita Reporter',
+        }),
+      );
+      const url = mockFetch.mock.calls[0]![0] as string;
+      const requested = new URL(url).searchParams.get('fields')!.split(',');
+      expect(requested).toEqual(expect.arrayContaining(['creator', 'reporter']));
+    });
+
+    it('maps an absent creator and an empty reporter to null in searchIssues', async () => {
+      // Arrange
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          issues: [
+            {
+              key: 'PROJ-4',
+              id: '10004',
+              fields: {
+                summary: 'No reporter',
+                reporter: null,
+                created: '2024-01-01T00:00:00.000Z',
+                updated: '2024-01-01T00:00:00.000Z',
+              },
+            },
+          ],
+        }),
+      );
+
+      // Act
+      const issues = await connector.searchIssues('project = PROJ');
+
+      // Assert
+      expect(issues[0]).toEqual(
+        expect.objectContaining({ creator: null, reporter: null }),
+      );
+    });
+
+    it('returns creator and reporter from getIssue', async () => {
+      // Arrange
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          key: 'PROJ-5',
+          id: '10005',
+          fields: {
+            summary: 'Detailed issue',
+            creator: { accountId: 'a-1', emailAddress: 'creator@example.com' },
+            reporter: { accountId: 'a-2', emailAddress: 'reporter@example.com' },
+            created: '2024-01-01T00:00:00.000Z',
+            updated: '2024-01-01T00:00:00.000Z',
+          },
+        }),
+      );
+
+      // Act
+      const issue = await connector.getIssue('PROJ-5');
+
+      // Assert
+      expect(issue.creator).toBe('creator@example.com');
+      expect(issue.creatorAccountId).toBe('a-1');
+      expect(issue.reporter).toBe('reporter@example.com');
+      const url = mockFetch.mock.calls[0]![0] as string;
+      const requested = new URL(url).searchParams.get('fields')!.split(',');
+      expect(requested).toEqual(expect.arrayContaining(['creator', 'reporter']));
+    });
+
+    it('maps an absent creator and reporter to null in getIssue', async () => {
+      // Arrange
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          key: 'PROJ-6',
+          id: '10006',
+          fields: {
+            summary: 'Bare issue',
+            created: '2024-01-01T00:00:00.000Z',
+            updated: '2024-01-01T00:00:00.000Z',
+          },
+        }),
+      );
+
+      // Act
+      const issue = await connector.getIssue('PROJ-6');
+
+      // Assert
+      expect(issue.creator).toBeNull();
+      expect(issue.creatorAccountId).toBeNull();
+      expect(issue.reporter).toBeNull();
+    });
   });
 
   // -----------------------------------------------------------------------

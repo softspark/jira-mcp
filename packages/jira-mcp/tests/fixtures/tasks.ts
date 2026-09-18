@@ -15,6 +15,8 @@ export function createTaskData(overrides?: Partial<TaskData>): TaskData {
     summary: 'Test task summary',
     status: 'To Do',
     assignee: 'user@example.com',
+    creator: 'creator@example.com',
+    reporter: 'reporter@example.com',
     priority: 'Medium',
     issue_type: 'Task',
     created: '2026-01-01T00:00:00.000Z',

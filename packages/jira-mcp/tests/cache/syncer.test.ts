@@ -107,6 +107,50 @@ describe('TaskSyncer', () => {
     expect(task['project_url']).toBe('https://test.atlassian.net');
   });
 
+  it('caches creator and reporter, by email or display name', async () => {
+    const cache = createMockCacheManager();
+    cache.save.mockResolvedValue(undefined);
+    const base = createJiraIssue();
+    const issue = createJiraIssue({
+      fields: {
+        ...base.fields,
+        creator: { emailAddress: 'pm@example.com', displayName: 'Pat Manager' },
+        reporter: { displayName: 'Rita Reporter' },
+      },
+    });
+    const fetcherFactory = vi.fn().mockReturnValue(createMockFetcher([issue]));
+
+    const syncer = new TaskSyncer(
+      asCacheManager(cache),
+      createMergedConfig(),
+      fetcherFactory,
+    );
+    await syncer.sync();
+
+    const task = (cache.save.mock.calls[0]![0] as Array<Record<string, unknown>>)[0]!;
+    expect(task['creator']).toBe('pm@example.com');
+    expect(task['reporter']).toBe('Rita Reporter');
+  });
+
+  it('caches null when the issue carries no creator or reporter', async () => {
+    const cache = createMockCacheManager();
+    cache.save.mockResolvedValue(undefined);
+    const fetcherFactory = vi
+      .fn()
+      .mockReturnValue(createMockFetcher([createJiraIssue()]));
+
+    const syncer = new TaskSyncer(
+      asCacheManager(cache),
+      createMergedConfig(),
+      fetcherFactory,
+    );
+    await syncer.sync();
+
+    const task = (cache.save.mock.calls[0]![0] as Array<Record<string, unknown>>)[0]!;
+    expect(task['creator']).toBeNull();
+    expect(task['reporter']).toBeNull();
+  });
+
   it('handles empty results from fetcher', async () => {
     const cache = createMockCacheManager();
     cache.save.mockResolvedValue(undefined);

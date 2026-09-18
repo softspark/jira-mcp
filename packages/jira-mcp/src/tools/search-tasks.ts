@@ -43,6 +43,8 @@ const SEARCH_FIELDS: readonly string[] = [
   'summary',
   'status',
   'assignee',
+  'creator',
+  'reporter',
   'priority',
   'issuetype',
   'created',

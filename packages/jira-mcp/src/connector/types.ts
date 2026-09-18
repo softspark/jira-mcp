@@ -23,6 +23,10 @@ export interface JiraIssue {
   readonly summary: string;
   readonly status: string;
   readonly assignee: string | null;
+  /** Who filed the issue. Immutable; null only when the field was not requested. */
+  readonly creator: string | null;
+  /** Who the issue is reported on behalf of. Editable, and may be empty. */
+  readonly reporter: string | null;
   readonly priority: string;
   readonly issueType: string;
   readonly created: string;
@@ -40,8 +44,9 @@ export interface JiraIssueDetail {
   readonly key: string;
   readonly summary: string;
   readonly description: AdfDocument | null;
-  readonly creator: string;
+  readonly creator: string | null;
   readonly creatorAccountId: string | null;
+  readonly reporter: string | null;
   readonly status: string;
   readonly assignee: string | null;
   readonly priority: string;

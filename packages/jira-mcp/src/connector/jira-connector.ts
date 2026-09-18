@@ -56,6 +56,8 @@ const SEARCH_FIELDS = [
   'summary',
   'status',
   'assignee',
+  'creator',
+  'reporter',
   'priority',
   'issuetype',
   'created',
@@ -68,16 +70,28 @@ const SEARCH_FIELDS = [
 // Raw Jira REST API response shapes (internal only)
 // ---------------------------------------------------------------------------
 
+/** A user reference embedded in an issue field (`creator`, `reporter`). */
+interface RawJiraPerson {
+  readonly accountId?: string;
+  readonly emailAddress?: string;
+  readonly displayName?: string;
+}
+
+/**
+ * Name a person the way the rest of the API does: email when Jira shows it,
+ * display name when Atlassian privacy hides the email, null when unset.
+ */
+function personLabel(person: RawJiraPerson | null | undefined): string | null {
+  return person?.emailAddress ?? person?.displayName ?? null;
+}
+
 /** Partial shape of a Jira issue from the REST API. */
 interface RawJiraIssueFields {
   readonly summary: string;
   readonly status?: { readonly name?: string };
   readonly assignee?: { readonly emailAddress?: string; readonly displayName?: string };
-  readonly creator?: {
-    readonly accountId?: string;
-    readonly emailAddress?: string;
-    readonly displayName?: string;
-  };
+  readonly creator?: RawJiraPerson | null;
+  readonly reporter?: RawJiraPerson | null;
   readonly priority?: { readonly name?: string };
   readonly issuetype?: { readonly name?: string };
   readonly issueType?: { readonly name?: string };
@@ -272,6 +286,8 @@ export class JiraConnector {
         summary: f.summary,
         status: f.status?.name ?? 'Unknown',
         assignee: f.assignee?.emailAddress ?? null,
+        creator: personLabel(f.creator),
+        reporter: personLabel(f.reporter),
         priority: f.priority?.name ?? 'None',
         issueType:
           f.issuetype?.name ?? f.issueType?.name ?? 'Unknown',
@@ -296,6 +312,7 @@ export class JiraConnector {
       'summary',
       'description',
       'creator',
+      'reporter',
       'status',
       'assignee',
       'priority',
@@ -332,11 +349,9 @@ export class JiraConnector {
       key: issue.key,
       summary: f.summary,
       description: f.description ?? null,
-      creator:
-        f.creator?.emailAddress ??
-        f.creator?.displayName ??
-        'Unknown',
+      creator: personLabel(f.creator),
       creatorAccountId: f.creator?.accountId ?? null,
+      reporter: personLabel(f.reporter),
       status: f.status?.name ?? 'Unknown',
       assignee: f.assignee?.emailAddress ?? null,
       priority: f.priority?.name ?? 'None',

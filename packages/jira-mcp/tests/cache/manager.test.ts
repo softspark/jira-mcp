@@ -105,6 +105,40 @@ describe('CacheManager.save and load', () => {
     expect(loaded.tasks[1]?.key).toBe('PROJ-2');
   });
 
+  it('roundtrips creator and reporter', async () => {
+    await manager.save([
+      createTaskData({ creator: 'pm@example.com', reporter: 'Rita Reporter' }),
+    ]);
+
+    const loaded = await manager.load();
+
+    expect(loaded.tasks[0]?.creator).toBe('pm@example.com');
+    expect(loaded.tasks[0]?.reporter).toBe('Rita Reporter');
+  });
+
+  it('loads a cache written before creator and reporter existed', async () => {
+    const { creator: _creator, reporter: _reporter, ...legacyTask } =
+      createTaskData({ key: 'PROJ-9' });
+    await writeFile(
+      manager.cachePath,
+      JSON.stringify({
+        metadata: {
+          version: '1.0',
+          last_sync: '2026-01-01T00:00:00.000Z',
+          jira_user: TEST_USER,
+        },
+        tasks: [legacyTask],
+      }),
+      'utf-8',
+    );
+
+    const loaded = await manager.load();
+
+    expect(loaded.tasks[0]?.key).toBe('PROJ-9');
+    expect(loaded.tasks[0]?.creator).toBeNull();
+    expect(loaded.tasks[0]?.reporter).toBeNull();
+  });
+
   it('atomic write cleans up .tmp file', async () => {
     const tasks = [createTaskData()];
     await manager.save(tasks);

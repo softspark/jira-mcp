@@ -69,6 +69,8 @@ export interface TaskDetail {
   readonly description: string;
   readonly status: string;
   readonly assignee: string | null;
+  readonly creator: string | null;
+  readonly reporter: string | null;
   readonly priority: string;
   readonly issueType: string;
   readonly created: string;

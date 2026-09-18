@@ -135,6 +135,7 @@ describe('TaskOperations', () => {
         description: null,
         creator: 'creator@example.com',
         creatorAccountId: 'creator-1',
+        reporter: 'reporter@example.com',
         status: 'To Do',
         assignee: 'user@example.com',
         priority: 'Medium',
@@ -162,6 +163,8 @@ describe('TaskOperations', () => {
           key: 'PROJ-1',
           status: 'In Progress', // updates override the refreshed Jira state
           summary: 'Fresh from Jira',
+          creator: 'creator@example.com',
+          reporter: 'reporter@example.com',
           project_url: 'https://test.atlassian.net',
           epic_link: null,
         }),
@@ -325,6 +328,7 @@ describe('TaskOperations', () => {
         description: adfDescription,
         creator: 'creator@example.com',
         creatorAccountId: 'creator-1',
+        reporter: 'reporter@example.com',
         status: 'To Do',
         assignee: 'user@example.com',
         priority: 'Medium',
@@ -354,6 +358,8 @@ describe('TaskOperations', () => {
       const details = await ops.getTaskDetails('PROJ-1');
 
       expect(details.key).toBe('PROJ-1');
+      expect(details.creator).toBe('creator@example.com');
+      expect(details.reporter).toBe('reporter@example.com');
       // adfToMarkdown is mocked
       expect(details.description).toBe('# Mocked markdown');
       expect(details.comments).toHaveLength(1);
