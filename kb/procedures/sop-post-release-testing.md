@@ -3,9 +3,9 @@ title: "SOP: Post-Release Testing"
 category: procedures
 service: jira-mcp
 tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, confluence-api, provenance, supply-chain]
-version: "1.13.0"
+version: "1.16.0"
 created: "2026-04-13"
-last_updated: "2026-09-09"
+last_updated: "2026-09-18"
 description: "End-to-end smoke test after publishing a release of the Atlassian MCP workspace — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN, live Confluence API tests against the default space, supply-chain verification (provenance, npm audit signatures), and cleanup."
 ---
 
@@ -341,10 +341,14 @@ get_task_time_tracking({ task_key: "KAN-XX" })
 ### Step 4.13: Sync Tasks
 
 ```
-sync_tasks({ project_key: "KAN" })
+sync_tasks({ project_key: "KAN", jql: "project = KAN ORDER BY updated DESC" })
 ```
 
-- [ ] Sync completes, reports number of synced tasks
+The `jql` is required here. Without it `sync_tasks` pulls `assignee = <me>`,
+and step 4.10 has just unassigned the test task, so the sync reports 0 tasks
+and step 4.14 fails with "not found in cache".
+
+- [ ] Sync completes, reports number of synced tasks (at least 1)
 - [ ] No authentication or connection errors
 
 ### Step 4.14: Read Cached Tasks
@@ -355,6 +359,7 @@ read_cached_tasks({ task_key: "KAN-XX" })
 
 - [ ] Returns the test task from cache
 - [ ] Status reflects the change from Step 4.9
+- [ ] `creator` and `reporter` are set (v1.16.0+)
 
 ### Step 4.15: Search Tasks
 
@@ -650,6 +655,13 @@ Two things the literal commands above get wrong on the real instance:
   `@softspark/confluence-mcp` at the same version. A smoke test run from a
   temporary directory validates the tarball, not the global install the CLI
   actually uses.
+
+## Verification on 2026-09-18 (1.16.0)
+
+Published 1.16.0 (`creator` and `reporter` on every task read). Full run
+against KAN and DevOps from a configured machine. It caught the step 4.13
+ordering problem fixed above: a default sync after the unassign in 4.10 finds
+nothing. See [the executed record](release-verification-20260918.md).
 
 ## Verification on 2026-09-09 (1.14.0, 1.14.1 and 1.14.2)
 
