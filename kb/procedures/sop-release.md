@@ -33,8 +33,8 @@ npm install --package-lock-only
 # 3. Write CHANGELOG.md entry + update README "What's New" section
 # 4. Run quality gates
 npm run typecheck && npm run lint && npm test && npm run build
-# 4.5. Validate README counts match source
-python3 scripts/validate_counts.py
+# 4.5. Validate README counts match source (--full also checks the test count)
+python3 scripts/validate_counts.py --full
 # 4.6. Supply-chain gates (v2.8.0+)
 grep -q -- '--provenance' .github/workflows/publish.yml
 grep -q 'id-token: write' .github/workflows/publish.yml
@@ -211,17 +211,16 @@ test files, bundle size) match the actual source code. This prevents count drift
 that erodes trust in documentation.
 
 ```bash
-python3 scripts/validate_counts.py
+python3 scripts/validate_counts.py --full
 ```
 
 - [ ] Exit code 0
-- [ ] All counts match source code
+- [ ] All counts match source code, the test count included
 
-For a full check including live test count verification:
-
-```bash
-python3 scripts/validate_counts.py --full
-```
+Run it with `--full` for a release. Without the flag the script skips the test
+count, because counting means running the suite. That is how the README shipped
+in 1.16.0 claiming 1093 tests when there were 1102. The short form is fine as a
+pre-commit check.
 
 > **Pattern:** Same approach as ai-toolkit `validate.py`. Counts are allowed
 > ONLY in `README.md` (single source of truth). All other docs use relative

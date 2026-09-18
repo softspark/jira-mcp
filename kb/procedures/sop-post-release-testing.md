@@ -663,6 +663,13 @@ against KAN and DevOps from a configured machine. It caught the step 4.13
 ordering problem fixed above: a default sync after the unassign in 4.10 finds
 nothing. See [the executed record](release-verification-20260918.md).
 
+Published 1.16.1 the same day (argument checks answer `INVALID_INPUT` instead
+of `UNKNOWN_ERROR`). The run added four calls built to be rejected after step
+4.15 and checked both their `code` and that the test task's comment count had
+not moved. Worth repeating whenever a release touches validation: a rejected
+call that still writes is the failure that matters, and only a live run shows
+it. See [the executed record](release-verification-20260918-v1161.md).
+
 ## Verification on 2026-09-09 (1.14.0, 1.14.1 and 1.14.2)
 
 Published 1.14.0 (translated comment templates and the locale installer), then
