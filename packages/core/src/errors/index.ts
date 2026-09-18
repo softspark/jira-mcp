@@ -26,6 +26,7 @@
  *   +-- PageNotFoundError
  *   +-- VersionConflictError
  *   +-- MarkupLossError
+ *   +-- AnchorNotFoundError
  *   +-- CacheError
  *   |   +-- CacheNotFoundError
  *   |   +-- CacheCorruptionError
@@ -191,6 +192,20 @@ export class MarkupLossError extends JiraMcpError {
   constructor(message: string) {
     super(message, 'MARKUP_LOSS_REFUSED');
     this.name = 'MarkupLossError';
+  }
+}
+
+/**
+ * Raised when an inline comment names text the page does not contain.
+ *
+ * Confluence would still accept the write and anchor it somewhere, so the
+ * check runs before the call. It has its own code so a client can tell "fix
+ * the selection and retry" apart from a failure it cannot act on.
+ */
+export class AnchorNotFoundError extends JiraMcpError {
+  constructor(message: string) {
+    super(message, 'ANCHOR_NOT_FOUND');
+    this.name = 'AnchorNotFoundError';
   }
 }
 

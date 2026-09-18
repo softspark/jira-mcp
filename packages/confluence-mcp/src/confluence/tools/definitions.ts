@@ -365,7 +365,7 @@ export const CONFLUENCE_TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'add_page_inline_comment',
     description:
-      'Anchor a markdown comment to a passage of a page, or reply to an existing inline thread. Requires user_approved=true. text_selection must appear verbatim in the page body; text that is not found is rejected rather than anchored elsewhere.',
+      'Anchor a markdown comment to a passage of a page, or reply to an existing inline thread. Requires user_approved=true. text_selection must appear verbatim in the page body; text that is not found is rejected with ANCHOR_NOT_FOUND rather than anchored elsewhere.',
     inputSchema: {
       type: 'object',
       properties: {

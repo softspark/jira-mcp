@@ -20,6 +20,7 @@
 
 import {
   adfToMarkdown,
+  AnchorNotFoundError,
   markdownToAdf,
   MarkupLossError,
 } from '@softspark/atlassian-mcp-core';
@@ -454,7 +455,7 @@ export class PageOperations {
         input.textSelection,
       );
       if (matchCount === 0) {
-        throw new Error(
+        throw new AnchorNotFoundError(
           `The text "${input.textSelection}" does not appear in page ${input.pageId}. An inline comment must anchor to text that exists.`,
         );
       }

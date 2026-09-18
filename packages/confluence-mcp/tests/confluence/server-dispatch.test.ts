@@ -515,6 +515,7 @@ describe('dispatchConfluenceTool', () => {
 
       expect(body['success']).toBe(false);
       expect(body['error']).toMatch(/does not appear in page/);
+      expect(body['code']).toBe('ANCHOR_NOT_FOUND');
       expect(connector['addInlineComment']).not.toHaveBeenCalled();
     });
   });

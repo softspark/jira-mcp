@@ -11,7 +11,10 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { MarkupLossError } from '@softspark/atlassian-mcp-core';
+import {
+  AnchorNotFoundError,
+  MarkupLossError,
+} from '@softspark/atlassian-mcp-core';
 
 import { PageOperations } from '../../src/confluence/page-operations';
 import type { ConfluenceConnector } from '../../src/confluence/connector';
@@ -405,13 +408,15 @@ describe('PageOperations', () => {
     });
 
     it('refuses to anchor to text that is not on the page', async () => {
-      await expect(
-        ops.addInlineComment({
-          pageId: '123',
-          markdown: 'x',
-          textSelection: 'nowhere to be found',
-        }),
-      ).rejects.toThrow(/does not appear in page/);
+      const attempt = ops.addInlineComment({
+        pageId: '123',
+        markdown: 'x',
+        textSelection: 'nowhere to be found',
+      });
+
+      await expect(attempt).rejects.toThrow(/does not appear in page/);
+      await expect(attempt).rejects.toBeInstanceOf(AnchorNotFoundError);
+      await expect(attempt).rejects.toMatchObject({ code: 'ANCHOR_NOT_FOUND' });
     });
 
     it('requires a text selection for a new thread', async () => {

@@ -13,7 +13,7 @@ Tools: `list_spaces`, `get_space_language`, `search_pages`, `get_page`, `list_sp
 - **Space key routes the site:** unlike a Jira issue key, a page id carries no space. `space_key` falls back to `default_space`, then to the only configured space. With several spaces and no default, name one.
 - **Space keys keep their case.** `DevOps` is not `DEVOPS`. Use the key exactly as configured.
 - **Templates:** call `list_page_templates` to see what is available for the space, then `create_page` with `template_id` and `variables`. The template supplies the title, body and format, so do not also pass `title`, `content` or `storage`.
-- **Inline comments must anchor to text that exists.** `add_page_inline_comment` verifies `text_selection` against the page and refuses text it cannot find, rather than attaching the comment to the wrong passage.
+- **Inline comments must anchor to text that exists.** `add_page_inline_comment` verifies `text_selection` against the page and refuses text it cannot find with `ANCHOR_NOT_FOUND`, rather than attaching the comment to the wrong passage. Fix the selection and call again.
 - **Restrictions replace, they never merge.** `set_page_restrictions` with no ids clears them and exposes the page to everyone with space access. Requires `user_approved=true` in both directions.
 - **Delete guard:** `delete_page`, `delete_blog_post`, `delete_page_comment` and `delete_whiteboard` require explicit `user_approved=true`, set only after the user confirms that specific deletion.
 - **Whiteboard content is not reachable.** The API exposes the container only. `create_whiteboard` makes an empty board. Never report having drawn anything.

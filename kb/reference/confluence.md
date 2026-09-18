@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [confluence, mcp, adf, cql, pages, spaces, attachments]
 version: "1.11.0"
 created: "2026-09-09"
-last_updated: "2026-09-09"
+last_updated: "2026-09-18"
 description: "Reference for the confluence-mcp server: architecture, space routing, the v1/v2 API split, ADF bodies, version conflicts, and the full tool surface."
 ---
 
@@ -136,7 +136,7 @@ Never use `before`/`after` against a top-level page. Atlassian documents that th
 
 Distinct from footer comments: an inline comment is anchored to a passage of the body, carries a `resolutionStatus`, and shows up as review feedback rather than discussion at the bottom of the page.
 
-Anchoring is the fragile part. Confluence takes the highlighted text plus a match index and a match count, and attaches the comment to the *n*-th occurrence. A wrong count silently anchors to a different passage, which is worse than an error, so `PageOperations.addInlineComment()` counts occurrences in the page's own rendered markdown when the caller does not supply a count, and refuses text that does not appear at all.
+Anchoring is the fragile part. Confluence takes the highlighted text plus a match index and a match count, and attaches the comment to the *n*-th occurrence. A wrong count silently anchors to a different passage, which is worse than an error, so `PageOperations.addInlineComment()` counts occurrences in the page's own rendered markdown when the caller does not supply a count, and refuses text that does not appear at all (`AnchorNotFoundError`, code `ANCHOR_NOT_FOUND`).
 
 A `dangling` resolution status means the anchored text was edited away and the thread is orphaned.
 
@@ -241,9 +241,13 @@ JiraMcpError
 ├── ConfluenceConnectionError    (CONFLUENCE_CONNECTION)
 │   ├── ConfluenceAuthenticationError  (CONFLUENCE_AUTH)
 │   └── ConfluencePermissionError      (CONFLUENCE_PERMISSION)
+├── MarkupLossError              (MARKUP_LOSS_REFUSED)
+├── AnchorNotFoundError          (ANCHOR_NOT_FOUND)
 ├── PageNotFoundError            (PAGE_NOT_FOUND)
 └── VersionConflictError         (VERSION_CONFLICT)
 ```
+
+`AnchorNotFoundError` is what `add_page_inline_comment` raises when `text_selection` is not in the page body. It is checked before the write and nothing is created, so the caller can correct the selection and call again.
 
 Confluence answers 404 for content the account may not view, so `PageNotFoundError` deliberately says "not found (or not visible to this account)". A 404 is not proof the page is absent.
 
