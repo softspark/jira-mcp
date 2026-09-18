@@ -14,6 +14,7 @@
 
 import {
   failure,
+  InvalidInputError,
   success,
   type ToolResult,
 } from '@softspark/atlassian-mcp-core';
@@ -61,7 +62,7 @@ export function resolveTempoProjectKey(
       args.task_key !== undefined &&
       !args.task_key.startsWith(`${args.project_key}-`)
     ) {
-      throw new Error(
+      throw new InvalidInputError(
         `Task '${args.task_key}' does not belong to project '${args.project_key}'.`,
       );
     }

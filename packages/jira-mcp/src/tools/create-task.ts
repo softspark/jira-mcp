@@ -16,9 +16,13 @@ import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure } from './helpers.js';
-import { markdownToAdf } from '@softspark/atlassian-mcp-core';
+import {
+  InvalidInputError,
+  markdownToAdf,
+  renderTemplate,
+  TemplateMissingVariableError,
+} from '@softspark/atlassian-mcp-core';
 import { parseTimeSpent } from '../connector/time-parser.js';
-import { renderTemplate } from '@softspark/atlassian-mcp-core';
 import type { TaskTemplateRegistry } from '../templates/task-registry.js';
 
 // ---------------------------------------------------------------------------
@@ -85,14 +89,14 @@ export async function handleCreateTask(
     const usingTemplate = args.template_id !== undefined;
     if (usingTemplate && (args.summary !== '' || args.description !== undefined)) {
       return failure(
-        new Error(
+        new InvalidInputError(
           'When template_id is provided, do not also provide summary or description.',
         ),
       );
     }
     if (!usingTemplate && args.summary.trim() === '') {
       return failure(
-        new Error(
+        new InvalidInputError(
           'Provide either template_id (with variables) or a non-empty summary.',
         ),
       );
@@ -118,7 +122,7 @@ export async function handleCreateTask(
         args.variables ?? {},
       );
       if (!renderedSummary.success) {
-        return failure(new Error(renderedSummary.error));
+        return failure(new TemplateMissingVariableError(renderedSummary.error));
       }
 
       const renderedDescription = renderTemplate(
@@ -126,7 +130,9 @@ export async function handleCreateTask(
         args.variables ?? {},
       );
       if (!renderedDescription.success) {
-        return failure(new Error(renderedDescription.error));
+        return failure(
+          new TemplateMissingVariableError(renderedDescription.error),
+        );
       }
 
       effectiveSummary = renderedSummary.markdown;

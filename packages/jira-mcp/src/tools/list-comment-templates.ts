@@ -12,6 +12,7 @@
  * @module
  */
 
+import { InvalidInputError } from '@softspark/atlassian-mcp-core';
 import type { TemplateRegistry } from '../templates/registry.js';
 import type { TemplateCategory } from '../templates/types.js';
 import { TEMPLATE_CATEGORIES } from '../templates/types.js';
@@ -49,7 +50,7 @@ export async function handleListCommentTemplates(
       if (!isValidCategory(args.category)) {
         const valid = Object.values(TEMPLATE_CATEGORIES).join(', ');
         return failure(
-          new Error(
+          new InvalidInputError(
             `Invalid category '${args.category}'. Valid categories: ${valid}`,
           ),
         );

@@ -88,6 +88,7 @@ describe('handleListCommentTemplates', () => {
     expect(result.isError).toBe(true);
     const parsed = parseResult(result);
     expect(parsed['error']).toContain('Invalid category');
+    expect(parsed['code']).toBe('INVALID_INPUT');
     expect(parsed['error']).toContain('invalid-category');
   });
 

@@ -29,7 +29,7 @@ import { loadConfluenceConfig } from '@softspark/atlassian-mcp-core';
 import { ConfluenceInstancePool } from './confluence/instance-pool.js';
 import { CONFLUENCE_TOOL_DEFINITIONS } from './confluence/tools/definitions.js';
 import type { ConfluenceDeps } from './confluence/tools/helpers.js';
-import { failure } from '@softspark/atlassian-mcp-core';
+import { failure, InvalidInputError } from '@softspark/atlassian-mcp-core';
 import {
   asOptionalBoolean,
   asOptionalNumber,
@@ -476,7 +476,7 @@ async function routeConfluenceTool(
       );
 
     default:
-      return failure(new Error(`Unknown tool: ${name}`));
+      return failure(new InvalidInputError(`Unknown tool: ${name}`));
   }
 }
 

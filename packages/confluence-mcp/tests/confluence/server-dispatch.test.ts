@@ -160,6 +160,7 @@ describe('dispatchConfluenceTool', () => {
       const result = await dispatchConfluenceTool('nope', {}, deps);
 
       expect(payload(result)['error']).toBe('Unknown tool: nope');
+      expect(payload(result)['code']).toBe('INVALID_INPUT');
     });
   });
 
@@ -300,6 +301,7 @@ describe('dispatchConfluenceTool', () => {
 
       expect(body['success']).toBe(false);
       expect(body['error']).toMatch(/Nothing to update/);
+      expect(body['code']).toBe('INVALID_INPUT');
     });
 
     it('update_page sends the version message', async () => {
@@ -334,6 +336,7 @@ describe('dispatchConfluenceTool', () => {
 
       expect(body['success']).toBe(false);
       expect(body['error']).toMatch(/Invalid position/);
+      expect(body['code']).toBe('INVALID_INPUT');
     });
 
     it('move_page across spaces uses the v1 content-tree endpoint', async () => {
@@ -878,6 +881,7 @@ describe('dispatchConfluenceTool', () => {
 
       expect(body['success']).toBe(false);
       expect(body['error']).toMatch(/upload limit/);
+      expect(body['code']).toBe('INVALID_INPUT');
       expect(connector['uploadAttachment']).not.toHaveBeenCalled();
     });
   });

@@ -15,7 +15,7 @@
 import type { InstancePool } from '../connector/instance-pool.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure } from './helpers.js';
-import { markdownToAdf } from '@softspark/atlassian-mcp-core';
+import { InvalidInputError, markdownToAdf } from '@softspark/atlassian-mcp-core';
 import { parseTimeSpent } from '../connector/time-parser.js';
 
 // ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ export async function handleUpdateTask(
     }
 
     if (Object.keys(fields).length === 0) {
-      return failure(new Error('No fields to update. Provide at least one of: summary, description, priority, labels, original_estimate, remaining_estimate.'));
+      return failure(new InvalidInputError('No fields to update. Provide at least one of: summary, description, priority, labels, original_estimate, remaining_estimate.'));
     }
 
     await connector.updateIssue(args.task_key, fields);

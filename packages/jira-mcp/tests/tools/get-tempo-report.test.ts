@@ -163,6 +163,7 @@ describe('handleGetTempoReport', () => {
 
     expect(result.isError).toBe(true);
     expect(parseResult(result)['error']).toContain("Unknown group_by value 'sprint'");
+    expect(parseResult(result)['code']).toBe('INVALID_INPUT');
     expect(pool.getTempoClient).not.toHaveBeenCalled();
   });
 

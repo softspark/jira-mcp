@@ -98,6 +98,12 @@ describe('TempoOperations.searchWorklogs', () => {
         ctx.ops.searchWorklogs({ from: '2026-09-30', to: '2026-09-01' }),
       ).rejects.toThrow('Invalid date range');
     });
+
+    it('raises a bad date as INVALID_INPUT, which the caller can fix', async () => {
+      await expect(
+        ctx.ops.searchWorklogs({ from: '2026-09-30', to: '2026-09-01' }),
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    });
   });
 
   describe('filter resolution', () => {

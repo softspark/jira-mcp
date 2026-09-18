@@ -11,6 +11,8 @@
 import { readFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 
+import { InvalidInputError } from '@softspark/atlassian-mcp-core';
+
 import type { ConfluenceDeps, ToolResult } from './helpers.js';
 import { failure, getPageOperations, success } from './helpers.js';
 
@@ -96,7 +98,7 @@ export async function handleUploadAttachment(
     const buffer = await read(absolutePath);
 
     if (buffer.byteLength > MAX_UPLOAD_BYTES) {
-      throw new Error(
+      throw new InvalidInputError(
         `File is ${String(buffer.byteLength)} bytes, above the ${String(MAX_UPLOAD_BYTES)} byte upload limit. Attach it through the Confluence UI instead.`,
       );
     }

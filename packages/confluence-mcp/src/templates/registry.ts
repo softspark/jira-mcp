@@ -19,6 +19,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+  TemplateMissingVariableError,
   TemplateNotFoundError,
   renderTemplate,
   type BodyFormat,
@@ -189,7 +190,7 @@ export class PageTemplateRegistry {
       variables,
     );
     if (!title.success) {
-      throw new Error(title.error);
+      throw new TemplateMissingVariableError(title.error);
     }
 
     const body = renderTemplate(
@@ -197,7 +198,7 @@ export class PageTemplateRegistry {
       variables,
     );
     if (!body.success) {
-      throw new Error(body.error);
+      throw new TemplateMissingVariableError(body.error);
     }
 
     return {

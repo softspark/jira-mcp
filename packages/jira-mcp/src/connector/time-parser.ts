@@ -12,6 +12,8 @@
  * @module
  */
 
+import { InvalidInputError } from '@softspark/atlassian-mcp-core';
+
 const HOURS_RE = /(\d+)\s*h/i;
 const MINUTES_RE = /(\d+)\s*m/i;
 const DAYS_RE = /\d+\s*d/i;
@@ -51,20 +53,20 @@ export function formatTimeSpent(totalSeconds: number): string {
  *  - "2h 30m"   -> 9000
  *  - "2h30m"    -> 9000
  *
- * @throws {Error} If the format is invalid, contains days, or results in zero seconds.
+ * @throws {InvalidInputError} If the format is invalid, contains days, or results in zero seconds.
  */
 export function parseTimeSpent(timeString: string): number {
   const trimmed = timeString.trim();
 
   if (trimmed.length === 0) {
-    throw new Error(
+    throw new InvalidInputError(
       "Invalid time format: empty string. Use: '2h', '30m', or '2h 30m'",
     );
   }
 
   // Reject days explicitly
   if (DAYS_RE.test(trimmed)) {
-    throw new Error(
+    throw new InvalidInputError(
       "Days (d) not supported. Use hours (h) and minutes (m) only. " +
         "Example: '2h', '30m', or '2h 30m'",
     );
@@ -83,7 +85,7 @@ export function parseTimeSpent(timeString: string): number {
   }
 
   if (totalSeconds === 0) {
-    throw new Error(
+    throw new InvalidInputError(
       `Invalid time format: '${timeString}'. ` +
         "Use: '2h', '30m', or '2h 30m'",
     );

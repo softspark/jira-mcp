@@ -77,6 +77,7 @@ describe('handleUpdateTask', () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toContain('No fields to update');
+    expect(result.content[0]?.text).toContain('"code": "INVALID_INPUT"');
   });
 
   it('updates multiple fields at once', async () => {

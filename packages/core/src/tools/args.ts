@@ -12,6 +12,8 @@
  * @module
  */
 
+import { InvalidInputError } from '../errors/index.js';
+
 /**
  * Extract a string value or return undefined.
  */
@@ -24,7 +26,7 @@ export function asOptionalString(value: unknown): string | undefined {
  */
 export function requireString(value: unknown, paramName: string): string {
   if (typeof value !== 'string' || value.length === 0) {
-    throw new Error(`Missing required parameter: ${paramName}`);
+    throw new InvalidInputError(`Missing required parameter: ${paramName}`);
   }
   return value;
 }

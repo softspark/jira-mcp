@@ -21,6 +21,7 @@
 import {
   adfToMarkdown,
   AnchorNotFoundError,
+  InvalidInputError,
   markdownToAdf,
   MarkupLossError,
 } from '@softspark/atlassian-mcp-core';
@@ -169,7 +170,9 @@ export class PageOperations {
     readonly allowMarkupLoss?: boolean;
   }): Promise<PageWriteResult> {
     if (input.markdown === undefined && input.storage === undefined) {
-      throw new Error('A new page needs a body: provide content or storage.');
+      throw new InvalidInputError(
+        'A new page needs a body: provide content or storage.',
+      );
     }
     this.assertCreateAllowed(input);
 
@@ -443,7 +446,7 @@ export class PageOperations {
     const isReply = input.parentCommentId !== undefined;
 
     if (!isReply && (input.textSelection ?? '').length === 0) {
-      throw new Error(
+      throw new InvalidInputError(
         'A top-level inline comment must name the text_selection it anchors to. Use add_page_comment for a comment on the page as a whole.',
       );
     }

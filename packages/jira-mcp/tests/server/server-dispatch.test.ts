@@ -318,16 +318,17 @@ describe('Unknown tool dispatch', () => {
     expect(parsed['success']).toBe(false);
     expect(parsed['error']).toContain('Unknown tool');
     expect(parsed['error']).toContain('nonexistent_tool');
+    expect(parsed['code']).toBe('INVALID_INPUT');
   });
 
-  it('returns failure with error code UNKNOWN_ERROR', async () => {
+  it('answers INVALID_INPUT when the call carries no arguments at all', async () => {
     const result = await callToolHandler({
       params: { name: 'does_not_exist' },
     });
 
     expect(result.isError).toBe(true);
     const parsed = parseResult(result);
-    expect(parsed['code']).toBe('UNKNOWN_ERROR');
+    expect(parsed['code']).toBe('INVALID_INPUT');
   });
 });
 

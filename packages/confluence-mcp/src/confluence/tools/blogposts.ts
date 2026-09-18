@@ -12,7 +12,10 @@
  * @module
  */
 
-import { assertDeletionApproved } from '@softspark/atlassian-mcp-core';
+import {
+  assertDeletionApproved,
+  InvalidInputError,
+} from '@softspark/atlassian-mcp-core';
 import type { ConfluenceDeps, ToolResult } from './helpers.js';
 import {
   failure,
@@ -131,7 +134,7 @@ export async function handleUpdateBlogPost(
 ): Promise<ToolResult> {
   try {
     if (args.title === undefined && args.content === undefined) {
-      throw new Error(
+      throw new InvalidInputError(
         'Nothing to update: provide at least one of title or content.',
       );
     }

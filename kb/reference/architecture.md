@@ -3,9 +3,9 @@ title: "Jira MCP Server - Architecture Overview"
 category: reference
 service: jira-mcp
 tags: [architecture, mcp, jira, tempo, typescript, design-patterns]
-version: "1.15.0"
+version: "1.16.1"
 created: "2026-04-13"
-last_updated: "2026-09-17"
+last_updated: "2026-09-18"
 description: "System architecture, module layout, data flow, and key design patterns for the Jira MCP server."
 ---
 
@@ -243,8 +243,11 @@ JiraMcpError (code: string)
 ├── TemplateError (TEMPLATE_ERROR)
 │   ├── TemplateNotFoundError (TEMPLATE_NOT_FOUND)
 │   └── TemplateMissingVariableError (TEMPLATE_MISSING_VAR)
-└── AdfConversionError (ADF_CONVERSION)
+├── AdfConversionError (ADF_CONVERSION)
+└── InvalidInputError (INVALID_INPUT)
 ```
+
+`InvalidInputError` is the one to reach for in a tool handler. A bare `Error` there comes out of `failure()` as `UNKNOWN_ERROR`, which tells the client something broke when it only needs to fix its arguments. `packages/core/tests/typed-errors.test.ts` rejects a bare `new Error(` outside `src/cli/`.
 
 ## Related Documentation
 

@@ -3,7 +3,7 @@ title: "Confluence MCP Server - Reference"
 category: reference
 service: jira-mcp
 tags: [confluence, mcp, adf, cql, pages, spaces, attachments]
-version: "1.11.0"
+version: "1.16.1"
 created: "2026-09-09"
 last_updated: "2026-09-18"
 description: "Reference for the confluence-mcp server: architecture, space routing, the v1/v2 API split, ADF bodies, version conflicts, and the full tool surface."
@@ -243,9 +243,12 @@ JiraMcpError
 │   └── ConfluencePermissionError      (CONFLUENCE_PERMISSION)
 ├── MarkupLossError              (MARKUP_LOSS_REFUSED)
 ├── AnchorNotFoundError          (ANCHOR_NOT_FOUND)
+├── InvalidInputError            (INVALID_INPUT)
 ├── PageNotFoundError            (PAGE_NOT_FOUND)
 └── VersionConflictError         (VERSION_CONFLICT)
 ```
+
+`InvalidInputError` is shared with the Jira server and covers every argument check here: a page with no body, `content` and `storage` together, an update that names nothing, an unknown `position`, an empty label list, a file over the upload limit. Nothing is written when it is raised. A page template with a required variable missing answers `TEMPLATE_MISSING_VAR` instead.
 
 `AnchorNotFoundError` is what `add_page_inline_comment` raises when `text_selection` is not in the page body. It is checked before the write and nothing is created, so the caller can correct the selection and call again.
 

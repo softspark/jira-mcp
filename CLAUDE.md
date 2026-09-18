@@ -60,6 +60,7 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Layered, deps point down only**: types/config, then infrastructure (`connector`, `cache`, `adf`, `templates`), then business logic (`operations`, `bulk`), then entry points (`tools`, `cli`, `server.ts`).
 - **DI for tests**: handlers take an optional `deps` parameter so tests inject fakes (`packages/jira-mcp/tests/fixtures/mocks.ts`). Tests never hit real Jira and never write to `~/.softspark/`.
 - **A `vi.mock` path that does not resolve is a silent no-op**: the real config loader then reads the developer's own `~/.softspark/jira-mcp/credentials.json`, and a failing assertion prints their live API token. This has happened twice. After moving a module, grep every `vi.mock` that referenced it.
+- **A bare `Error` in a tool path answers `UNKNOWN_ERROR`**: `failure()` reads `code` only from a `JiraMcpError`. An argument check that throws `new Error(...)` tells the client something broke when it only has to fix its call, and an agent that reads that stops or works around the server. Use `InvalidInputError` (`INVALID_INPUT`), or `TemplateMissingVariableError` for a render failure. `packages/core/tests/typed-errors.test.ts` rejects a bare `new Error(` outside `src/cli/`.
 - **Prose style for generated content**: plain, workmanlike tone, no em dash and no `--` separator in comments, descriptions, or docs.
 
 ## MCP Tools

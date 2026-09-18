@@ -15,10 +15,14 @@
 import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
 import type { TemplateRegistry } from '../templates/registry.js';
-import { renderTemplate } from '@softspark/atlassian-mcp-core';
+import {
+  assertCommentApproved,
+  InvalidInputError,
+  renderTemplate,
+  TemplateMissingVariableError,
+} from '@softspark/atlassian-mcp-core';
 import type { ToolResult } from './helpers.js';
 import { success, failure, getOperations } from './helpers.js';
-import { assertCommentApproved } from '@softspark/atlassian-mcp-core';
 
 export interface AddTemplatedCommentArgs {
   readonly task_key: string;
@@ -51,14 +55,14 @@ export async function handleAddTemplatedComment(
     // Validate: exactly one source must be provided
     if (args.template_id && args.markdown) {
       return failure(
-        new Error(
+        new InvalidInputError(
           'Provide either template_id or markdown, not both.',
         ),
       );
     }
     if (!args.template_id && !args.markdown) {
       return failure(
-        new Error(
+        new InvalidInputError(
           'Provide either template_id (with variables) or markdown.',
         ),
       );
@@ -73,7 +77,7 @@ export async function handleAddTemplatedComment(
       const rendered = renderTemplate(template, args.variables ?? {});
 
       if (!rendered.success) {
-        return failure(new Error(rendered.error));
+        return failure(new TemplateMissingVariableError(rendered.error));
       }
 
       finalMarkdown = rendered.markdown;

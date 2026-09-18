@@ -288,9 +288,9 @@ src/
 
 **Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 561KB library bundle, 1 runtime dep (commander).
 
-**Typed error hierarchy** -- 31 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+**Typed error hierarchy** -- 32 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1093 tests across 85 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1109 tests across 86 test files.
 
 ## Documentation
 

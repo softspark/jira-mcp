@@ -318,6 +318,7 @@ describe('handleCreateTask', () => {
 
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text).toContain('Days (d) not supported');
+    expect(result.content[0]?.text).toContain('"code": "INVALID_INPUT"');
     expect(connector.createIssue).not.toHaveBeenCalled();
   });
 

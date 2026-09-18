@@ -38,6 +38,7 @@
  *   |   +-- CommentApprovalRequiredError
  *   |   +-- DeletionApprovalRequiredError
  *   +-- AdfConversionError
+ *   +-- InvalidInputError
  *   +-- OwnershipError
  *   +-- CommentNotFoundError
  */
@@ -393,6 +394,27 @@ export class DeletionApprovalRequiredError extends ApprovalError {
   constructor(message: string) {
     super(message, 'DELETION_APPROVAL_REQUIRED');
     this.name = 'DeletionApprovalRequiredError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Input errors
+// ---------------------------------------------------------------------------
+
+/**
+ * Raised when a tool call's arguments cannot be acted on as given.
+ *
+ * Covers a missing required argument, two arguments that exclude each other,
+ * an update that names nothing to change, a value outside the accepted set or
+ * format. Nothing was sent to Atlassian, and the message says what to pass
+ * instead, so the caller can correct the call and repeat it. That is the whole
+ * point of the code: `UNKNOWN_ERROR` reads as "something broke", and an agent
+ * that sees it stops rather than fixing its own arguments.
+ */
+export class InvalidInputError extends JiraMcpError {
+  constructor(message: string) {
+    super(message, 'INVALID_INPUT');
+    this.name = 'InvalidInputError';
   }
 }
 

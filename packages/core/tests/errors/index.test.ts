@@ -28,7 +28,10 @@ import {
   TempoAuthenticationError,
   TempoPermissionError,
   TempoNotConfiguredError,
+  InvalidInputError,
+  AnchorNotFoundError,
 } from '../../src/errors/index';
+import { requireString } from '../../src/tools/args';
 
 describe('JiraMcpError', () => {
   it('extends Error', () => {
@@ -148,6 +151,29 @@ describe('AdfConversionError', () => {
     expect(err).toBeInstanceOf(JiraMcpError);
     expect(err.code).toBe('ADF_CONVERSION');
     expect(err.name).toBe('AdfConversionError');
+  });
+});
+
+describe('caller-fixable errors', () => {
+  it('InvalidInputError carries INVALID_INPUT', () => {
+    const err = new InvalidInputError('Provide a title.');
+    expect(err).toBeInstanceOf(JiraMcpError);
+    expect(err.code).toBe('INVALID_INPUT');
+    expect(err.name).toBe('InvalidInputError');
+  });
+
+  it('AnchorNotFoundError carries ANCHOR_NOT_FOUND', () => {
+    const err = new AnchorNotFoundError('not on the page');
+    expect(err).toBeInstanceOf(JiraMcpError);
+    expect(err.code).toBe('ANCHOR_NOT_FOUND');
+    expect(err.name).toBe('AnchorNotFoundError');
+  });
+
+  it('requireString rejects a missing or empty value with INVALID_INPUT', () => {
+    for (const bad of [undefined, '', 42]) {
+      expect(() => requireString(bad, 'task_key')).toThrow(InvalidInputError);
+    }
+    expect(requireString('KAN-1', 'task_key')).toBe('KAN-1');
   });
 });
 

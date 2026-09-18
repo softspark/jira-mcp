@@ -29,7 +29,7 @@ import { CacheManager } from './cache/manager.js';
 import { TaskSyncer } from './cache/syncer.js';
 import type { JiraFetcher, JiraIssue as SyncerJiraIssue } from './cache/syncer.js';
 import { loadTemplateCatalog } from './templates/catalog.js';
-import { failure } from '@softspark/atlassian-mcp-core';
+import { failure, InvalidInputError } from '@softspark/atlassian-mcp-core';
 import { TOOL_DEFINITIONS } from './tools/definitions.js';
 import {
   asOptionalString,
@@ -377,7 +377,7 @@ export async function startServer(): Promise<void> {
         );
 
       default:
-        return failure(new Error(`Unknown tool: ${name}`));
+        return failure(new InvalidInputError(`Unknown tool: ${name}`));
     }
   });
 

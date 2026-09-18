@@ -18,6 +18,7 @@ Tools: `list_spaces`, `get_space_language`, `search_pages`, `get_page`, `list_sp
 - **Delete guard:** `delete_page`, `delete_blog_post`, `delete_page_comment` and `delete_whiteboard` require explicit `user_approved=true`, set only after the user confirms that specific deletion.
 - **Whiteboard content is not reachable.** The API exposes the container only. `create_whiteboard` makes an empty board. Never report having drawn anything.
 - **Search is scoped to one space** unless `all_spaces=true`. Pass plain `text` for a full-text search, or raw `cql` for precise filtering.
+- **Read the `code` on a failure.** `INVALID_INPUT`, `TEMPLATE_MISSING_VAR` and `ANCHOR_NOT_FOUND` mean the call was wrong and nothing was written: the message names what to pass, so fix the arguments and call again. `UNKNOWN_ERROR` is the one that means something is actually broken.
 
 ## Writing Style
 

@@ -3,7 +3,7 @@ title: "Jira MCP Server - API Reference"
 category: reference
 service: jira-mcp
 tags: [api, mcp, tools, jira, tempo]
-version: "1.16.0"
+version: "1.16.1"
 created: "2026-04-13"
 last_updated: "2026-09-18"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
@@ -914,6 +914,9 @@ Only the grouped dimensions appear on a row: `project` for `project`, `user` plu
 | `TEMPLATE_NOT_FOUND` | `TemplateNotFoundError` | Template ID not registered |
 | `TEMPLATE_MISSING_VAR` | `TemplateMissingVariableError` | Required template variable not supplied |
 | `ADF_CONVERSION` | `AdfConversionError` | ADF conversion failure (rare — has fallbacks) |
+| `INVALID_INPUT` | `InvalidInputError` | The arguments cannot be acted on as given: a required one is missing, two exclude each other, an update names nothing to change, a time or date is malformed, a `group_by` or category value is not in the accepted set, or the tool name is unknown. Nothing was sent to Jira or Tempo. The message says what to pass instead, so correct the call and repeat it |
+
+`UNKNOWN_ERROR` is what remains for a failure that is not one of the classes above, which means a bug or a condition nobody anticipated. Before v1.16.1 every input check answered with it too, because the handlers raised a bare `Error`. `packages/core/tests/typed-errors.test.ts` now fails the build on a bare `new Error(` anywhere a tool call can reach.
 
 ## Related Documentation
 

@@ -8,6 +8,7 @@
  * @module
  */
 
+import { InvalidInputError } from '@softspark/atlassian-mcp-core';
 import type { ConfluenceDeps, ToolResult } from './helpers.js';
 import { failure, getPageOperations, success } from './helpers.js';
 
@@ -56,7 +57,7 @@ export async function handleAddPageLabels(
 ): Promise<ToolResult> {
   try {
     if (args.labels.length === 0) {
-      throw new Error('Provide at least one label to add.');
+      throw new InvalidInputError('Provide at least one label to add.');
     }
 
     const [, ops] = getPageOperations(deps, args.space_key);

@@ -8,7 +8,11 @@
  * @module
  */
 
-import { assertDeletionApproved } from '@softspark/atlassian-mcp-core';
+import {
+  assertDeletionApproved,
+  InvalidInputError,
+  TemplateError,
+} from '@softspark/atlassian-mcp-core';
 import type { ConfluenceDeps, ToolResult } from './helpers.js';
 import {
   failure,
@@ -59,7 +63,7 @@ export async function handleSearchPages(
           : '';
 
     if (query.length === 0 && args.all_spaces === true) {
-      throw new Error(
+      throw new InvalidInputError(
         'Provide cql or text when searching across all spaces.',
       );
     }
@@ -213,7 +217,7 @@ export async function handleCreatePage(
 ): Promise<ToolResult> {
   try {
     if (args.content !== undefined && args.storage !== undefined) {
-      throw new Error(
+      throw new InvalidInputError(
         'Provide either content (markdown) or storage (Confluence XHTML), not both.',
       );
     }
@@ -225,12 +229,14 @@ export async function handleCreatePage(
         args.content !== undefined ||
         args.storage !== undefined)
     ) {
-      throw new Error(
+      throw new InvalidInputError(
         'When template_id is given, the template supplies the title and body. Pass variables instead of title/content/storage.',
       );
     }
     if (!usingTemplate && args.title === undefined) {
-      throw new Error('Provide a title, or a template_id that supplies one.');
+      throw new InvalidInputError(
+        'Provide a title, or a template_id that supplies one.',
+      );
     }
 
     const [spaceKey, ops] = getPageOperations(deps, args.space_key);
@@ -244,7 +250,7 @@ export async function handleCreatePage(
     if (usingTemplate) {
       const registry = deps.pageTemplates;
       if (!registry) {
-        throw new Error('No page templates are loaded on this server.');
+        throw new TemplateError('No page templates are loaded on this server.');
       }
       const rendered = registry.render(
         args.template_id ?? '',
@@ -334,13 +340,13 @@ export async function handleUpdatePage(
       args.storage === undefined &&
       args.parent_id === undefined
     ) {
-      throw new Error(
+      throw new InvalidInputError(
         'Nothing to update: provide at least one of title, content, storage or parent_id.',
       );
     }
 
     if (args.content !== undefined && args.storage !== undefined) {
-      throw new Error(
+      throw new InvalidInputError(
         'Provide either content (markdown) or storage (Confluence XHTML), not both.',
       );
     }
@@ -398,7 +404,7 @@ export async function handleMovePage(
   try {
     const position = args.position ?? 'append';
     if (!MOVE_POSITIONS.has(position)) {
-      throw new Error(
+      throw new InvalidInputError(
         `Invalid position '${position}'. Use 'append', 'before' or 'after'.`,
       );
     }

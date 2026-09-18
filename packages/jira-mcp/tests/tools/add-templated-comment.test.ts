@@ -86,6 +86,7 @@ describe('handleAddTemplatedComment', () => {
     expect(result.isError).toBe(true);
     const parsed = parseResult(result);
     expect(parsed['error']).toContain('not both');
+    expect(parsed['code']).toBe('INVALID_INPUT');
   });
 
   it('returns failure when neither template_id nor markdown is provided', async () => {
@@ -178,6 +179,7 @@ describe('handleAddTemplatedComment', () => {
     expect(result.isError).toBe(true);
     const parsed = parseResult(result);
     expect(parsed['error']).toContain('Missing required variables');
+    expect(parsed['code']).toBe('TEMPLATE_MISSING_VAR');
   });
 
   it('uses raw markdown when markdown is provided', async () => {
