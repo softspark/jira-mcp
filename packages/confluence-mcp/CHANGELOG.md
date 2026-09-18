@@ -7,6 +7,48 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.16.1 -- Bad arguments stop answering UNKNOWN_ERROR (2026-09-18)
+
+Both packages change in this release.
+
+### Fixed
+
+- **Argument checks answer `INVALID_INPUT`.** Every input check in both servers
+  raised a bare `Error`, and a tool response takes its `code` only from the
+  typed hierarchy, so "you passed both `content` and `storage`" came back as
+  `UNKNOWN_ERROR`. That code reads as "something broke", and an agent that sees
+  it stops or looks for a way around the server instead of fixing its call. 31
+  sites now raise `InvalidInputError`: a missing required argument, two
+  arguments that exclude each other, an update that names nothing to change, a
+  malformed time (`2d`) or Tempo date, an unknown `group_by`, category or
+  `position` value, a file over the upload limit, an unknown tool name. Nothing
+  reaches Atlassian when it is raised, and the messages are unchanged.
+- **`TEMPLATE_MISSING_VAR` is real now.** `create_task`,
+  `add_templated_comment` and `create_page` answer it when a template is
+  rendered without a required variable. The class and its row in the API
+  reference had existed since templates shipped, but nothing raised it.
+- **`add_page_inline_comment` answers `ANCHOR_NOT_FOUND`** when
+  `text_selection` is not in the page body, instead of `UNKNOWN_ERROR`. Found
+  in the 1.16.0 post-release run.
+- A raw NUL byte in a string literal in `tempo-operations.ts` made git and grep
+  treat the file as binary: its diffs showed as `Bin` and searches skipped it
+  without saying so. It is now the escape `'\u0000'` behind a named constant.
+  Behaviour is identical.
+- The README test count had been stale since 1.16.0.
+
+### Added
+
+- `packages/core/tests/typed-errors.test.ts` fails the build on a bare
+  `new Error(` anywhere a tool call can reach (`src/cli/` is exempt, a CLI error
+  goes to a terminal) and on a raw control byte in a source file. It found six
+  of the 31 sites on its first run, in the file grep could not read.
+
+### Upgrade note
+
+A client that matched on `UNKNOWN_ERROR` to detect a rejected call now sees
+`INVALID_INPUT`, `TEMPLATE_MISSING_VAR` or `ANCHOR_NOT_FOUND` there.
+`UNKNOWN_ERROR` is left for failures nobody anticipated.
+
 ## v1.16.0 -- Creator and reporter on every task read (2026-09-18)
 
 `@softspark/confluence-mcp` has no behaviour change in this release; it is bumped

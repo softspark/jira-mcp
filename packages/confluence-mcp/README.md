@@ -3,17 +3,18 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.16.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.16.1-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
 
 ---
 
-## What's New in v1.16.0
+## What's New in v1.16.1
 
-- No behaviour change in this package: same 31 tools, same commands, same config path.
-- The work is in [`@softspark/jira-mcp`](../jira-mcp): task reads now return the issue's `creator` and `reporter`. Both packages share one version, so this one is bumped with it.
+- **A rejected call says so.** Every argument check used to answer `UNKNOWN_ERROR`, which reads as "something broke". They now answer `INVALID_INPUT`: a page with no body, `content` together with `storage`, an update that names nothing, an unknown `position`, an empty label list, a file over the upload limit. Nothing is written, and the message names what to pass.
+- `add_page_inline_comment` answers `ANCHOR_NOT_FOUND` when `text_selection` is not on the page, and a page template missing a required variable answers `TEMPLATE_MISSING_VAR`.
+- If a client matched on `UNKNOWN_ERROR` to detect a bad call, match on the new codes instead. Same 31 tools, same commands, same config path.
 
 ---
 
