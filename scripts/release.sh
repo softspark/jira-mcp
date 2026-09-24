@@ -23,6 +23,9 @@ readonly PUBLISH_WORKFLOW="publish.yml"
 readonly LINUX_IMAGE="node:22"
 readonly WAIT_ATTEMPTS=5
 readonly WAIT_SECONDS=30
+# npm lists a new version 3 to 6 minutes after the publish job ends; 20 x 30 s
+# leaves margin (ai-toolkit v5.0.1 timed out on 5 x 30 s).
+readonly NPM_WAIT_ATTEMPTS=20
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly REPO_ROOT
@@ -323,10 +326,10 @@ find_publish_run() {
 
 verify_npm() {
     local pkg="@softspark/$1" attempt published provenance
-    for attempt in $(seq 1 "$WAIT_ATTEMPTS"); do
+    for attempt in $(seq 1 "$NPM_WAIT_ATTEMPTS"); do
         published="$(npm view "$pkg@$VERSION" version 2>/dev/null || true)"
         [ "$published" = "$VERSION" ] && break
-        echo "  waiting for npm to list $pkg@$VERSION ($attempt/$WAIT_ATTEMPTS)"
+        echo "  waiting for npm to list $pkg@$VERSION ($attempt/$NPM_WAIT_ATTEMPTS)"
         sleep "$WAIT_SECONDS"
     done
     [ "$published" = "$VERSION" ] || die "$pkg@$VERSION is not on npm"
