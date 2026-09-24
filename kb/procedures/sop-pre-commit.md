@@ -3,16 +3,18 @@ title: "SOP: Pre-Commit Quality Checklist"
 category: procedures
 service: jira-mcp
 tags: [sop, pre-commit, quality, lint, typecheck, test, build, security, version-sync]
-version: "1.11.0"
+version: "1.12.0"
 created: "2026-04-13"
-last_updated: "2026-09-06"
+last_updated: "2026-09-24"
 description: "Pre-commit quality checklist for @softspark/jira-mcp — TypeScript type check, ESLint, tests, build, secret scan, version sync (package.json ↔ package-lock.json), conventional commit format, and branch naming."
 ---
 
 # SOP: Pre-Commit Quality Checklist
 
 Complete checklist to run **before every commit** to `@softspark/jira-mcp`.
-Mirrors the CI pipeline (`.github/workflows/ci.yml`) so failures are caught locally.
+No GitHub workflow tests a push or a pull request (CI only publishes tags), so
+this checklist is what keeps `main` green between releases. It is a subset of
+the release gate in `scripts/release.sh`.
 
 **Time:** 1-2 minutes
 
@@ -124,8 +126,8 @@ python3 scripts/validate_counts.py
 ### Step 6: Version Sync (package.json ↔ package-lock.json)
 
 If the commit touches `package.json`, `package-lock.json` must match the same
-`version` field. An out-of-sync lockfile breaks `npm ci` in CI and the publish
-workflow, producing a failed release.
+`version` field. An out-of-sync lockfile breaks `npm ci` in the release script
+and the publish workflow, producing a failed release.
 
 ```bash
 node -e "const a=require('./package.json').version, b=require('./package-lock.json').version; if (a!==b) { console.error('MISMATCH: package.json='+a+' package-lock.json='+b); process.exit(1) } console.log('OK: '+a)"
@@ -222,18 +224,23 @@ git branch --show-current
 
 ---
 
-## CI Parity
+## Release Gate Parity
 
-This checklist mirrors the CI jobs defined in `.github/workflows/ci.yml`:
+No GitHub workflow tests pushes or pull requests (CI only publishes tags). This
+checklist is a subset of the release gate in `scripts/release.sh`
+(`npm run release -- X.Y.Z`, see `sop-release.md`):
 
-| CI Job | Local Command | What It Checks |
+| Release gate | Local Command | What It Checks |
 |--------|---------------|----------------|
-| TypeScript compile check | `npm run typecheck` | `tsc --noEmit` with strict mode |
-| ESLint | `npm run lint` | Linting of `src/` and `tests/` |
-| Tests (ubuntu + macOS) | `npm test` | Vitest test suite |
-| Build | `npm run build` | tsup compilation to `dist/` |
-| Validate counts | `python3 scripts/validate_counts.py` | README.md counts match source code |
-| Required files check | Manual | LICENSE, CHANGELOG.md, SECURITY.md, CODE_OF_CONDUCT.md, README.md exist |
+| typecheck | `npm run typecheck` | `tsc --noEmit` with strict mode |
+| lint | `npm run lint` | Linting of `src/` and `tests/` |
+| test-coverage (macOS host) + tests-linux (`node:22` container) | `npm test` | Vitest test suite |
+| build | `npm run build` | tsup compilation to `dist/` |
+| validate-counts | `python3 scripts/validate_counts.py` | README.md counts match source code (`--full` at release) |
+| required-files | Manual | LICENSE, CHANGELOG.md, SECURITY.md, CODE_OF_CONDUCT.md, README.md exist |
+
+`npm run release -- X.Y.Z --gates-only` runs the whole release gate on the
+working tree without tagging (needs Docker).
 
 ---
 

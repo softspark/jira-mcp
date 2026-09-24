@@ -2,7 +2,7 @@
 
 > Two MCP servers for Atlassian Cloud: Jira and Confluence. One configuration, one API token, separate tool lists.
 
-[![CI](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/ci.yml)
+[![Publish](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---

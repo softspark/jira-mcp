@@ -37,7 +37,8 @@
     "lint": "eslint packages/",
     "lint:fix": "eslint packages/ --fix",
     "typecheck": "tsc --noEmit",
-    "validate:counts": "python3 scripts/validate_counts.py"
+    "validate:counts": "python3 scripts/validate_counts.py",
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "commander": "^14.0.3"

@@ -2,56 +2,58 @@
 title: "SOP: Release Creation"
 category: procedures
 service: jira-mcp
-tags: [sop, release, version, publish, changelog, semver, npm, tag, provenance, supply-chain]
-version: "1.15.0"
+tags: [sop, release, version, publish, changelog, semver, npm, tag, provenance, supply-chain, local-gates]
+version: "2.0.0"
 created: "2026-04-13"
-last_updated: "2026-09-17"
-description: "Step-by-step release procedure for @softspark/jira-mcp — version bump, changelog, quality gates, supply-chain gates (provenance + id-token), tagging, npm publish via CI, and rollback instructions."
+last_updated: "2026-09-24"
+description: "Release procedure for @softspark/jira-mcp and @softspark/confluence-mcp under Local Release Gates, Publish-Only CI: version bump, changelog, rebuilt dist, then one command (npm run release -- X.Y.Z) that runs every gate on macOS and in a Linux container, tags, pushes and watches the publish-only workflow. Rollback included."
 ---
 
 # SOP: Release Creation
 
-Complete procedure for preparing and publishing a new `@softspark/jira-mcp` release.
-Run this **before** tagging. After CI publishes, run the
-[Post-Release Testing SOP](sop-post-release-testing.md) to verify.
+Procedure for a new release of the Atlassian MCP workspace:
+`@softspark/jira-mcp` and `@softspark/confluence-mcp`, one version, one tag.
+Model: every test runs on the maintainer's machine, GitHub Actions only turns
+the tag into npm packages and a GitHub Release (the shared SoftSpark standard
+"Local Release Gates, Publish-Only CI", 2026-09-24). No workflow runs on branch
+pushes or pull requests.
 
 **Pipeline:**
 ```
-Release Creation (this SOP) --> git tag --> CI publish --> Post-Release Testing SOP
+Prepare the release commit on main (Phases 1-4)
+      ↓
+npm run release -- X.Y.Z   (gates → Linux → pack + smoke → tag → push → watch publish)
+      ↓
+Post-Release Testing SOP
 ```
 
-**Time:** 5-10 minutes
+**Time:** 5-10 minutes of preparation, then a few minutes of unattended gates.
 
 ---
 
 ## Quick Checklist (TL;DR)
 
 ```bash
-# 1. Decide version bump (patch / minor / major)
-# 2. Edit package.json "version" field (and sync package-lock.json)
+# 0. On an up-to-date main
+git switch main && git pull --ff-only
+# 1. Decide the bump; set "version" in all four package.json files
 npm install --package-lock-only
-# 3. Write CHANGELOG.md entry + update README "What's New" section
-# 4. Run quality gates
-npm run typecheck && npm run lint && npm test && npm run build
-# 4.5. Validate README counts match source (--full also checks the test count)
-python3 scripts/validate_counts.py --full
-# 4.6. Supply-chain gates (v2.8.0+)
-grep -q -- '--provenance' .github/workflows/publish.yml
-grep -q 'id-token: write' .github/workflows/publish.yml
-# 4.7. Licensing gate (v1.7.0+) -- headers, LICENSE, NOTICE, dist banner
-npx vitest run packages/jira-mcp/tests/licensing.test.ts
-# 5. Commit (all four package.json files, the lockfile, the root changelog and its
-#    synced copies, both READMEs, and the rebuilt dist/ that carries the version)
-git add package.json package-lock.json packages/*/package.json CHANGELOG.md packages/*/CHANGELOG.md packages/*/README.md packages/*/dist
+# 2. CHANGELOG.md "## vX.Y.Z -- Title (YYYY-MM-DD)" + "What's New in vX.Y.Z" in both package READMEs
+# 3. Rebuild: dist/ and the per-package CHANGELOG copies are committed
+npm run build
+# 4. Commit the release on main
+git add package.json package-lock.json packages/*/package.json CHANGELOG.md \
+  packages/*/CHANGELOG.md packages/*/README.md packages/*/dist
 git commit -m "chore: release vX.Y.Z"
-# 6. Tag (annotated: tag.gpgSign rejects a bare tag), assert, push
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-test "$(git rev-parse 'vX.Y.Z^{commit}')" = "$(git rev-parse HEAD)" || { echo "FAIL: tag not on HEAD"; exit 1; }
-git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" || { echo "FAIL: tag not on release commit"; exit 1; }
-git push origin main
-git push origin refs/tags/vX.Y.Z   # single tag by full ref, never --tags
-# 7. Verify: npm view @softspark/jira-mcp version + provenance attestation
+# 5. Rehearse (optional: every gate, no tag)
+npm run release -- X.Y.Z --dry-run
+# 6. Release: gates, Linux run, pack + smoke, tag, push, watch publish, verify npm
+npm run release -- X.Y.Z
+# 7. Post-release testing SOP
 ```
+
+`scripts/release.sh` is the only supported way to create a release tag. A tag
+made by hand skipped the gates, and nothing on GitHub will catch that.
 
 ---
 
@@ -65,9 +67,6 @@ Follow [Semantic Versioning](https://semver.org/):
 | New MCP tool, feature, resource | **minor** | Add `get-sprint-tasks` tool, add caching layer |
 | Breaking API change, removed tool, config format change | **major** | Rename tool schema, remove `sync_tasks` |
 
-- [ ] Version bump type decided: patch / minor / major
-- [ ] New version number determined: `X.Y.Z`
-
 **Rule:** When in doubt, bump minor.
 
 **Both published packages share one version.** `@softspark/jira-mcp` and
@@ -79,39 +78,32 @@ mandates for a new module. See
 [ADR-0002](../decisions/ADR-0002-shared-version-across-packages.md); do not
 "fix" the numbering without reading it.
 
-- [ ] Version bumped in all four `package.json` files (root, core, jira-mcp, confluence-mcp)
+Prepare the release on `main`, up to date with `origin/main`. There is no
+release branch, no PR and no CI to wait for: the release script's gates are the
+check.
 
 ---
 
 ## Phase 2: Update Version
 
-Edit `package.json` and set the `"version"` field to the new version, then
-re-sync `package-lock.json` so both files match. An out-of-sync lockfile breaks
-`npm ci` in the publish workflow and fails the pre-tag sync check.
+Set `"version"` to `X.Y.Z` in all four `package.json` files (root, `packages/core`,
+`packages/jira-mcp`, `packages/confluence-mcp`), then re-sync the lockfile:
 
 ```bash
-# 1. Edit package.json "version" field to "X.Y.Z"
-# 2. Re-sync package-lock.json
 npm install --package-lock-only
 ```
 
-- [ ] `package.json` `"version"` field updated to `X.Y.Z`
-- [ ] `package-lock.json` regenerated via `npm install --package-lock-only`
-
-**Verify both files match:**
-
-```bash
-node -e "const a=require('./package.json').version, b=require('./package-lock.json').version; if (a!==b) { console.error('MISMATCH', a, b); process.exit(1) } console.log(a)"
-```
-
-- [ ] Output matches target version `X.Y.Z`
-- [ ] No `MISMATCH` error
+The release script checks all four manifests and the lockfile (`version` plus
+the `packages[""]`, `packages/core`, `packages/jira-mcp` and
+`packages/confluence-mcp` entries). An out-of-sync lockfile breaks `npm ci`.
 
 ---
 
-## Phase 3: Write CHANGELOG Entry
+## Phase 3: CHANGELOG and READMEs
 
-Add an entry at the top of `CHANGELOG.md`, below the header and above `[Unreleased]`:
+Add an entry at the top of `CHANGELOG.md`, below the header and above the
+previous release. The release script requires a heading starting with
+`## vX.Y.Z `:
 
 ```markdown
 ## vX.Y.Z -- Short Title (YYYY-MM-DD)
@@ -130,163 +122,88 @@ Add an entry at the top of `CHANGELOG.md`, below the header and above `[Unreleas
 ```
 
 **Rules:**
-- [ ] Entry placed after the header, before previous entries
-- [ ] Format: `## vX.Y.Z -- Short Title (YYYY-MM-DD)`
-- [ ] Only include sections that have content (Added, Changed, Fixed, Removed)
-- [ ] Feature names in **bold**
-- [ ] Descriptions start with a verb
-- [ ] Tool names in backticks: `sync_tasks`
-- [ ] Date format: `YYYY-MM-DD`
+- Only include sections that have content (Added, Changed, Fixed, Removed)
+- Feature names in **bold**, descriptions start with a verb
+- Tool names in backticks: `sync_tasks`
+- Date format: `YYYY-MM-DD`
 
-### Step 3.2: Update README "What's New" Section
-
-Replace the "What's New in vOLD" section in `README.md` with the new version highlights:
-
-```markdown
-## What's New in vX.Y.Z
-
-- **Highlight 1** -- short description.
-- **Highlight 2** -- short description.
-```
-
-- [ ] Section title updated to `## What's New in vX.Y.Z`
-- [ ] Bullet points reflect the most important changes from CHANGELOG
-- [ ] Test/file counts match actual values (verified by `validate_counts.py`)
+Replace the "What's New in vOLD" section in **both** `packages/jira-mcp/README.md`
+and `packages/confluence-mcp/README.md` with `## What's New in vX.Y.Z` (checked by
+the script) and keep test/file counts right: `validate_counts.py --full` runs
+as a gate.
 
 ---
 
-## Phase 4: Run Quality Gates
+## Phase 4: Rebuild and Commit
 
-Run the full CI-equivalent pipeline locally:
-
-### Step 4.1: TypeScript Type Check
-
-```bash
-npm run typecheck
-```
-
-- [ ] Exit code 0
-- [ ] Zero type errors
-
-### Step 4.2: ESLint
-
-```bash
-npm run lint
-```
-
-- [ ] Exit code 0
-- [ ] Zero errors, zero warnings
-
-### Step 4.3: Tests
-
-```bash
-npm test
-```
-
-- [ ] Exit code 0
-- [ ] All test suites pass
-- [ ] All individual tests pass
-
-### Step 4.4: Build
+The version is injected at build time and `dist/` is committed, as are the
+changelog copies `scripts/sync-changelog.mjs` writes into each package:
 
 ```bash
 npm run build
+git add package.json package-lock.json packages/*/package.json \
+  CHANGELOG.md packages/*/CHANGELOG.md packages/*/README.md packages/*/dist
+git commit -m "chore: release vX.Y.Z"
 ```
 
-- [ ] Exit code 0
-- [ ] `dist/` directory generated successfully
-
-**One-liner:**
-
-```bash
-npm run typecheck && npm run lint && npm test && npm run build
-```
-
-- [ ] All four commands pass with zero errors
-
-### Step 4.5: Validate Counts
-
-Verify that README.md counts (MCP tools, CLI commands, templates, error classes,
-test files, bundle size) match the actual source code. This prevents count drift
-that erodes trust in documentation.
-
-```bash
-python3 scripts/validate_counts.py --full
-```
-
-- [ ] Exit code 0
-- [ ] All counts match source code, the test count included
-
-Run it with `--full` for a release. Without the flag the script skips the test
-count, because counting means running the suite. That is how the README shipped
-in 1.16.0 claiming 1093 tests when there were 1102. The short form is fine as a
-pre-commit check.
-
-> **Pattern:** Same approach as ai-toolkit `validate.py`. Counts are allowed
-> ONLY in `README.md` (single source of truth). All other docs use relative
-> language ("all tools", "built-in templates"). See `scripts/validate_counts.py`.
-
-**If counts are out of sync:** Update `README.md` to match actual values.
-Do NOT update source code to match README — source is always authoritative.
-
-**If any step fails:** Fix the issue. Do NOT proceed with the release.
-
-### Step 4.6: Supply-Chain Gates (v2.8.0+)
-
-Every public npm release MUST ship with provenance attestation (SLSA v1).
-Unsigned releases are a regression and will be re-published. Verify the
-workflow file enforces both requirements before tagging:
-
-```bash
-grep -q -- '--provenance' .github/workflows/publish.yml && echo "OK: --provenance"
-grep -q 'id-token: write' .github/workflows/publish.yml && echo "OK: id-token: write"
-```
-
-- [ ] `.github/workflows/publish.yml` publish step uses `npm publish --access public --provenance`
-- [ ] Workflow `permissions:` block includes `id-token: write` (required for OIDC attestation)
-- [ ] Both grep checks exit 0
-
-**If either check fails:** Fix `.github/workflows/publish.yml` before tagging.
-A tag pushed with a broken workflow produces an unsigned release that must be
-deprecated and re-published.
+The subject must be exactly `chore: release vX.Y.Z`. The release script
+rebuilds and fails if that changes any committed file, so stale `dist/` cannot
+reach a tag.
 
 ---
 
-## Phase 4.7: Licensing Gate (v1.7.0+)
-
-The project is Apache-2.0. Attribution only counts if it reaches the artifact,
-and for this package that is not automatic.
+## Phase 5: Run the Release
 
 ```bash
-npx vitest run packages/jira-mcp/tests/licensing.test.ts
+npm run release -- X.Y.Z --dry-run   # optional rehearsal, steps 1-5 only
+npm run release -- X.Y.Z
 ```
 
-Eight assertions, and why each exists:
+Logs go to `${TMPDIR:-/tmp}/jira-mcp-release-X.Y.Z/<gate>.log`. The script
+stops at the first failure and prints the tail of that gate's log.
 
-| Check | Fails when |
+| Step | What `scripts/release.sh` does |
 |---|---|
-| The walker finds >100 source files | The file walk broke and every other assertion would pass vacuously |
-| Every source file carries an SPDX header | A new `.ts` file was added without one |
-| Every header names Apache-2.0 | A file was copied in from a differently-licensed source |
-| `LICENSE` is the complete Apache 2.0 text | The file was truncated or replaced with a summary |
-| `NOTICE` carries attribution, source URL and section 4(d) | The attribution mechanism was gutted |
-| `LICENSE` and `NOTICE` both in `package.json` `files` | A NOTICE that never reaches the consumer cannot satisfy 4(d) |
-| `package.json` declares Apache-2.0 | The manifest drifted from the licence |
-| **Both build entries carry the licence banner** | The one that matters -- see below |
+| 1. Preconditions | Branch is `main`; tree clean; `git fetch` done and `origin/main` is an ancestor of `HEAD`; `X.Y.Z` is semver; `vX.Y.Z` exists neither locally nor on `origin`; neither package has `X.Y.Z` on npm yet |
+| 2. Version and notes | The four manifests and five lockfile entries say `X.Y.Z`; CHANGELOG `## vX.Y.Z`; both package READMEs `What's New in vX.Y.Z`; `HEAD` subject `chore: release vX.Y.Z` |
+| 3. Gates (macOS host) | Required files; `npm ci`; `npm run typecheck`; `npm run lint`; `npm run test:coverage` (includes the licensing test and the 70% coverage threshold); `npm run build`; licence banner in both `dist/index.js` and `dist/cli.js`; `validate_counts.py --full`; `publish.yml` still has `--provenance` and `id-token: write`; the gates left the tree unchanged |
+| 4. Linux | The repository (tracked files plus `.git`, copied in, never mounted) into a throwaway `node:22` container: `npm ci` and `npm run test:coverage` as the unprivileged `node` user |
+| 5. Build and smoke | `npm pack` of both workspaces; both tarballs installed into a scratch prefix with a scratch `HOME`; `jira-mcp --version` and `confluence-mcp --version` report `X.Y.Z`, `--help` runs |
+| 6. Tag and push | Annotated tag `vX.Y.Z` (`tag.gpgSign` rejects a bare tag); asserts `vX.Y.Z^{commit}` is `HEAD` and its subject is `chore: release vX.Y.Z`; `git push origin main`; `git push origin refs/tags/vX.Y.Z` |
+| 7. Watch publish | Finds the `publish.yml` run for the tagged commit, `gh run watch --exit-status`; `npm view` shows `X.Y.Z` with a SLSA v1 provenance attestation for both packages; the GitHub Release exists |
 
-**Why the banner assertion is the important one.** npm ships `dist/`, not `src/`,
-and the build runs with `minify: true`, which strips every comment. The SPDX
-headers in `src/` never reach a consumer. The only attribution in the published
-package comes from the `banner` in `tsup.config.ts`. Delete it and the package
-ships with no licence marker at all, while typecheck, lint, tests and build all
-stay green. Verify by hand after a build if you touched the bundler config:
+`--gates-only` runs steps 3-5 on the current working tree without any git
+precondition and tags nothing.
 
-```bash
-npm run build && grep -c 'Apache-2.0' dist/index.js dist/cli.js   # expect 1 and 1
-```
+### Why step 4 applies here
 
-The banner sits just after the hoisted ESM imports rather than on line 1 -- that
-is normal esbuild behaviour for this format, not a defect.
+The code is plain Node, but the old CI ran the suite on Ubuntu and macOS, and
+the difference is real: Linux has a case-sensitive filesystem and different
+temp and home paths, which is exactly where the filesystem and config tests can
+diverge. The container run costs about a minute.
+
+### What the publish workflow still does
+
+`.github/workflows/publish.yml`, on a `v*` tag only: checkout, Node 22 setup,
+**tag equals the root, jira-mcp and confluence-mcp versions**, `npm ci`,
+`npm run build`, `npm whoami`, `npm publish --access public --provenance` for
+each workspace, GitHub Release. Actions are pinned by commit SHA. No test,
+lint or count step: the tag exists only because the local gates passed.
+
+**Provenance is non-negotiable.** Every public `@softspark/*` release ships with
+a SLSA v1 attestation; the script's `publish-workflow` gate fails when
+`--provenance` or `id-token: write` disappears, and step 7 fails when a
+published version has no attestation.
+
+### Licensing: why the banner gate matters
+
+npm ships `dist/`, not `src/`, and the build runs with `minify: true`, which
+strips every comment. The SPDX headers in `src/` never reach a consumer. The
+only attribution in the published package comes from the `banner` in
+`tsup.config.ts`. Delete it and the package ships with no licence marker at all,
+while typecheck, lint, tests and build all stay green. The licensing test
+(`packages/jira-mcp/tests/licensing.test.ts`, inside `test:coverage`) and the
+`licence-banner` gate both catch it.
 
 **Adding source files?** Header after any shebang, `//` comments:
 
@@ -298,195 +215,79 @@ is normal esbuild behaviour for this format, not a defect.
 
 Full convention: [Licensing](../reference/licensing.md).
 
----
+### Postmortems the script encodes
 
-## Phase 5: Commit Release
+- **Tag on the wrong commit** (two repositories, 2026-07-27): a tag on the
+  commit before the release commit publishes the previous tree under the new
+  number, or fails on an already-published version. Step 6 asserts the tag
+  before pushing; the workflow asserts tag equals version.
+- **`--tags` push**: GitHub suppresses tag-triggered runs when many tags arrive
+  in one push (rag-mcp skipped an image build with 37 tags). The script pushes
+  exactly one ref.
+- **README claimed 1093 tests when there were 1102** (1.16.0): `validate_counts.py`
+  without `--full` skips the test count. The gate always uses `--full`.
 
-Stage only the release files (lockfile included — see Phase 2). In the
-workspace that means all four `package.json` files, the root `CHANGELOG.md` and
-the copies `scripts/sync-changelog.mjs` writes into each package, both package
-READMEs, and the rebuilt `dist/`, because the version is injected at build time:
+### If a gate fails
 
-```bash
-git add package.json package-lock.json packages/*/package.json \
-  CHANGELOG.md packages/*/CHANGELOG.md packages/*/README.md packages/*/dist
-```
+Fix the cause, amend or add to the release commit, run the script again. Do
+not skip a gate and do not tag by hand. If step 7 fails, the tag is pushed:
+read the run log (`gh run view <id> --log-failed`) and use Rollback when a
+broken version reached npm.
 
-Commit with the conventional commit format:
-
-```bash
-git commit -m "chore: release vX.Y.Z"
-```
-
-- [ ] All four `package.json` files, `package-lock.json`, the changelog and its copies, both READMEs and `dist/` are staged
-- [ ] Commit message follows format: `chore: release vX.Y.Z`
-- [ ] Working tree is clean after commit
-
-**Verify:**
-
-```bash
-git log --oneline -1
-```
-
-- [ ] Latest commit shows `chore: release vX.Y.Z`
-
----
-
-## Phase 6: Tag and Push
-
-Create an annotated tag and push. Annotated, because a bare `git tag vX.Y.Z`
-fails with "no tag message?" once `tag.gpgSign` is on, which it is in the
-maintainer's checkout. The first assertion dereferences with `^{commit}` for
-the same reason: `git rev-parse` on an annotated tag returns the tag object,
-not the commit, and would report a correct tag as "not on HEAD".
-
-```bash
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-
-# Assert before pushing. Both checks are one line and both have caught a real
-# broken release in a sibling repository on the same day.
-test "$(git rev-parse 'vX.Y.Z^{commit}')" = "$(git rev-parse HEAD)" \
-  || { echo "FAIL: tag is not on HEAD"; exit 1; }
-git show --no-patch --format=%s vX.Y.Z | grep -qx "chore: release vX.Y.Z" \
-  || { echo "FAIL: tag is not on the chore: release commit"; exit 1; }
-
-git push origin main
-git push origin refs/tags/vX.Y.Z
-```
-
-- [ ] Tag `vX.Y.Z` created locally
-- [ ] Both assertions exit 0 **before** any push
-- [ ] Push to `origin main` succeeds
-- [ ] Single tag pushed by full ref
-
-> **Never `git push --tags`.** It pushes every local tag at once, and GitHub
-> suppresses tag-triggered workflow runs when many tags arrive in one push --
-> the publish workflow silently does not fire and nothing reaches npm. This is
-> not hypothetical: a `--tags` push carrying 37 tags is exactly how the sibling
-> `rag-mcp` project skipped an image build. Push the single release tag by its
-> full ref.
->
-> **Assert the tag placement.** A tag landing on the commit *before* the release
-> commit publishes the previous version's tree under the new version number, or
-> fails on an already-published version. Both happened on 2026-07-27, in two
-> different repositories, and both were found only after the fact.
-
-This triggers `.github/workflows/publish.yml` which:
-1. Checks out the tag
-2. Runs `npm ci` and `npm run build`
-3. Publishes to npm as `@softspark/jira-mcp@X.Y.Z` (public access) with `--provenance`
-4. Creates a GitHub Release with auto-generated release notes
-
----
-
-## Phase 7: Verify Publish
-
-Wait for the CI publish workflow to complete (1-2 minutes), then verify:
-
-### Step 7.1: npm Registry
-
-```bash
-npm view @softspark/jira-mcp version
-```
-
-- [ ] Output shows `X.Y.Z`
-
-### Step 7.2: npm Package Contents
-
-```bash
-npm view @softspark/jira-mcp dist.tarball
-```
-
-- [ ] Tarball URL is accessible
-
-**If the tarball 404s while the version and its metadata are present:** that is
-npm CDN propagation, not a bad publish. Poll the URL rather than re-publishing
-or deprecating. See
+**npm tarball 404 while the version and its metadata are present:** CDN
+propagation, not a bad publish. See
 [npm 404 on a version that was just published](../troubleshooting/common-issues.md#npm-404-on-a-version-that-was-just-published).
 
-### Step 7.3: Provenance Attestation (v2.8.0+)
+---
 
-Verify that the release landed with a SLSA provenance attestation. Any public
-`@softspark/*` package without one is treated as a regression.
+## Phase 6: Post-Release Testing
 
-```bash
-npm view "@softspark/jira-mcp@X.Y.Z" --json \
-  | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['dist']['attestations']['provenance']['predicateType']=='https://slsa.dev/provenance/v1'; print('PROVENANCE OK')"
-```
+Run the full [Post-Release Testing SOP](sop-post-release-testing.md).
 
-- [ ] Output shows `PROVENANCE OK`
-- [ ] No `AssertionError` or `KeyError`
+---
 
-**If attestation is missing:** the publish workflow did NOT emit provenance.
-Deprecate this version (`npm deprecate`), fix `publish.yml`, bump patch, and
-re-release.
+## Repository settings
 
-### Step 7.4: GitHub Release
-
-```bash
-gh release view vX.Y.Z --repo softspark/jira-mcp
-```
-
-- [ ] Release exists for tag `vX.Y.Z`
-- [ ] Release notes are populated
-
-### Step 7.5: Run Post-Release Testing
-
-After verification, run the full [Post-Release Testing SOP](sop-post-release-testing.md).
-
-- [ ] Post-release smoke tests pass
+Rulesets must not require status checks: the checks no longer exist, and a
+required check that never reports blocks every merge. Releases push `main`
+directly, which needs a rule set that lets the maintainer push (today the
+`main protection` ruleset allows repository admins to bypass).
 
 ---
 
 ## Rollback
 
-If a bad release was published:
-
 ### Option A: Deprecate (Preferred)
-
-Deprecation does not break existing installs but warns users:
 
 ```bash
 npm deprecate "@softspark/jira-mcp@X.Y.Z" "Known issue: <description>. Use vA.B.C instead."
+npm deprecate "@softspark/confluence-mcp@X.Y.Z" "Known issue: <description>. Use vA.B.C instead."
 ```
 
-- [ ] Deprecation message set on npm
+If only the first package published (the workflow publishes them in sequence),
+deprecate the orphan and release a patch.
 
 ### Option B: Unpublish (Within 72 Hours)
 
-Only use if the release contains a critical security issue:
+Only for a critical security issue:
 
 ```bash
 npm unpublish @softspark/jira-mcp@X.Y.Z
 ```
 
-- [ ] Package version removed from npm
+### Delete the Tag and the GitHub Release
 
-### Delete the Tag
-
-Remove the tag from both local and remote:
+Deleting a tag does not delete what was published.
 
 ```bash
 git tag -d vX.Y.Z
 git push origin --delete vX.Y.Z
-```
-
-- [ ] Local tag deleted
-- [ ] Remote tag deleted
-
-### Delete the GitHub Release
-
-```bash
 gh release delete vX.Y.Z --repo softspark/jira-mcp --yes
 ```
 
-- [ ] GitHub Release deleted
-
 ### Fix and Re-release
 
-1. Fix the issue on `main`
-2. Bump to next patch version (e.g., `X.Y.Z+1`)
-3. Re-run this SOP from Phase 1
+Fix the issue on `main`, bump to the next patch version, and re-run this SOP.
 
 ---
 
@@ -495,16 +296,9 @@ gh release delete vX.Y.Z --repo softspark/jira-mcp --yes
 | # | Phase | Action | Pass Criteria |
 |---|-------|--------|---------------|
 | 1 | Version bump | Decide patch/minor/major | Type selected |
-| 2 | Update version | Edit `package.json` + `npm install --package-lock-only` | Versions match in both files |
-| 3a | CHANGELOG | Add release entry | Entry exists with correct format |
-| 3b | README | Update "What's New" section | Title + bullets match new version |
-| 4a | Typecheck | `npm run typecheck` | 0 errors |
-| 4b | Lint | `npm run lint` | 0 errors, 0 warnings |
-| 4c | Test | `npm test` | All pass |
-| 4d | Build | `npm run build` | Clean build |
-| 4e | Validate counts | `python3 scripts/validate_counts.py` | All counts match |
-| 4f | Supply-chain gates | `grep -q -- '--provenance'` + `grep -q 'id-token: write'` | Both exit 0 |
-| 5 | Commit | `git commit` | Clean working tree |
-| 6 | Tag and push | `git tag` + `git push` | CI triggered |
-| 7a | Verify npm | `npm view` + GitHub | Correct version published |
-| 7b | Verify provenance | `npm view --json` + assert `slsa.dev/provenance/v1` | Attestation present |
+| 2 | Update version | Four `package.json` files + `npm install --package-lock-only` | All say `X.Y.Z` |
+| 3 | CHANGELOG + READMEs | Entry + `What's New in vX.Y.Z` in both package READMEs | Present |
+| 4 | Rebuild + commit | `npm run build`, `git commit -m "chore: release vX.Y.Z"` | Clean tree |
+| 5 | Rehearse | `npm run release -- X.Y.Z --dry-run` | Steps 1-5 green |
+| 6 | Release | `npm run release -- X.Y.Z` | Exit 0: gates green on macOS and Linux, tag pushed, publish run green, both packages on npm with provenance, GitHub Release |
+| 7 | Post-release | [Post-Release Testing SOP](sop-post-release-testing.md) | Pass |

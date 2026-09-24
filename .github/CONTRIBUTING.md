@@ -7,7 +7,7 @@ We welcome bug fixes, new MCP tools/resources, and improvements. This guide expl
 1. **Fork** the repository and clone your fork
 2. **Create a branch** from `main`: `git checkout -b feat/my-change`
 3. **Make your changes** -- follow the conventions below
-4. **Run all checks** locally (see CI Requirements)
+4. **Run all checks** locally (see Required Checks)
 5. **Push** to your fork and open a **Pull Request** against `main`
 6. The maintainer will review the code, tests and documentation together before merging
 
@@ -39,9 +39,11 @@ test: add integration tests for sync_tasks
 - Keep the subject line under 72 characters
 - No `WIP` commits in the final PR
 
-## CI Requirements
+## Required Checks
 
-Your PR must pass **all** CI jobs before review. Run them locally:
+No GitHub workflow tests pull requests: CI only publishes release tags, and the
+maintainer runs every gate locally before a release. Run these before asking for
+review:
 
 ```bash
 # All of these must pass with zero errors:
@@ -52,13 +54,11 @@ npm run build        # TypeScript compilation (tsup)
 npm run validate:counts # README counts agree with the built project
 ```
 
-CI runs these in parallel on every push/PR to `main`:
-- **TypeScript compile check** (`tsc --noEmit`)
-- **ESLint** (zero errors, zero warnings)
-- **Tests** (ubuntu + macOS matrix)
-- **Build** (tsup)
-- **Validate README counts** (`scripts/validate_counts.py`)
-- **Required files check** (LICENSE, CHANGELOG, SECURITY, etc.)
+The maintainer's release gate (`npm run release -- X.Y.Z`, see
+`kb/procedures/sop-release.md`) runs the same set plus the required-files
+check, the test suite in a Linux container, and a pack-and-install smoke test.
+`npm run release -- X.Y.Z --gates-only` runs it on your branch without tagging
+(needs Docker).
 
 Keep README counts in sync when adding commands, tools, templates or tests.
 
