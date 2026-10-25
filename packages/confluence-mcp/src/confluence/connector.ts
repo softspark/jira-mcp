@@ -1281,24 +1281,11 @@ export class ConfluenceConnector {
     }
     form.append('minorEdit', 'true');
 
-    const url = new URL(
-      `/wiki/rest/api/content/${encodeURIComponent(input.pageId)}/child/attachment`,
-      this.instanceUrl,
-    );
-
-    const raw = await this.http.send<RawV1AttachmentResponse>(
-      url,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: this.http.authorization,
-          Accept: 'application/json',
-          // Confluence rejects multipart writes without this XSRF opt-out.
-          'X-Atlassian-Token': 'no-check',
-        },
-        body: form,
-      },
+    // The shared helper adds the XSRF opt-out Confluence demands on multipart.
+    const raw = await this.http.requestMultipart<RawV1AttachmentResponse>(
       'PUT',
+      `/wiki/rest/api/content/${encodeURIComponent(input.pageId)}/child/attachment`,
+      form,
       '/wiki/rest/api/content/{id}/child/attachment',
     );
 

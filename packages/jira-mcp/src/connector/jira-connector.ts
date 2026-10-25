@@ -12,6 +12,8 @@
  * @module
  */
 
+import { z } from 'zod';
+
 import type {
   JiraInstanceConfig,
   AdfDocument,
@@ -19,6 +21,8 @@ import type {
 } from '@softspark/atlassian-mcp-core';
 import { AtlassianHttpClient } from '@softspark/atlassian-mcp-core';
 import type {
+  AttachmentUpload,
+  JiraAttachment,
   JiraIssue,
   JiraIssueDetail,
   JiraComment,
@@ -32,7 +36,10 @@ import type {
   JiraIssueRef,
   JiraProject,
 } from './types.js';
+import { DEFAULT_MEDIA_TYPE } from '../utils/media-type.js';
 import {
+  AttachmentTooLargeError,
+  IssueNotFoundError,
   JiraAuthenticationError,
   JiraConnectionError,
   JiraPermissionError,
@@ -204,6 +211,41 @@ interface RawJiraUserBulkResult {
   readonly values?: readonly RawJiraUser[];
 }
 
+/**
+ * One attachment as Jira returns it, from an upload or from `fields.attachment`.
+ *
+ * Validated with Zod rather than cast, because the upload result is handed
+ * back to an agent as proof that the file landed: a shape drift must fail
+ * loudly instead of reporting an attachment with an empty id.
+ */
+const RawJiraAttachmentSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String),
+  filename: z.string(),
+  mimeType: z.string().optional(),
+  size: z.number().optional(),
+  created: z.string().optional(),
+  content: z.string().optional(),
+  author: z
+    .object({
+      accountId: z.string().optional(),
+      emailAddress: z.string().optional(),
+      displayName: z.string().optional(),
+    })
+    .nullish(),
+});
+
+type RawJiraAttachment = z.infer<typeof RawJiraAttachmentSchema>;
+
+/** `POST /issue/{key}/attachments` answers with an array, one per file part. */
+const RawAttachmentUploadSchema = z.array(RawJiraAttachmentSchema);
+
+/** `GET /issue/{key}?fields=attachment`; the field is absent when empty on some sites. */
+const RawIssueAttachmentsSchema = z.object({
+  fields: z
+    .object({ attachment: z.array(RawJiraAttachmentSchema).nullish() })
+    .optional(),
+});
+
 // ---------------------------------------------------------------------------
 // JiraConnector
 // ---------------------------------------------------------------------------
@@ -224,13 +266,46 @@ function mapJiraError({ status, detail }: HttpFailure): Error {
   return new JiraConnectionError(`Jira API error (${status}): ${detail}`);
 }
 
+/**
+ * Error mapping for the attachment endpoints.
+ *
+ * Narrower than {@link mapJiraError} on purpose: a 404 there means "issue not
+ * found or not visible" and a 413 means "file too large", both of which the
+ * caller can act on. Giving every Jira call those codes would change what
+ * existing tools answer, so only the attachment calls use this mapper.
+ */
+function mapJiraAttachmentError(failure: HttpFailure): Error {
+  const { status, detail } = failure;
+  if (status === 403) {
+    return new JiraPermissionError(
+      `Permission denied: the account may lack Browse Projects or Create Attachments on this project, or attachments are disabled on the site. ${detail}`,
+    );
+  }
+  if (status === 404) {
+    return new IssueNotFoundError(
+      `Issue not found, or not visible to this account: ${detail}`,
+    );
+  }
+  if (status === 413) {
+    return new AttachmentTooLargeError(
+      `Jira refused the attachment as too large (site attachment size limit or the issue's attachment limit): ${detail}`,
+    );
+  }
+  return mapJiraError(failure);
+}
+
 export class JiraConnector {
   private readonly http: AtlassianHttpClient;
+  private readonly attachmentHttp: AtlassianHttpClient;
   readonly instanceUrl: string;
 
   constructor(config: JiraInstanceConfig) {
     this.instanceUrl = config.url;
     this.http = new AtlassianHttpClient(config, mapJiraError);
+    this.attachmentHttp = new AtlassianHttpClient(
+      config,
+      mapJiraAttachmentError,
+    );
   }
 
   // -----------------------------------------------------------------------
@@ -782,6 +857,82 @@ export class JiraConnector {
       id: project.id,
       key: project.key,
       name: project.name ?? project.key,
+    };
+  }
+
+  // -----------------------------------------------------------------------
+  // Attachments
+  // -----------------------------------------------------------------------
+
+  /**
+   * Upload one file as an issue attachment.
+   *
+   * Multipart with the part named `file`, as Jira requires; the shared client
+   * adds `X-Atlassian-Token: no-check`, without which Jira blocks the request.
+   * Jira answers with an array because one request may carry several parts.
+   */
+  async addAttachment(
+    issueKey: string,
+    upload: AttachmentUpload,
+  ): Promise<JiraAttachment[]> {
+    const form = new FormData();
+    form.append(
+      'file',
+      new Blob([upload.content], { type: upload.mediaType }),
+      upload.filename,
+    );
+
+    const raw = await this.attachmentHttp.requestMultipart<unknown>(
+      'POST',
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/attachments`,
+      form,
+      '/rest/api/3/issue/{issueKey}/attachments',
+    );
+
+    const parsed = RawAttachmentUploadSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new JiraConnectionError(
+        `Unexpected attachment upload response from Jira for ${issueKey}: ${parsed.error.message}`,
+      );
+    }
+    return parsed.data.map((a) => this.#toAttachment(a));
+  }
+
+  /** List attachment metadata for an issue. Binary content is never fetched. */
+  async getAttachments(issueKey: string): Promise<JiraAttachment[]> {
+    const raw = await this.attachmentHttp.requestJson<unknown>(
+      'GET',
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
+      undefined,
+      { fields: 'attachment' },
+    );
+
+    const parsed = RawIssueAttachmentsSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new JiraConnectionError(
+        `Unexpected attachment list response from Jira for ${issueKey}: ${parsed.error.message}`,
+      );
+    }
+    return (parsed.data.fields?.attachment ?? []).map((a) =>
+      this.#toAttachment(a),
+    );
+  }
+
+  #toAttachment(a: RawJiraAttachment): JiraAttachment {
+    return {
+      id: a.id,
+      filename: a.filename,
+      mimeType: a.mimeType ?? DEFAULT_MEDIA_TYPE,
+      size: a.size ?? 0,
+      created: a.created ?? '',
+      author: personLabel(a.author),
+      authorAccountId: a.author?.accountId ?? null,
+      contentUrl:
+        a.content ??
+        new URL(
+          `/rest/api/3/attachment/content/${encodeURIComponent(a.id)}`,
+          this.instanceUrl,
+        ).toString(),
     };
   }
 

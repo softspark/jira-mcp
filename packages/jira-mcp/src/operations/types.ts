@@ -13,6 +13,7 @@
  */
 
 import type { TaskData } from '../cache/types.js';
+import type { JiraAttachment } from '../connector/types.js';
 
 // ---------------------------------------------------------------------------
 // Status
@@ -105,6 +106,16 @@ export interface TimeTrackingResult {
   readonly originalEstimate: string | null;
   readonly remainingEstimate: string | null;
   readonly timeSpent: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Attachments
+// ---------------------------------------------------------------------------
+
+/** Attachments of a task: the ones just uploaded, or all of them. */
+export interface AttachmentsResult {
+  readonly taskKey: string;
+  readonly attachments: readonly JiraAttachment[];
 }
 
 // ---------------------------------------------------------------------------

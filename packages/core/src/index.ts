@@ -104,6 +104,7 @@ export {
   asOptionalRecord,
   asOptionalString,
   asOptionalStringArray,
+  parseToolArgs,
   requireString,
 } from './tools/args.js';
 export { assertCommentApproved } from './tools/comment-approval.js';

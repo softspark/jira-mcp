@@ -25,6 +25,7 @@ import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
 import { TaskOperations } from '../operations/task-operations.js';
 import { TempoOperations } from '../operations/tempo-operations.js';
+import { AttachmentOperations } from '../operations/attachment-operations.js';
 
 // Re-exported so the many tool handlers that import from here keep working.
 export type { ToolResult };
@@ -43,6 +44,17 @@ export function getOperations(
 ): TaskOperations {
   const connector = pool.getConnectorForTask(taskKey);
   return new TaskOperations(connector, cacheManager);
+}
+
+/**
+ * Create an {@link AttachmentOperations} instance for the Jira project that
+ * owns the given task key. Attachments are not cached, so no cache manager.
+ */
+export function getAttachmentOperations(
+  pool: InstancePool,
+  taskKey: string,
+): AttachmentOperations {
+  return new AttachmentOperations(pool.getConnectorForTask(taskKey));
 }
 
 /**

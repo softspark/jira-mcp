@@ -17,6 +17,8 @@
  *   +-- JiraConnectionError
  *   |   +-- JiraAuthenticationError
  *   |   +-- JiraPermissionError
+ *   |   +-- IssueNotFoundError
+ *   |   +-- AttachmentTooLargeError
  *   +-- ConfluenceConnectionError
  *   |   +-- ConfluenceAuthenticationError
  *   |   +-- ConfluencePermissionError
@@ -138,6 +140,35 @@ export class JiraPermissionError extends JiraConnectionError {
   constructor(message: string) {
     super(message, 'JIRA_PERMISSION');
     this.name = 'JiraPermissionError';
+  }
+}
+
+/**
+ * Raised when Jira answers 404 for an issue.
+ *
+ * Jira gives the same 404 for an issue that does not exist and for one the
+ * account may not browse, so this is not proof that the issue is absent.
+ * A subclass of {@link JiraConnectionError} so existing handlers that catch
+ * the parent keep working.
+ */
+export class IssueNotFoundError extends JiraConnectionError {
+  constructor(message: string) {
+    super(message, 'ISSUE_NOT_FOUND');
+    this.name = 'IssueNotFoundError';
+  }
+}
+
+/**
+ * Raised when Jira answers 413 to an attachment upload.
+ *
+ * The file is over the site's attachment size setting (1 GB by default on
+ * Jira Cloud, configurable by an admin), or the issue reached its attachment
+ * limit. Retrying the same file cannot succeed.
+ */
+export class AttachmentTooLargeError extends JiraConnectionError {
+  constructor(message: string) {
+    super(message, 'ATTACHMENT_TOO_LARGE');
+    this.name = 'AttachmentTooLargeError';
   }
 }
 

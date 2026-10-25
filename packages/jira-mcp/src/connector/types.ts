@@ -184,3 +184,32 @@ export interface JiraProject {
   readonly key: string;
   readonly name: string;
 }
+
+// ---------------------------------------------------------------------------
+// Attachments
+// ---------------------------------------------------------------------------
+
+/** Metadata of one file attached to an issue. Binary content is never held. */
+export interface JiraAttachment {
+  readonly id: string;
+  readonly filename: string;
+  readonly mimeType: string;
+  /** Size in bytes. */
+  readonly size: number;
+  readonly created: string;
+  /** Uploader's email, or display name when privacy hides it. */
+  readonly author: string | null;
+  readonly authorAccountId: string | null;
+  /** Authenticated download URL (`/rest/api/3/attachment/content/{id}`). */
+  readonly contentUrl: string;
+}
+
+/** A file to upload as an issue attachment. */
+export interface AttachmentUpload {
+  /** Stored name, a basename with no directory part. */
+  readonly filename: string;
+  /** File bytes. Build with `Uint8Array.from(buffer)` to satisfy Blob's type. */
+  readonly content: Uint8Array<ArrayBuffer>;
+  /** `Content-Type` of the multipart part, stored by Jira as `mimeType`. */
+  readonly mediaType: string;
+}

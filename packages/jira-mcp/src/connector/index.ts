@@ -22,4 +22,6 @@ export type {
   JiraTimeTracking,
   JiraIssueRef,
   JiraProject,
+  JiraAttachment,
+  AttachmentUpload,
 } from './types.js';

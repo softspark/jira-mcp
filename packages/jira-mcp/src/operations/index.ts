@@ -8,8 +8,13 @@
 
 export { TaskOperations } from './task-operations.js';
 export { TempoOperations, assertGroupBy } from './tempo-operations.js';
+export {
+  AttachmentOperations,
+  MAX_ATTACHMENT_BYTES,
+} from './attachment-operations.js';
 export { TEMPO_GROUP_KEYS } from './types.js';
 export type {
+  AttachmentsResult,
   TaskUpdateResult,
   CommentResult,
   StatusTransition,

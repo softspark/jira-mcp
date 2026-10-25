@@ -163,10 +163,44 @@ export class AtlassianHttpClient {
   }
 
   /**
+   * Send an authenticated multipart/form-data request, such as a file upload.
+   *
+   * Jira and Confluence both refuse a multipart write that lacks
+   * `X-Atlassian-Token: no-check`: it is their XSRF guard, and the request is
+   * blocked before the body is read. No `Content-Type` is set here on
+   * purpose, because `fetch` derives it from the `FormData`, boundary
+   * included, and a hand-written one would carry no boundary.
+   *
+   * @param errorPath  Path reported to the error mapper. Defaults to `path`;
+   *                   pass a template such as `/issue/{key}/attachments` to
+   *                   keep ids out of error messages.
+   */
+  async requestMultipart<T>(
+    method: string,
+    path: string,
+    form: FormData,
+    errorPath: string = path,
+  ): Promise<T> {
+    return this.send<T>(
+      new URL(path, this.instanceUrl),
+      {
+        method,
+        headers: {
+          Authorization: this.authorization,
+          Accept: 'application/json',
+          'X-Atlassian-Token': 'no-check',
+        },
+        body: form,
+      },
+      method,
+      errorPath,
+    );
+  }
+
+  /**
    * Run a prepared request through the retry loop and status mapping.
    *
-   * Exposed for requests this client cannot assemble itself, such as a
-   * multipart upload whose body must not carry a JSON content type.
+   * Exposed for requests the two helpers above cannot assemble.
    */
   async send<T>(
     url: URL,
