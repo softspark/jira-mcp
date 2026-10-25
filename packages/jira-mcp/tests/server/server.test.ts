@@ -29,6 +29,7 @@ import { createServer, TOOL_DEFINITIONS } from '../../src/server.js';
 // ---------------------------------------------------------------------------
 
 const EXPECTED_TOOL_NAMES: readonly string[] = [
+  'add_task_attachment',
   'add_task_comment',
   'add_templated_comment',
   'create_monthly_tasks',
@@ -41,6 +42,7 @@ const EXPECTED_TOOL_NAMES: readonly string[] = [
   'get_task_time_tracking',
   'get_tempo_report',
   'list_comment_templates',
+  'list_task_attachments',
   'list_task_templates',
   'log_task_time',
   'read_cached_tasks',
@@ -74,8 +76,8 @@ describe('createServer', () => {
 // ---------------------------------------------------------------------------
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has exactly 21 tool definitions', () => {
-    expect(TOOL_DEFINITIONS).toHaveLength(21);
+  it('has exactly 23 tool definitions', () => {
+    expect(TOOL_DEFINITIONS).toHaveLength(23);
   });
 
   it('contains all expected tool names', () => {
@@ -118,6 +120,8 @@ describe('TOOL_DEFINITIONS', () => {
       get_project_language: ['project_key'],
       update_task: ['task_key'],
       search_tasks: ['jql'],
+      add_task_attachment: ['task_key', 'file_path'],
+      list_task_attachments: ['task_key'],
     };
 
     for (const tool of TOOL_DEFINITIONS) {

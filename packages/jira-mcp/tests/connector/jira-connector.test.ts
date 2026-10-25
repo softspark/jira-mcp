@@ -15,6 +15,8 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { JiraConnector } from '../../src/connector/jira-connector';
 import {
+  AttachmentTooLargeError,
+  IssueNotFoundError,
   JiraAuthenticationError,
   JiraConnectionError,
   JiraPermissionError,
@@ -1363,6 +1365,199 @@ describe('JiraConnector', () => {
           { name: 'Done', id: '3' },
         ],
       });
+    });
+  });
+
+  describe('addAttachment', () => {
+    const upload = {
+      filename: 'shot.png',
+      content: Uint8Array.from([0x89, 0x50, 0x4e, 0x47]),
+      mediaType: 'image/png',
+    };
+
+    const createdAttachment = {
+      self: 'https://test.atlassian.net/rest/api/3/attachments/10000',
+      id: '10000',
+      filename: 'shot.png',
+      author: {
+        accountId: 'acc-1',
+        emailAddress: 'dev@example.com',
+        displayName: 'Dev',
+      },
+      created: '2026-10-25T10:00:00.000+0000',
+      size: 4,
+      mimeType: 'image/png',
+      content: 'https://test.atlassian.net/rest/api/3/attachment/content/10000',
+      thumbnail: 'https://test.atlassian.net/rest/api/3/attachment/thumbnail/10000',
+    };
+
+    it('POSTs a multipart form with the file under "file" and the XSRF opt-out', async () => {
+      mockFetch.mockResolvedValue(mockResponse([createdAttachment]));
+
+      await connector.addAttachment('PROJ-1', upload);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe(
+        'https://test.atlassian.net/rest/api/3/issue/PROJ-1/attachments',
+      );
+      expect(init.method).toBe('POST');
+      const headers = init.headers as Record<string, string>;
+      expect(headers['X-Atlassian-Token']).toBe('no-check');
+      expect(headers['Authorization']).toBe(`Basic ${EXPECTED_AUTH_TOKEN}`);
+      expect(headers['Content-Type']).toBeUndefined();
+
+      const form = init.body as FormData;
+      expect(form).toBeInstanceOf(FormData);
+      expect([...form.keys()]).toEqual(['file']);
+      const part = form.get('file') as File;
+      expect(part.name).toBe('shot.png');
+      expect(part.type).toBe('image/png');
+      expect(new Uint8Array(await part.arrayBuffer())).toEqual(upload.content);
+    });
+
+    it('maps the created attachment', async () => {
+      mockFetch.mockResolvedValue(mockResponse([createdAttachment]));
+
+      const result = await connector.addAttachment('PROJ-1', upload);
+
+      expect(result).toEqual([
+        {
+          id: '10000',
+          filename: 'shot.png',
+          mimeType: 'image/png',
+          size: 4,
+          created: '2026-10-25T10:00:00.000+0000',
+          author: 'dev@example.com',
+          authorAccountId: 'acc-1',
+          contentUrl:
+            'https://test.atlassian.net/rest/api/3/attachment/content/10000',
+        },
+      ]);
+    });
+
+    it('fills defaults and builds the content URL when Jira omits them', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse([{ id: 10001, filename: 'notes', author: null }]),
+      );
+
+      const [attachment] = await connector.addAttachment('PROJ-1', upload);
+
+      expect(attachment).toEqual({
+        id: '10001',
+        filename: 'notes',
+        mimeType: 'application/octet-stream',
+        size: 0,
+        created: '',
+        author: null,
+        authorAccountId: null,
+        contentUrl:
+          'https://test.atlassian.net/rest/api/3/attachment/content/10001',
+      });
+    });
+
+    it('encodes the issue key in the path', async () => {
+      mockFetch.mockResolvedValue(mockResponse([createdAttachment]));
+
+      await connector.addAttachment('PROJ 1/x', upload);
+
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toContain('/rest/api/3/issue/PROJ%201%2Fx/attachments');
+    });
+
+    it('rejects a response that is not an attachment array', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ unexpected: true }));
+
+      await expect(connector.addAttachment('PROJ-1', upload)).rejects.toThrow(
+        /Unexpected attachment upload response/,
+      );
+    });
+
+    it.each([
+      [403, JiraPermissionError, 'JIRA_PERMISSION'],
+      [404, IssueNotFoundError, 'ISSUE_NOT_FOUND'],
+      [413, AttachmentTooLargeError, 'ATTACHMENT_TOO_LARGE'],
+      [401, JiraAuthenticationError, 'JIRA_AUTH'],
+      [500, JiraConnectionError, 'JIRA_CONNECTION'],
+    ] as const)(
+      'maps HTTP %i to %o with code %s',
+      async (status, ErrorClass, code) => {
+        mockFetch.mockResolvedValue(mockErrorResponse(status, 'nope'));
+
+        const error = await connector
+          .addAttachment('PROJ-1', upload)
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(ErrorClass);
+        expect((error as { code: string }).code).toBe(code);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      },
+    );
+  });
+
+  describe('getAttachments', () => {
+    it('reads fields=attachment from the issue and maps each entry', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          key: 'PROJ-1',
+          fields: {
+            attachment: [
+              {
+                id: '1',
+                filename: 'a.pdf',
+                mimeType: 'application/pdf',
+                size: 2048,
+                created: '2026-10-25T10:00:00.000+0000',
+                author: { accountId: 'acc-2', displayName: 'Hidden Email' },
+                content: 'https://test.atlassian.net/rest/api/3/attachment/content/1',
+              },
+            ],
+          },
+        }),
+      );
+
+      const attachments = await connector.getAttachments('PROJ-1');
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const parsed = new URL(url);
+      expect(parsed.pathname).toBe('/rest/api/3/issue/PROJ-1');
+      expect(parsed.searchParams.get('fields')).toBe('attachment');
+      expect(init.method).toBe('GET');
+      expect(attachments).toEqual([
+        {
+          id: '1',
+          filename: 'a.pdf',
+          mimeType: 'application/pdf',
+          size: 2048,
+          created: '2026-10-25T10:00:00.000+0000',
+          author: 'Hidden Email',
+          authorAccountId: 'acc-2',
+          contentUrl: 'https://test.atlassian.net/rest/api/3/attachment/content/1',
+        },
+      ]);
+    });
+
+    it('returns an empty list when the issue has no attachment field', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ key: 'PROJ-1', fields: {} }));
+
+      await expect(connector.getAttachments('PROJ-1')).resolves.toEqual([]);
+    });
+
+    it('rejects a malformed attachment entry', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({ fields: { attachment: [{ id: '1' }] } }),
+      );
+
+      await expect(connector.getAttachments('PROJ-1')).rejects.toThrow(
+        /Unexpected attachment list response/,
+      );
+    });
+
+    it('maps a 404 to ISSUE_NOT_FOUND', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(404, 'Issue does not exist'));
+
+      await expect(connector.getAttachments('PROJ-404')).rejects.toBeInstanceOf(
+        IssueNotFoundError,
+      );
     });
   });
 

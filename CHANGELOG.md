@@ -7,6 +7,50 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## Unreleased
+
+Both packages change: Jira gains two tools, Confluence only moves to the
+shared upload helper.
+
+### Added
+
+- **`add_task_attachment`** uploads a local file to an issue
+  (`POST /rest/api/3/issue/{key}/attachments`, multipart field `file`,
+  `X-Atlassian-Token: no-check`). Takes `task_key`, an absolute `file_path`
+  and an optional bare `filename`. The file must exist, be a regular file and
+  be at most 10 MB; that cap is the server's (it holds the file in memory),
+  Jira Cloud's own default is 1 GB. The part's media type comes from the
+  extension (png, jpg/jpeg, gif, webp, pdf, txt, csv, json, zip; otherwise
+  `application/octet-stream`). Returns id, filename, mime type, size, created,
+  author and content URL of the created attachment.
+- **`list_task_attachments`** lists an issue's attachments (metadata only) via
+  `GET /rest/api/3/issue/{key}?fields=attachment`, so an agent can check that
+  an upload landed.
+- **`ISSUE_NOT_FOUND` and `ATTACHMENT_TOO_LARGE`.** The attachment calls map
+  Jira's 404 to `IssueNotFoundError` and its 413 to `AttachmentTooLargeError`,
+  both subclasses of `JiraConnectionError`. Other tools keep answering
+  `JIRA_CONNECTION` for those statuses.
+- **`parseToolArgs()`** in core validates tool arguments with a Zod schema and
+  answers `INVALID_INPUT` naming each bad argument. The attachment tools use it
+  for the task key, the absolute path and the file name.
+
+### Changed
+
+- **One multipart path for both products.** `AtlassianHttpClient.requestMultipart()`
+  sends a `FormData` body with the auth and XSRF headers and lets `fetch` set
+  the boundary. Confluence `upload_attachment` now uses it instead of building
+  the request by hand; its behaviour is unchanged.
+
+### Not done
+
+- **Inline images in comments.** An ADF `media` node needs a Media Services
+  file id, which the public REST API does not return for an uploaded
+  attachment ([JRACLOUD-96384](https://jira.atlassian.com/browse/JRACLOUD-96384)),
+  so `add_task_comment` cannot embed an attachment. Attach the file and name it
+  in the comment.
+
+---
+
 ## v1.16.1 -- Bad arguments stop answering UNKNOWN_ERROR (2026-09-18)
 
 Both packages change in this release.

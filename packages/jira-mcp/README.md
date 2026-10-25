@@ -128,6 +128,8 @@ That unlocks `search_tempo_worklogs` and `get_tempo_report`. Without it every ot
 | `search_tasks` | Search Jira issues with JQL (no caching) | `jql`, `max_results?`, `project_key?` |
 | `search_tempo_worklogs` | List Tempo worklogs in a date range, issue keys and user names resolved | `from`, `to`, `project_key?`, `task_key?`, `user_email?`, `limit?` |
 | `get_tempo_report` | Sum Tempo hours by project, user and/or task | `from`, `to`, `group_by?`, `project_key?`, `task_key?`, `user_email?` |
+| `add_task_attachment` | Upload a local file (10 MB max) as an issue attachment | `task_key`, `file_path` (absolute), `filename?` |
+| `list_task_attachments` | List an issue's attachments (metadata only) | `task_key` |
 
 ## Comment Templates
 
@@ -218,7 +220,7 @@ The URL form is re-fetched on every `ai-toolkit update`, so the rules follow rel
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 21 MCP tools** and **24 CLI commands** reference
+- **All 23 MCP tools** and **24 CLI commands** reference
 
 ### AI Toolkit Hooks
 
@@ -265,7 +267,7 @@ src/
   errors/         Typed error hierarchy
   operations/     Business logic (status, comments, time tracking, Tempo reports)
   templates/      File-backed comment/task template loading and registries
-  tools/          MCP tool handlers (21 tools, one file per tool)
+  tools/          MCP tool handlers (23 tools, one file per tool)
   types/          Shared TypeScript types
   server.ts       MCP server setup and tool registration
   cli.ts          CLI entry point
@@ -289,11 +291,13 @@ src/
 
 **Tempo worklogs and reports** -- `search_tempo_worklogs` and `get_tempo_report` read Tempo Timesheets (Cloud REST API v4) for hours per project, user or task over a date range, with Tempo's numeric ids resolved to issue keys and names through Jira. Needs a Tempo API token (`jira-mcp config set-tempo-token`); nothing else depends on it. See [API Reference](kb/reference/api.md).
 
-**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 561KB library bundle, 1 runtime dep (commander).
+**Attachments** -- `add_task_attachment` uploads a local file (absolute path, 10 MB cap, media type from the extension) to an issue, and `list_task_attachments` lists what is attached so an agent can check the upload. An uploaded image cannot be embedded inline in a comment: ADF media nodes need a Media Services file id, which the public REST API does not return. See [API Reference](kb/reference/api.md).
 
-**Typed error hierarchy** -- 32 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 569KB library bundle, 1 runtime dep (commander).
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1109 tests across 86 test files.
+**Typed error hierarchy** -- 34 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1180 tests across 90 test files.
 
 ## Documentation
 
@@ -301,7 +305,7 @@ src/
 |----------|-------------|
 | [Architecture](kb/reference/architecture.md) | System design and module overview |
 | [Local audit](kb/reference/audit.md) | JSON/SARIF formats, filesystem checks and hook permissions |
-| [API Reference](kb/reference/api.md) | All 21 MCP tools with schemas |
+| [API Reference](kb/reference/api.md) | All 23 MCP tools with schemas |
 | [Configuration](kb/reference/configuration.md) | Config files, env vars, multi-instance |
 | [ADF Format](kb/reference/adf.md) | Atlassian Document Format conversion |
 | [Caching](kb/reference/caching.md) | Task, workflow, and user caching |

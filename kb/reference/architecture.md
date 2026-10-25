@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [architecture, mcp, jira, tempo, typescript, design-patterns]
 version: "1.16.1"
 created: "2026-04-13"
-last_updated: "2026-09-18"
+last_updated: "2026-10-25"
 description: "System architecture, module layout, data flow, and key design patterns for the Jira MCP server."
 ---
 
@@ -74,7 +74,8 @@ src/
 │
 ├── operations/
 │   ├── task-operations.ts  # TaskOperations: status, comment, assign, time log
-│   └── tempo-operations.ts # TempoOperations: Tempo worklogs joined with Jira, reports
+│   ├── tempo-operations.ts # TempoOperations: Tempo worklogs joined with Jira, reports
+│   └── attachment-operations.ts # AttachmentOperations: local file checks (10 MB cap), upload, list
 │
 ├── templates/
 │   ├── built-in.ts        # Built-in CommentTemplates
@@ -108,7 +109,9 @@ src/
     ├── update-task.ts
     ├── get-project-language.ts
     ├── search-tempo-worklogs.ts
-    └── get-tempo-report.ts
+    ├── get-tempo-report.ts
+    ├── add-task-attachment.ts
+    └── list-task-attachments.ts
 ```
 
 ## Layer Diagram
@@ -232,7 +235,9 @@ JiraMcpError (code: string)
 │   └── TempoNotConfiguredError (TEMPO_NOT_CONFIGURED)
 ├── JiraConnectionError (JIRA_CONNECTION)
 │   ├── JiraAuthenticationError (JIRA_AUTH)
-│   └── JiraPermissionError (JIRA_PERMISSION)
+│   ├── JiraPermissionError (JIRA_PERMISSION)
+│   ├── IssueNotFoundError (ISSUE_NOT_FOUND)          # attachment calls only
+│   └── AttachmentTooLargeError (ATTACHMENT_TOO_LARGE) # HTTP 413 on upload
 ├── TempoConnectionError (TEMPO_CONNECTION)
 │   ├── TempoAuthenticationError (TEMPO_AUTH)
 │   └── TempoPermissionError (TEMPO_PERMISSION)

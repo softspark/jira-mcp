@@ -2,10 +2,10 @@
 title: "Jira MCP Server - API Reference"
 category: reference
 service: jira-mcp
-tags: [api, mcp, tools, jira, tempo]
+tags: [api, mcp, tools, jira, tempo, attachments]
 version: "1.16.1"
 created: "2026-04-13"
-last_updated: "2026-09-18"
+last_updated: "2026-10-25"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
@@ -895,6 +895,100 @@ Only the grouped dimensions appear on a row: `project` for `project`, `user` plu
 
 ---
 
+## Attachment Tools (2)
+
+The task key prefix selects the Jira instance, as for every task tool. Both tools validate `task_key` against `PROJ-123` before anything is sent, and answer `INVALID_INPUT` when it does not match.
+
+Jira's 404 on these calls means "issue not found or not visible to this account" and comes back as `ISSUE_NOT_FOUND`; a 413 on upload comes back as `ATTACHMENT_TOO_LARGE`; a 403 stays `JIRA_PERMISSION` (no Browse Projects or Create Attachments permission, or attachments disabled on the site).
+
+**Inline images in comments are not supported.** An ADF `media` node references a Media Services file id, not the attachment id the REST API returns, and Atlassian exposes no public endpoint that maps one to the other ([JRACLOUD-96384](https://jira.atlassian.com/browse/JRACLOUD-96384)). Attach the file and mention its name in the comment instead.
+
+### add_task_attachment
+
+Upload one local file to a task (`POST /rest/api/3/issue/{key}/attachments`, multipart field `file`, header `X-Atlassian-Token: no-check`).
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
+| `file_path` | string | Yes | — | Absolute path of a regular local file. Relative paths are rejected: the server's working directory is not the caller's. |
+| `filename` | string | No | basename of `file_path` | Stored name. A bare file name of 1 to 255 characters, without `/`, `\` or control characters, and not `.` or `..`. |
+
+**Checks before upload** (each answers `INVALID_INPUT`, nothing is sent): the path exists (`File not found`), is readable, is a regular file and not a directory, and is at most 10 MB (10 485 760 bytes). The cap is this server's, because it holds the whole file in memory to build the multipart body. Jira Cloud's own default is 1 GB per file (admin configurable up to 2 GB); a site set lower than 10 MB answers `ATTACHMENT_TOO_LARGE`.
+
+**Media type** comes from the stored name's extension: `png`, `jpg`/`jpeg`, `gif`, `webp`, `pdf`, `txt`, `csv`, `json`, `zip`. Anything else uploads as `application/octet-stream`, which Jira offers as a download rather than a preview.
+
+**Input example**
+
+```json
+{ "task_key": "TPR-195", "file_path": "/Users/me/Desktop/bug.png" }
+```
+
+**Output example**
+
+```json
+{
+  "success": true,
+  "task_key": "TPR-195",
+  "attachments": [
+    {
+      "id": "10432",
+      "filename": "bug.png",
+      "mime_type": "image/png",
+      "size": 48213,
+      "created": "2026-10-25T21:02:11.000+0200",
+      "author": "dev@example.com",
+      "content_url": "https://site.atlassian.net/rest/api/3/attachment/content/10432"
+    }
+  ],
+  "message": "Attached 'bug.png' to TPR-195"
+}
+```
+
+`content_url` needs the same Basic auth as any other REST call. Uploading a name that already exists adds a second attachment with that name; Jira does not version issue attachments.
+
+### list_task_attachments
+
+List the attachments of a task (`GET /rest/api/3/issue/{key}?fields=attachment`). Metadata only, file content is never returned. Use it to confirm an upload.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
+
+**Input example**
+
+```json
+{ "task_key": "TPR-195" }
+```
+
+**Output example**
+
+```json
+{
+  "success": true,
+  "task_key": "TPR-195",
+  "attachments": [
+    {
+      "id": "10432",
+      "filename": "bug.png",
+      "mime_type": "image/png",
+      "size": 48213,
+      "created": "2026-10-25T21:02:11.000+0200",
+      "author": "dev@example.com",
+      "content_url": "https://site.atlassian.net/rest/api/3/attachment/content/10432"
+    }
+  ],
+  "message": "Found 1 attachment(s) on TPR-195"
+}
+```
+
+`author` is the uploader's email, their display name when Atlassian privacy hides the email, or `null`.
+
+---
+
 ## Error Codes
 
 | Code | Class | Trigger |
@@ -903,6 +997,8 @@ Only the grouped dimensions appear on a row: `project` for `project`, `user` plu
 | `CONFIG_VALIDATION` | `ConfigValidationError` | Invalid JSON or schema mismatch |
 | `JIRA_AUTH` | `JiraAuthenticationError` | HTTP 401 from Jira |
 | `JIRA_PERMISSION` | `JiraPermissionError` | HTTP 403 from Jira |
+| `ISSUE_NOT_FOUND` | `IssueNotFoundError` | HTTP 404 from an attachment call: the issue does not exist or this account cannot browse it |
+| `ATTACHMENT_TOO_LARGE` | `AttachmentTooLargeError` | HTTP 413 on upload: over the site's attachment size setting or the issue's attachment limit |
 | `JIRA_CONNECTION` | `JiraConnectionError` | Any other Jira API error |
 | `TEMPO_NOT_CONFIGURED` | `TempoNotConfiguredError` | A Tempo tool was called for a site with no `tempo_token` |
 | `TEMPO_AUTH` | `TempoAuthenticationError` | HTTP 401 from Tempo |

@@ -64,9 +64,9 @@ Only the non-obvious rules live here. Full agent rules in `rules/jira-mcp.md` an
 - **Prose style for generated content**: plain, workmanlike tone, no em dash and no `--` separator in comments, descriptions, or docs.
 
 ## MCP Tools
-21 tools registered in `src/tools/definitions.ts`:
-- **Read**: `sync_tasks`, `read_cached_tasks`, `search_tasks`, `get_task_details`, `get_task_statuses`, `get_project_language`, `get_task_time_tracking`, `search_tempo_worklogs`, `get_tempo_report`
-- **Mutate**: `update_task`, `update_task_status`, `reassign_task`, `add_task_comment`, `add_templated_comment`, `log_task_time`, `create_task`, `create_monthly_tasks`
+23 tools registered in `src/tools/definitions.ts`:
+- **Read**: `sync_tasks`, `read_cached_tasks`, `search_tasks`, `get_task_details`, `get_task_statuses`, `get_project_language`, `get_task_time_tracking`, `search_tempo_worklogs`, `get_tempo_report`, `list_task_attachments`
+- **Mutate**: `update_task`, `update_task_status`, `reassign_task`, `add_task_comment`, `add_templated_comment`, `log_task_time`, `create_task`, `create_monthly_tasks`, `add_task_attachment`
 - **Delete (guarded)**: `delete_task`, `delete_comment`
 - **Templates**: `list_comment_templates`, `list_task_templates`
 
