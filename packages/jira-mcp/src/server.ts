@@ -61,6 +61,8 @@ import { handleSearchTasks } from './tools/search-tasks.js';
 import { handleCreateMonthlyTasks } from './tools/create-monthly-tasks.js';
 import { handleSearchTempoWorklogs } from './tools/search-tempo-worklogs.js';
 import { handleGetTempoReport } from './tools/get-tempo-report.js';
+import { handleAddTaskAttachment } from './tools/add-task-attachment.js';
+import { handleListTaskAttachments } from './tools/list-task-attachments.js';
 
 import type { JiraConnector } from './connector/jira-connector.js';
 
@@ -374,6 +376,22 @@ export async function startServer(): Promise<void> {
             user_email: asOptionalString(args['user_email']),
           },
           { pool, config },
+        );
+
+      case 'add_task_attachment':
+        return handleAddTaskAttachment(
+          {
+            task_key: requireString(args['task_key'], 'task_key'),
+            file_path: requireString(args['file_path'], 'file_path'),
+            filename: asOptionalString(args['filename']),
+          },
+          { pool },
+        );
+
+      case 'list_task_attachments':
+        return handleListTaskAttachments(
+          { task_key: requireString(args['task_key'], 'task_key') },
+          { pool },
         );
 
       default:

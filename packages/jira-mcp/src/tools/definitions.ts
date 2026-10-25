@@ -547,4 +547,44 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       required: ['from', 'to'],
     },
   },
+  {
+    name: 'add_task_attachment',
+    description:
+      'Upload a local file to a Jira task as an attachment. The task key prefix selects the Jira instance. Files above 10 MB are rejected. The media type comes from the extension (png, jpg, jpeg, gif, webp, pdf, txt, csv, json, zip; anything else uploads as application/octet-stream). Returns the created attachment with id, filename, mime_type, size and content_url. An uploaded image cannot be shown inline in a comment through this server: Jira needs a Media Services id for that, which the REST API does not return.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_key: {
+          type: 'string',
+          description: 'Task key (e.g. "PROJ-123").',
+        },
+        file_path: {
+          type: 'string',
+          description:
+            'Absolute path of a local regular file to upload. Relative paths are rejected because the server does not run in your working directory.',
+        },
+        filename: {
+          type: 'string',
+          description:
+            'Optional stored name, a bare file name without "/" or "\\". Defaults to the basename of file_path. Its extension also picks the media type.',
+        },
+      },
+      required: ['task_key', 'file_path'],
+    },
+  },
+  {
+    name: 'list_task_attachments',
+    description:
+      'List the attachments of a Jira task: id, filename, mime_type, size, created, author and content_url. Metadata only, file content is never returned. Use it to verify an add_task_attachment upload.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_key: {
+          type: 'string',
+          description: 'Task key (e.g. "PROJ-123").',
+        },
+      },
+      required: ['task_key'],
+    },
+  },
 ];

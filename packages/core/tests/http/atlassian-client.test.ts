@@ -306,4 +306,48 @@ describe('AtlassianHttpClient', () => {
       expect((init.headers as Record<string, string>)['X-Custom']).toBe('1');
     });
   });
+
+  describe('requestMultipart', () => {
+    it('sends the form with auth and the XSRF opt-out, and no hand-set content type', async () => {
+      mockFetch.mockResolvedValue(mockResponse([{ id: '1' }]));
+      const form = new FormData();
+      form.append('file', new Blob(['x']), 'x.txt');
+
+      const result = await client.requestMultipart<unknown>(
+        'POST',
+        '/rest/api/3/issue/PROJ-1/attachments',
+        form,
+      );
+
+      expect(result).toEqual([{ id: '1' }]);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('https://test.atlassian.net/rest/api/3/issue/PROJ-1/attachments');
+      expect(init.method).toBe('POST');
+      expect(init.body).toBe(form);
+      const headers = init.headers as Record<string, string>;
+      expect(headers['X-Atlassian-Token']).toBe('no-check');
+      expect(headers['Authorization']).toBe(client.authorization);
+      expect(headers['Accept']).toBe('application/json');
+      // fetch must derive the multipart boundary itself.
+      expect(headers['Content-Type']).toBeUndefined();
+    });
+
+    it('reports the error path to the mapper, defaulting to the request path', async () => {
+      const seen: string[] = [];
+      const recording = new AtlassianHttpClient(CONFIG, (failure) => {
+        seen.push(failure.path);
+        return new TestError(failure.status, failure.detail);
+      });
+      mockFetch.mockResolvedValue(mockResponse('gone', 404));
+
+      await expect(
+        recording.requestMultipart('POST', '/upload/42', new FormData()),
+      ).rejects.toBeInstanceOf(TestError);
+      await expect(
+        recording.requestMultipart('POST', '/upload/42', new FormData(), '/upload/{id}'),
+      ).rejects.toBeInstanceOf(TestError);
+
+      expect(seen).toEqual(['/upload/42', '/upload/{id}']);
+    });
+  });
 });
