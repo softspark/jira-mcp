@@ -7,7 +7,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v1.17.0 -- Attachments on Jira issues (2026-10-25)
 
 Both packages change: Jira gains two tools, Confluence only moves to the
 shared upload helper.

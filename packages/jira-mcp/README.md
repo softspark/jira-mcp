@@ -4,19 +4,17 @@
 
 [![Publish](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.16.1-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.17.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.16.1
+## What's New in v1.17.0
 
-- **A rejected call says so.** Every argument check used to answer `UNKNOWN_ERROR`, which reads as "something broke". They now answer `INVALID_INPUT`: a missing argument, `template_id` together with `markdown`, an update with nothing to change, a time like `2d`, a malformed Tempo date or `group_by`. Nothing reaches Jira, and the message names what to pass.
-- A template rendered without a required variable answers `TEMPLATE_MISSING_VAR`, as the API reference always said it did.
-- If a client matched on `UNKNOWN_ERROR` to detect a bad call, match on the new codes instead. `UNKNOWN_ERROR` is left for failures nobody anticipated.
-- **From 1.16.0: `creator` and `reporter` on every task read.** `search_tasks`, `get_task_details`, `sync_tasks` and `read_cached_tasks` now say who filed an issue and who it is reported by. Before, neither field reached a response, so "who raised this bug" had no answer.
-- Both hold the email, or the display name when Atlassian privacy settings hide the email, and `null` when Jira returns none. To filter by them, use JQL: `creator = "pm@example.com"` or `reporter = currentUser()`.
-- An existing task cache keeps loading. Rows cached before the upgrade read `null` for both fields until the next `sync_tasks`.
+- **Attach a file to an issue.** `add_task_attachment` uploads a local file (screenshot, PDF, log) to a task: `task_key`, an absolute `file_path` and an optional `filename`. Files up to 10 MB; the media type comes from the extension. Before, adding a screenshot to a task meant calling the REST API by hand.
+- **Check what is attached.** `list_task_attachments` returns id, name, type, size, author and date of every attachment, so an upload can be verified.
+- A missing issue answers `ISSUE_NOT_FOUND` and a file Jira refuses as too large answers `ATTACHMENT_TOO_LARGE` on these two tools; every other tool answers as before.
+- Images are attached, not shown inline in a comment: Jira's comment format needs a Media Services id that its public API does not hand out. Name the attached file in the comment instead.
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ## Table of Contents
