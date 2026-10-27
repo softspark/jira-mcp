@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.18.1 -- get_page field name in the docs (2026-10-27)
+
+Confluence only; Jira is unchanged and moves to the shared version.
+
+### Fixed
+
+- **`get_page` documented a field that does not exist** -- the tool
+  description, `rules/confluence-mcp.md`, the README and the KB told callers to
+  read `has_storage_markup`, while the response has always carried
+  `page.hasStorageMarkup`. An agent following the docs never saw the flag and
+  could not tell a macro-bearing page in advance. Pages stayed safe:
+  `update_page` refuses markdown over such a page with `MARKUP_LOSS_REFUSED`
+  either way. The response is unchanged; the docs now name the real field and
+  a test ties the description to it. Found in the 1.18.0 post-release run.
+
 ## v1.18.0 -- Comment visibility and internal notes (2026-10-27)
 
 Jira gains restricted comments and worklogs, Service Management internal

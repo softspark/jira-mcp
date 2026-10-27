@@ -3,16 +3,17 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.18.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.18.1-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
 
 ---
 
-## What's New in v1.18.0
+## What's New in v1.18.1
 
-- **No change in behaviour.** The shared `config.json` accepts two new optional Jira fields, `default_comment` and `projects.<KEY>.default_comment`, written by `@softspark/jira-mcp`. Confluence ignores them. Same 31 tools, same commands, same config path.
+- **`get_page` docs name the real field.** The response carries `page.hasStorageMarkup`; the tool description and the agent rule used to say `has_storage_markup`, which never exists. Read `page.hasStorageMarkup` before editing a page: `true` means macros or page links, so edit it as `storage`. The response itself did not change.
+- 1.18.0 changed nothing here: the shared `config.json` only gained two optional Jira fields (`default_comment`, `projects.<KEY>.default_comment`) that Confluence ignores.
 - Released together with `@softspark/jira-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ---
