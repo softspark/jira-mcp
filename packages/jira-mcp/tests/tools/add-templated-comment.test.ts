@@ -19,6 +19,9 @@ import {
   asCacheManager,
   asRegistry,
 } from '../fixtures/mocks';
+import { createMergedConfig } from '@softspark/atlassian-mcp-core/test-fixtures';
+
+const TEST_CONFIG = createMergedConfig();
 
 vi.mock('../../src/operations/task-operations', () => ({
   TaskOperations: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
@@ -80,6 +83,7 @@ describe('handleAddTemplatedComment', () => {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
         templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
       },
     );
 
@@ -98,6 +102,7 @@ describe('handleAddTemplatedComment', () => {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
         templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
       },
     );
 
@@ -140,6 +145,7 @@ describe('handleAddTemplatedComment', () => {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
         templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
       },
     );
 
@@ -173,6 +179,7 @@ describe('handleAddTemplatedComment', () => {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
         templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
       },
     );
 
@@ -202,6 +209,7 @@ describe('handleAddTemplatedComment', () => {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
         templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
       },
     );
 
@@ -226,6 +234,7 @@ describe('handleAddTemplatedComment', () => {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
         templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
       },
     );
 
@@ -241,11 +250,98 @@ describe('handleAddTemplatedComment', () => {
         pool: asPool(pool),
         cacheManager: asCacheManager(cache),
         templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
       },
     );
 
     expect(result.isError).toBe(true);
     const parsed = parseResult(result);
     expect(parsed['code']).toBe('COMMENT_APPROVAL_REQUIRED');
+  });
+
+  it('passes visibility to addComment and returns the stored restriction', async () => {
+    const { pool, cache, registry } = setupDeps();
+    const visibility = { type: 'group', identifier: 'group-id-1' };
+    const addComment = vi.fn().mockResolvedValue({
+      taskKey: 'PROJ-1',
+      commentId: 'c-3',
+      author: 'user@example.com',
+      bodyMarkdown: 'Internal',
+      created: '2026-01-01T00:00:00.000Z',
+      visibility: { ...visibility, value: 'jira-developers' },
+    });
+
+    const { TaskOperations } = await import('../../src/operations/task-operations');
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.addComment = addComment;
+    });
+
+    const result = await handleAddTemplatedComment(
+      { task_key: 'PROJ-1', markdown: 'Internal', user_approved: true, visibility },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
+      },
+    );
+
+    expect(addComment).toHaveBeenCalledWith('PROJ-1', 'Internal', { visibility });
+    const comment = parseResult(result)['comment'] as Record<string, unknown>;
+    expect(comment['visibility']).toEqual({ ...visibility, value: 'jira-developers' });
+  });
+
+  it('passes internal to addComment and reports it', async () => {
+    const { pool, cache, registry } = setupDeps();
+    const addComment = vi.fn().mockResolvedValue({
+      taskKey: 'SD-1',
+      commentId: 'c-4',
+      author: 'agent@example.com',
+      bodyMarkdown: 'Internal',
+      created: '2026-01-01T00:00:00.000Z',
+      visibility: null,
+      internal: true,
+    });
+
+    const { TaskOperations } = await import('../../src/operations/task-operations');
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.addComment = addComment;
+    });
+
+    const result = await handleAddTemplatedComment(
+      { task_key: 'SD-1', markdown: 'Internal', user_approved: true, internal: true },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
+      },
+    );
+
+    expect(addComment).toHaveBeenCalledWith('SD-1', 'Internal', { internal: true });
+    const comment = parseResult(result)['comment'] as Record<string, unknown>;
+    expect(comment['internal']).toBe(true);
+  });
+
+  it('rejects a group visibility with neither name nor id', async () => {
+    const { pool, cache, registry } = setupDeps();
+
+    const result = await handleAddTemplatedComment(
+      {
+        task_key: 'PROJ-1',
+        markdown: 'Internal',
+        user_approved: true,
+        visibility: { type: 'group' },
+      },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        templateRegistry: asRegistry(registry),
+        config: TEST_CONFIG,
+      },
+    );
+
+    expect(result.isError).toBe(true);
+    expect(parseResult(result)['code']).toBe('INVALID_INPUT');
   });
 });

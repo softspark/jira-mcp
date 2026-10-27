@@ -555,6 +555,63 @@ describe('Attachment tool dispatch', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Visibility forwarding
+// ---------------------------------------------------------------------------
+
+describe('Visibility dispatch', () => {
+  const visibility = { type: 'role', value: 'Administrators' };
+
+  it('forwards visibility and internal untouched to add_task_comment', async () => {
+    const { handleAddTaskComment } = await import('../../src/tools/add-task-comment.js');
+
+    await callToolHandler({
+      params: {
+        name: 'add_task_comment',
+        arguments: { task_key: 'PROJ0-1', comment: 'x', user_approved: true, visibility, internal: true },
+      },
+    });
+
+    expect(vi.mocked(handleAddTaskComment)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visibility, internal: true }),
+      expect.anything(),
+    );
+  });
+
+  it('forwards visibility and internal untouched to add_templated_comment', async () => {
+    const { handleAddTemplatedComment } = await import('../../src/tools/add-templated-comment.js');
+
+    await callToolHandler({
+      params: {
+        name: 'add_templated_comment',
+        arguments: { task_key: 'PROJ0-1', markdown: 'x', user_approved: true, visibility, internal: 'yes' },
+      },
+    });
+
+    // Validation is the handler's job, so a wrong type must reach it unchanged.
+    expect(vi.mocked(handleAddTemplatedComment)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visibility, internal: 'yes' }),
+      expect.anything(),
+    );
+  });
+
+  it('forwards visibility untouched to log_task_time', async () => {
+    const { handleLogTaskTime } = await import('../../src/tools/log-task-time.js');
+
+    await callToolHandler({
+      params: {
+        name: 'log_task_time',
+        arguments: { task_key: 'PROJ0-1', time_spent: '1h', visibility },
+      },
+    });
+
+    expect(vi.mocked(handleLogTaskTime)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visibility }),
+      expect.anything(),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // asOptionalString behavior (via CallTool dispatch)
 //
 // asOptionalString returns undefined for non-string values, which is

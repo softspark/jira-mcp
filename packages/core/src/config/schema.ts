@@ -34,6 +34,29 @@ export type LanguageCode = z.infer<typeof LanguageCodeSchema>;
 export const DEFAULT_LANGUAGE: LanguageCode = 'pl';
 
 // ---------------------------------------------------------------------------
+// Default comment audience (Jira Service Management)
+// ---------------------------------------------------------------------------
+
+/**
+ * What a comment posted without an explicit `internal` flag becomes in a
+ * Jira Service Management project: an internal note (agents only) or a
+ * public reply the customer sees and is e-mailed. Other project types have
+ * no such distinction and ignore the setting.
+ */
+export const COMMENT_DEFAULTS = ['internal', 'public'] as const;
+
+export const CommentDefaultSchema = z.enum(COMMENT_DEFAULTS);
+
+export type CommentDefault = z.infer<typeof CommentDefaultSchema>;
+
+/**
+ * Public unless a project opts in to internal. That is what Jira itself does
+ * and what this server did before the setting existed, so an upgrade never
+ * silently stops replies from reaching customers.
+ */
+export const DEFAULT_COMMENT: CommentDefault = 'public';
+
+// ---------------------------------------------------------------------------
 // config.json schemas
 // ---------------------------------------------------------------------------
 
@@ -41,6 +64,7 @@ export const DEFAULT_LANGUAGE: LanguageCode = 'pl';
 export const ProjectConfigSchema = z.object({
   url: z.string().url(),
   language: LanguageCodeSchema.optional(),
+  default_comment: CommentDefaultSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -101,6 +125,7 @@ export const ConfigFileSchema = z
     projects: z.record(z.string(), ProjectConfigSchema),
     default_project: z.string(),
     default_language: LanguageCodeSchema.optional(),
+    default_comment: CommentDefaultSchema.optional(),
     spaces: z.record(z.string(), SpaceConfigSchema).optional(),
     default_space: z.string().optional(),
     default_format: BodyFormatSchema.optional(),
@@ -160,6 +185,8 @@ export const JiraInstanceConfigSchema = z.object({
   api_token: z.string().min(1),
   language: LanguageCodeSchema,
   tempo_token: z.string().min(1).optional(),
+  /** The project's own value, else config.json's global one. Unset means {@link DEFAULT_COMMENT}. */
+  default_comment: CommentDefaultSchema.optional(),
 });
 
 /** Schema for the complete, merged configuration used at runtime. */

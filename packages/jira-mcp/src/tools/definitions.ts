@@ -26,6 +26,38 @@ export interface ToolDefinition {
 }
 
 // ---------------------------------------------------------------------------
+// Shared properties
+// ---------------------------------------------------------------------------
+
+/** Jira's visibility object, shared by the comment and worklog tools. */
+const VISIBILITY_PROPERTY = {
+  type: 'object',
+  description:
+    'Optional restriction. Omit it and everyone who can browse the issue sees the item. ' +
+    'Role: {"type": "role", "value": "Administrators"}. ' +
+    'Group by name: {"type": "group", "value": "jira-developers"}, ' +
+    'or by group id, which survives a rename: {"type": "group", "identifier": "<groupId>"}.',
+  properties: {
+    type: { type: 'string', enum: ['group', 'role'] },
+    value: { type: 'string', description: 'Role name, or group name.' },
+    identifier: { type: 'string', description: 'Group id.' },
+  },
+  required: ['type'],
+  additionalProperties: false,
+} as const;
+
+/** Service Management internal note flag, shared by both comment tools. */
+const INTERNAL_PROPERTY = {
+  type: 'boolean',
+  description:
+    'Jira Service Management only. true posts an internal note that agents see and the customer does not; ' +
+    'false posts a public reply that reaches the customer by e-mail. Omitted, the project\'s configured ' +
+    'default applies, which is public unless the project is set to internal. Pass it explicitly whenever ' +
+    'you know which one the user wants. true is refused with INVALID_INPUT outside a service project; ' +
+    'use visibility there. The result says which one was posted.',
+} as const;
+
+// ---------------------------------------------------------------------------
 // Definitions
 // ---------------------------------------------------------------------------
 
@@ -105,6 +137,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           description:
             'Must be true only after the user explicitly approves posting this comment.',
         },
+        visibility: VISIBILITY_PROPERTY,
+        internal: INTERNAL_PROPERTY,
       },
       required: ['task_key', 'comment'],
     },
@@ -223,6 +257,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           type: 'string',
           description: 'Optional work description.',
         },
+        visibility: VISIBILITY_PROPERTY,
       },
       required: ['task_key', 'time_spent'],
     },
@@ -290,6 +325,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           description:
             'Must be true only after the user explicitly approves posting this comment.',
         },
+        visibility: VISIBILITY_PROPERTY,
+        internal: INTERNAL_PROPERTY,
       },
       required: ['task_key'],
     },

@@ -279,6 +279,7 @@ export async function loadConfig(
   const mergedProjects: Record<string, JiraInstanceConfig> = {};
   for (const [key, project] of Object.entries(config.projects)) {
     const cred = resolveCredentialForUrl(normalized, project.url);
+    const defaultComment = project.default_comment ?? config.default_comment;
     // The Tempo token travels with the credential that won for this URL and
     // never falls back across entries: a Tempo token is bound to one site, so
     // borrowing the default's token for an overridden instance would only
@@ -291,6 +292,7 @@ export async function loadConfig(
       ...(cred.tempo_token !== undefined
         ? { tempo_token: cred.tempo_token }
         : {}),
+      ...(defaultComment !== undefined ? { default_comment: defaultComment } : {}),
     };
 
     // Validate the merged instance

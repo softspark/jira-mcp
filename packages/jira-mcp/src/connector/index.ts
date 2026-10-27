@@ -17,6 +17,8 @@ export type {
   JiraIssue,
   JiraIssueDetail,
   JiraComment,
+  CommentOptions,
+  JiraVisibility,
   JiraTransition,
   JiraWorklog,
   JiraTimeTracking,

@@ -29,6 +29,8 @@ import type { UserCacheManager } from '../../src/cache/user-cache';
 interface MockJiraConnector {
   searchIssues: ReturnType<typeof vi.fn>;
   getIssue: ReturnType<typeof vi.fn>;
+  getInternalCommentIds: ReturnType<typeof vi.fn>;
+  getProjectTypeKey: ReturnType<typeof vi.fn>;
   addComment: ReturnType<typeof vi.fn>;
   deleteIssue: ReturnType<typeof vi.fn>;
   deleteComment: ReturnType<typeof vi.fn>;
@@ -58,6 +60,8 @@ export function createMockConnector(
   return {
     searchIssues: vi.fn(),
     getIssue: vi.fn(),
+    getInternalCommentIds: vi.fn().mockResolvedValue(new Set<string>()),
+    getProjectTypeKey: vi.fn(),
     addComment: vi.fn(),
     deleteIssue: vi.fn(),
     deleteComment: vi.fn(),

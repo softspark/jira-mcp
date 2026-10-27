@@ -19,6 +19,8 @@ import type { JiraConnector } from '../connector/jira-connector.js';
 import type { CacheManager } from '../cache/manager.js';
 import type { TaskData } from '../cache/types.js';
 import type {
+  AddCommentOptions,
+  LogTimeOptions,
   TaskUpdateResult,
   CommentResult,
   DeleteCommentResult,
@@ -32,12 +34,17 @@ import type {
 import { markdownToAdf, adfToMarkdown } from '@softspark/atlassian-mcp-core';
 import { parseTimeSpent } from '../connector/time-parser.js';
 import {
+  DEFAULT_COMMENT,
+  InvalidInputError,
   JiraConnectionError,
   OwnershipError,
   CommentNotFoundError,
   TaskNotFoundError,
   CacheNotFoundError,
 } from '@softspark/atlassian-mcp-core';
+
+/** `projectTypeKey` of a Jira Service Management project. */
+const SERVICE_PROJECT_TYPE = 'service_desk';
 
 // ---------------------------------------------------------------------------
 // TaskOperations
@@ -120,13 +127,26 @@ export class TaskOperations {
    *
    * Converts the markdown to ADF before sending to the Jira v3 API,
    * then converts the response body back to markdown for the result.
+   *
+   * An explicit `internal` wins. Without it a service project falls back to
+   * `serviceDefault` (public unless the project is set to internal), and any
+   * other project type posts an ordinary comment.
+   *
+   * @throws {InvalidInputError} When `internal: true` is asked for outside a
+   *   service project, where Jira would store the flag and still show the
+   *   comment to everyone.
    */
   async addComment(
     taskKey: string,
     markdownComment: string,
+    options: AddCommentOptions = {},
   ): Promise<CommentResult> {
+    const internal = await this.resolveInternal(taskKey, options);
     const adfBody = markdownToAdf(markdownComment);
-    const comment = await this.connector.addComment(taskKey, adfBody);
+    const comment = await this.connector.addComment(taskKey, adfBody, {
+      ...(options.visibility ? { visibility: options.visibility } : {}),
+      ...(internal ? { internal: true } : {}),
+    });
 
     return {
       taskKey,
@@ -134,7 +154,31 @@ export class TaskOperations {
       author: comment.author,
       bodyMarkdown: adfToMarkdown(comment.body),
       created: comment.created,
+      visibility: comment.visibility,
+      internal,
     };
+  }
+
+  private async resolveInternal(
+    taskKey: string,
+    options: AddCommentOptions,
+  ): Promise<boolean> {
+    if (options.internal === false) {
+      return false;
+    }
+    const projectKey = taskKey.split('-')[0] ?? '';
+    const projectType = await this.connector.getProjectTypeKey(projectKey);
+    const isServiceProject = projectType === SERVICE_PROJECT_TYPE;
+    if (options.internal === true && !isServiceProject) {
+      throw new InvalidInputError(
+        `internal comments exist only in Jira Service Management projects, and ${projectKey} is ` +
+          `${projectType ?? 'of unknown type'}. Use visibility to limit the comment to a role or group.`,
+      );
+    }
+    if (options.internal === true) {
+      return true;
+    }
+    return isServiceProject && (options.serviceDefault ?? DEFAULT_COMMENT) === 'internal';
   }
 
   /**
@@ -200,10 +244,15 @@ export class TaskOperations {
    * Get full task details with description and comments as markdown.
    *
    * Fetches the issue from Jira and converts all ADF content
-   * (description and comment bodies) to readable markdown.
+   * (description and comment bodies) to readable markdown. Comment
+   * properties come from a second call, because the issue's comment field
+   * never carries them.
    */
   async getTaskDetails(taskKey: string): Promise<TaskDetail> {
-    const issue = await this.connector.getIssue(taskKey);
+    const [issue, internalIds] = await Promise.all([
+      this.connector.getIssue(taskKey),
+      this.connector.getInternalCommentIds(taskKey),
+    ]);
 
     const markdownComments: MarkdownComment[] = issue.comments.map(
       (c): MarkdownComment => ({
@@ -211,6 +260,8 @@ export class TaskOperations {
         author: c.author,
         body: adfToMarkdown(c.body),
         created: c.created,
+        visibility: c.visibility,
+        internal: internalIds.has(c.id),
       }),
     );
 
@@ -264,7 +315,7 @@ export class TaskOperations {
    * Log work time on a task.
    *
    * Accepts human-readable time format ("2h 30m"), converts to seconds,
-   * and optionally attaches a markdown comment.
+   * and optionally attaches a markdown comment and a visibility restriction.
    *
    * After logging, the task is removed from cache to force a refresh
    * on next read (time tracking data changed).
@@ -274,16 +325,14 @@ export class TaskOperations {
   async logTime(
     taskKey: string,
     timeSpent: string,
-    comment?: string,
+    options: LogTimeOptions = {},
   ): Promise<WorklogResult> {
     const seconds = parseTimeSpent(timeSpent);
 
-    const adfComment = comment ? markdownToAdf(comment) : undefined;
-    const worklog = await this.connector.addWorklog(
-      taskKey,
-      seconds,
-      adfComment,
-    );
+    const worklog = await this.connector.addWorklog(taskKey, seconds, {
+      ...(options.comment ? { comment: markdownToAdf(options.comment) } : {}),
+      ...(options.visibility ? { visibility: options.visibility } : {}),
+    });
 
     // Invalidate cache -- time tracking data changed
     try {
@@ -299,6 +348,7 @@ export class TaskOperations {
       worklogId: worklog.id,
       timeSpent,
       timeSpentSeconds: worklog.timeSpentSeconds,
+      visibility: worklog.visibility,
     };
   }
 

@@ -97,6 +97,8 @@ That unlocks `search_tempo_worklogs` and `get_tempo_report`. Without it every ot
 | `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-language <lang>` | Set global default language |
 | `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |
+| `jira-mcp config set-comment-default <internal\|public>` | Service Management: what a comment without an explicit `internal` flag becomes, all projects (default `public`) |
+| `jira-mcp config set-project-comment-default <key> <internal\|public>` | Same for one project, overriding the global value |
 | `jira-mcp cache sync-workflows` | Sync workflow status transitions |
 | `jira-mcp cache sync-users` | Sync user list for reassignment |
 | `jira-mcp cache list-workflows` | Show cached workflows |
@@ -110,18 +112,18 @@ That unlocks `search_tempo_worklogs` and `get_tempo_report`. Without it every ot
 | `read_cached_tasks` | Read tasks from cache without hitting Jira | `task_key?` |
 | `update_task_status` | Change task status via workflow transition | `task_key`, `status` |
 | `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?`, `original_estimate?`, `remaining_estimate?` |
-| `add_task_comment` | Add a markdown comment (auto-converted to ADF) | `task_key`, `comment`, `user_approved` |
+| `add_task_comment` | Add a markdown comment (auto-converted to ADF), optionally limited to a role or group, or a Service Management internal note | `task_key`, `comment`, `user_approved`, `visibility?`, `internal?` |
 | `delete_task` | Delete a task, only when the authenticated user is the task creator | `task_key`, `user_approved` |
 | `delete_comment` | Delete a comment, only when the authenticated user is the comment author | `task_key`, `comment_id`, `user_approved` |
 | `reassign_task` | Reassign or unassign a task | `task_key`, `assignee_email?` |
 | `get_task_statuses` | Get valid workflow transitions for a task | `task_key` |
 | `get_task_details` | Get full details with description, comments, and language | `task_key` |
 | `get_project_language` | Get configured language for a project | `project_key` |
-| `log_task_time` | Log work time (`"2h 30m"` format, no days) | `task_key`, `time_spent`, `comment?` |
+| `log_task_time` | Log work time (`"2h 30m"` format, no days) | `task_key`, `time_spent`, `comment?`, `visibility?` |
 | `get_task_time_tracking` | Get time tracking info (estimate, spent, remaining) | `task_key` |
 | `list_comment_templates` | List available comment templates | `category?` |
 | `list_task_templates` | List available task templates for `create_task` | — |
-| `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?`, `user_approved` |
+| `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?`, `user_approved`, `visibility?`, `internal?` |
 | `create_task` | Create a new Jira issue with explicit fields or a task template | `project_key`, `summary?`, `template_id?`, `variables?`, `description?`, `assignee_email?`, `labels?`, `epic_key?`, `parent_key?`, `original_estimate?` |
 | `search_tasks` | Search Jira issues with JQL (no caching) | `jql`, `max_results?`, `project_key?` |
 | `search_tempo_worklogs` | List Tempo worklogs in a date range, issue keys and user names resolved | `from`, `to`, `project_key?`, `task_key?`, `user_email?`, `limit?` |
@@ -218,7 +220,7 @@ The URL form is re-fetched on every `ai-toolkit update`, so the rules follow rel
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 23 MCP tools** and **24 CLI commands** reference
+- **All 23 MCP tools** and **26 CLI commands** reference
 
 ### AI Toolkit Hooks
 
@@ -295,7 +297,7 @@ src/
 
 **Typed error hierarchy** -- 34 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1180 tests across 90 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1234 tests across 92 test files.
 
 ## Documentation
 

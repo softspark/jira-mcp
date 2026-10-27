@@ -951,6 +951,135 @@ describe('JiraConnector', () => {
       expect(comment.author).toBe('author@example.com');
       expect(comment.authorAccountId).toBe('author-1');
       expect(comment.body).toEqual(adfBody);
+      expect(comment.visibility).toBeNull();
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ body: adfBody });
+    });
+
+    it('sends visibility and maps it back from the response', async () => {
+      // Arrange
+      const adfBody = { type: 'doc' as const, version: 1 as const, content: [] };
+      const visibility = { type: 'role' as const, value: 'Administrators' };
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          id: '10101',
+          body: adfBody,
+          created: '2024-01-03T00:00:00.000Z',
+          visibility: { type: 'role', value: 'Administrators', identifier: 'Administrators' },
+        }),
+      );
+
+      // Act
+      const comment = await connector.addComment('PROJ-1', adfBody, { visibility });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ body: adfBody, visibility });
+      expect(comment.visibility).toEqual({
+        type: 'role',
+        value: 'Administrators',
+        identifier: 'Administrators',
+      });
+    });
+
+    it('marks an internal note with the sd.public.comment property', async () => {
+      // Arrange
+      const adfBody = { type: 'doc' as const, version: 1 as const, content: [] };
+      mockFetch.mockResolvedValue(mockResponse({ id: '10102', body: adfBody }));
+
+      // Act
+      await connector.addComment('PROJ-1', adfBody, { internal: true });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({
+        body: adfBody,
+        properties: [{ key: 'sd.public.comment', value: { internal: true } }],
+      });
+    });
+
+    it('sends no property when internal is false', async () => {
+      // Arrange
+      const adfBody = { type: 'doc' as const, version: 1 as const, content: [] };
+      mockFetch.mockResolvedValue(mockResponse({ id: '10103', body: adfBody }));
+
+      // Act
+      await connector.addComment('PROJ-1', adfBody, { internal: false });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ body: adfBody });
+    });
+  });
+
+  describe('getInternalCommentIds', () => {
+    it('reads comment properties page by page and keeps only internal notes', async () => {
+      // Arrange
+      const internal = [{ key: 'sd.public.comment', value: { internal: true } }];
+      const page = (comments: unknown[], total: number) => mockResponse({ comments, total });
+      mockFetch
+        .mockResolvedValueOnce(
+          page(
+            [
+              { id: 'c-1', properties: internal },
+              { id: 'c-2', properties: [{ key: 'sd.public.comment', value: { internal: false } }] },
+            ],
+            3,
+          ),
+        )
+        .mockResolvedValueOnce(page([{ id: 'c-3', properties: internal }], 3));
+
+      // Act
+      const ids = await connector.getInternalCommentIds('PROJ-1');
+
+      // Assert
+      expect([...ids]).toEqual(['c-1', 'c-3']);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const first = new URL(mockFetch.mock.calls[0]![0] as string);
+      expect(first.pathname).toBe('/rest/api/3/issue/PROJ-1/comment');
+      expect(first.searchParams.get('expand')).toBe('properties');
+      expect(first.searchParams.get('startAt')).toBe('0');
+      const second = new URL(mockFetch.mock.calls[1]![0] as string);
+      expect(second.searchParams.get('startAt')).toBe('2');
+    });
+
+    it('returns an empty set for an issue without comments', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ comments: [], total: 0 }));
+
+      const ids = await connector.getInternalCommentIds('PROJ-1');
+
+      expect(ids.size).toBe(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getProjectTypeKey', () => {
+    it('returns the project type, or null when Jira omits it', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponse({ id: '1', key: 'SD', projectTypeKey: 'service_desk' }))
+        .mockResolvedValueOnce(mockResponse({ id: '2', key: 'OLD' }));
+
+      expect(await connector.getProjectTypeKey('SD')).toBe('service_desk');
+      expect(await connector.getProjectTypeKey('OLD')).toBeNull();
+    });
+
+    it('asks Jira once per project and answers later calls from memory', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ id: '1', key: 'SD', projectTypeKey: 'service_desk' }));
+
+      await connector.getProjectTypeKey('SD');
+      const second = await connector.getProjectTypeKey('SD');
+
+      expect(second).toBe('service_desk');
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not remember a failed lookup', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponse({ errorMessages: ['boom'] }, 500, 'Server Error'))
+        .mockResolvedValue(mockResponse({ id: '1', key: 'SD', projectTypeKey: 'service_desk' }));
+
+      await expect(connector.getProjectTypeKey('SD')).rejects.toThrow();
+      expect(await connector.getProjectTypeKey('SD')).toBe('service_desk');
     });
   });
 
@@ -986,6 +1115,22 @@ describe('JiraConnector', () => {
                   body: null,
                   created: '2024-01-03T00:00:00.000Z',
                 },
+                {
+                  id: 'c-2',
+                  body: null,
+                  created: '2024-01-04T00:00:00.000Z',
+                  visibility: {
+                    type: 'group',
+                    value: 'jira-developers',
+                    identifier: '276f955c-63d7-42c8-9520-92d01dca0625',
+                  },
+                },
+                {
+                  id: 'c-3',
+                  body: null,
+                  created: '2024-01-05T00:00:00.000Z',
+                  visibility: { type: 'unknown-kind', value: 'x' },
+                },
               ],
             },
             timetracking: {},
@@ -999,6 +1144,13 @@ describe('JiraConnector', () => {
       expect(issue.creatorAccountId).toBe('creator-1');
       expect(issue.comments[0]?.author).toBe('commenter@example.com');
       expect(issue.comments[0]?.authorAccountId).toBe('commenter-1');
+      expect(issue.comments[0]?.visibility).toBeNull();
+      expect(issue.comments[1]?.visibility).toEqual({
+        type: 'group',
+        value: 'jira-developers',
+        identifier: '276f955c-63d7-42c8-9520-92d01dca0625',
+      });
+      expect(issue.comments[2]?.visibility).toBeNull();
     });
   });
 
@@ -1262,6 +1414,38 @@ describe('JiraConnector', () => {
         timeSpent: '2h',
         timeSpentSeconds: 7200,
         created: '2024-01-04T00:00:00.000Z',
+        visibility: null,
+      });
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ timeSpentSeconds: 7200 });
+    });
+
+    it('sends comment and visibility and maps visibility back', async () => {
+      // Arrange
+      const comment = { type: 'doc' as const, version: 1 as const, content: [] };
+      const visibility = { type: 'group' as const, identifier: 'group-id-1' };
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          id: '10201',
+          timeSpentSeconds: 3600,
+          visibility: { type: 'group', identifier: 'group-id-1', value: 'devs' },
+        }),
+      );
+
+      // Act
+      const worklog = await connector.addWorklog('PROJ-1', 3600, { comment, visibility });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({
+        timeSpentSeconds: 3600,
+        comment,
+        visibility,
+      });
+      expect(worklog.visibility).toEqual({
+        type: 'group',
+        value: 'devs',
+        identifier: 'group-id-1',
       });
     });
   });

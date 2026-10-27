@@ -13,7 +13,9 @@
  */
 
 import type { TaskData } from '../cache/types.js';
-import type { JiraAttachment } from '../connector/types.js';
+import type { CommentDefault } from '@softspark/atlassian-mcp-core';
+
+import type { CommentOptions, JiraAttachment, JiraVisibility } from '../connector/types.js';
 
 // ---------------------------------------------------------------------------
 // Status
@@ -43,6 +45,18 @@ export interface CommentResult {
   readonly author: string;
   readonly bodyMarkdown: string;
   readonly created: string;
+  readonly visibility: JiraVisibility | null;
+  /** Service Management internal note, hidden from the customer. */
+  readonly internal: boolean;
+}
+
+/** Options of a new comment, plus the project's fallback for `internal`. */
+export interface AddCommentOptions extends CommentOptions {
+  /**
+   * What `internal: undefined` means in a service project, from the
+   * project's `default_comment` setting. Unset means `DEFAULT_COMMENT` (public).
+   */
+  readonly serviceDefault?: CommentDefault;
 }
 
 /** Result of deleting a comment. */
@@ -61,6 +75,9 @@ export interface MarkdownComment {
   readonly author: string;
   readonly body: string;
   readonly created: string;
+  readonly visibility: JiraVisibility | null;
+  /** Service Management internal note, hidden from the customer. */
+  readonly internal: boolean;
 }
 
 /** Full task details with description and comments as markdown. */
@@ -94,6 +111,13 @@ export interface WorklogResult {
   readonly worklogId: string;
   readonly timeSpent: string;
   readonly timeSpentSeconds: number;
+  readonly visibility: JiraVisibility | null;
+}
+
+/** Optional parts of a time log: a markdown description and a restriction. */
+export interface LogTimeOptions {
+  readonly comment?: string;
+  readonly visibility?: JiraVisibility;
 }
 
 // ---------------------------------------------------------------------------

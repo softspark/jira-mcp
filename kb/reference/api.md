@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [api, mcp, tools, jira, tempo, attachments]
 version: "1.16.1"
 created: "2026-04-13"
-last_updated: "2026-10-25"
+last_updated: "2026-10-27"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
@@ -175,6 +175,8 @@ If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to block 
 | `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
 | `comment` | string | Yes | — | Comment text in markdown format. |
 | `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves posting the comment. |
+| `visibility` | object | No | — | Restrict the comment to a role or group. See [Visibility](#visibility). |
+| `internal` | boolean | No | — | Service Management only: post an internal note the customer does not see. See [Internal notes](#internal-notes). |
 
 **Input example**
 
@@ -190,6 +192,41 @@ If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to block 
 ```
 Added comment to PROJ-123 (comment ID: 10042).
 ```
+
+#### Visibility
+
+`add_task_comment`, `add_templated_comment` and `log_task_time` take the same optional `visibility` object, in Jira's own shape. Without it the comment or worklog is visible to everyone who can browse the issue.
+
+| Restriction | Value |
+|-------------|-------|
+| Project role | `{"type": "role", "value": "Administrators"}` |
+| Group by name | `{"type": "group", "value": "jira-developers"}` |
+| Group by id | `{"type": "group", "identifier": "276f955c-63d7-42c8-9520-92d01dca0625"}` |
+
+Prefer the group id: a group can be renamed, its id stays. A role needs `value`. A group needs `value` or `identifier`. Anything else (another `type`, an empty name, an extra key) answers `INVALID_INPUT` and nothing is sent to Jira. A role or group that does not exist in the project is Jira's call and comes back as Jira's error.
+
+The response carries `visibility` as Jira stored it (Jira fills in both `value` and `identifier`), or `null` for an unrestricted item. `get_task_details` returns the same field on every comment.
+
+#### Internal notes
+
+In a Jira Service Management project the "Internal note" a support agent writes is not a `visibility` restriction. Jira stores it as the comment property `sd.public.comment` with `{"internal": true}`, and its `visibility` stays `null`. `add_task_comment` and `add_templated_comment` take `"internal": true` for this:
+
+```json
+{
+  "task_key": "SD-42",
+  "comment": "Customer's licence expired last week, renewal is with sales.",
+  "internal": true,
+  "user_approved": true
+}
+```
+
+- `internal: false` is a public reply: it shows on the portal and the customer gets it by e-mail.
+- Without `internal`, the project's `default_comment` decides: public unless it was set to internal (see [PATH: kb/reference/configuration.md], "Comment Default"). The result's `internal` says which one was posted.
+- Outside a service project the server refuses `internal: true` with `INVALID_INPUT`, because Jira would store the property and still show the comment to everyone. It reads the project's `projectTypeKey` (`service_desk`) before posting. Use `visibility` there.
+- `internal` must be a JSON boolean. `"true"` as a string is refused, not read as false.
+- `get_task_details` returns `internal` on every comment, read from `GET /rest/api/3/issue/{key}/comment?expand=properties`. Check it before quoting a comment back to a customer.
+
+No setup is needed for either field: Jira validates role and group names on the write, the same way statuses are checked live by `get_task_statuses`.
 
 ---
 
@@ -292,7 +329,9 @@ Get full task details from Jira, including description and all comments. ADF con
         "id": "10001",
         "author": "reviewer@example.com",
         "body": "Looks good, please add refresh token support.",
-        "created": "2026-04-01T11:00:00.000+0000"
+        "created": "2026-04-01T11:00:00.000+0000",
+        "visibility": null,
+        "internal": false
       }
     ]
   },
@@ -300,6 +339,8 @@ Get full task details from Jira, including description and all comments. ADF con
   "message": "Retrieved details for PROJ-123"
 }
 ```
+
+Each comment's `visibility` is `null` when everyone with issue access can read it, otherwise the role or group it is limited to (see [Visibility](#visibility)). `internal` is `true` for a Service Management internal note (see [Internal notes](#internal-notes)).
 
 `creator` is the account that filed the issue. `reporter` is the editable "reported by" field. Either is `null` when Jira returns none. Both hold the email, or the display name when Atlassian privacy settings hide the email.
 
@@ -456,6 +497,7 @@ Log work time to a Jira task. After logging, the task is removed from cache to f
 | `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
 | `time_spent` | string | Yes | — | Time in format `"2h"`, `"30m"`, or `"2h 30m"`. Days are not supported. |
 | `comment` | string | No | — | Optional work description (markdown). |
+| `visibility` | object | No | — | Restrict the worklog to a role or group. See [Visibility](#visibility). |
 
 **Input example**
 
@@ -463,7 +505,8 @@ Log work time to a Jira task. After logging, the task is removed from cache to f
 {
   "task_key": "PROJ-123",
   "time_spent": "2h 30m",
-  "comment": "Implemented JWT token refresh logic"
+  "comment": "Implemented JWT token refresh logic",
+  "visibility": { "type": "role", "value": "Developers" }
 }
 ```
 
@@ -550,6 +593,8 @@ If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to render
 | `variables` | object | No | — | Key-value map of template variables. Required when using `template_id`. |
 | `markdown` | string | No | — | Raw markdown. Use instead of `template_id` for freeform comments. |
 | `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves posting the comment. |
+| `visibility` | object | No | — | Restrict the comment to a role or group. See [Visibility](#visibility). |
+| `internal` | boolean | No | — | Service Management only: post an internal note the customer does not see. See [Internal notes](#internal-notes). |
 
 **Input example (template)**
 

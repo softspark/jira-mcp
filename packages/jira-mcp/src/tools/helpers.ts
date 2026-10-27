@@ -23,7 +23,9 @@ import type { JiraConfig } from '@softspark/atlassian-mcp-core';
 
 import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
+import type { AddCommentOptions } from '../operations/types.js';
 import { TaskOperations } from '../operations/task-operations.js';
+import { parseInternal, parseVisibility } from '../utils/visibility.js';
 import { TempoOperations } from '../operations/tempo-operations.js';
 import { AttachmentOperations } from '../operations/attachment-operations.js';
 
@@ -44,6 +46,30 @@ export function getOperations(
 ): TaskOperations {
   const connector = pool.getConnectorForTask(taskKey);
   return new TaskOperations(connector, cacheManager);
+}
+
+/**
+ * Validate a comment tool's `visibility` and `internal` and attach the
+ * project's `default_comment`, the fallback for a missing `internal`.
+ *
+ * @throws {InvalidInputError} When either argument has the wrong shape.
+ */
+export function resolveCommentOptions(
+  args: {
+    readonly task_key: string;
+    readonly visibility?: unknown;
+    readonly internal?: unknown;
+  },
+  config: JiraConfig,
+): AddCommentOptions {
+  const visibility = parseVisibility(args.visibility);
+  const internal = parseInternal(args.internal);
+  const serviceDefault = config.projects[args.task_key.split('-')[0] ?? '']?.default_comment;
+  return {
+    ...(visibility ? { visibility } : {}),
+    ...(internal !== undefined ? { internal } : {}),
+    ...(serviceDefault ? { serviceDefault } : {}),
+  };
 }
 
 /**

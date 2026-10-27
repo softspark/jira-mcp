@@ -91,6 +91,8 @@ All commands:
   config set-default <key>       Set default project
   config set-language <lang>     Set default language (pl, en, de, es, fr, pt, it, nl)
   config set-project-language <key> <lang>  Set language for a specific project
+  config set-comment-default <internal|public>  Service Management comment default, all projects
+  config set-project-comment-default <key> <internal|public>  Service Management comment default, one project
 
   cache sync-workflows           Sync workflow status transitions
   cache sync-users               Sync user list

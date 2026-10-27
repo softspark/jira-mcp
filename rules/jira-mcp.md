@@ -11,6 +11,8 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 - **Status changes:** call `get_task_statuses` first to check valid transitions.
 - **Multi-instance:** project key determines which Jira instance is used (mapped in config.json).
 - **Comments are ADF:** `add_task_comment` converts markdown to ADF (Atlassian Document Format) automatically.
+- **Restricted comments and worklogs:** `add_task_comment`, `add_templated_comment` and `log_task_time` take an optional `visibility`: `{"type": "role", "value": "<role name>"}`, or a group as `{"type": "group", "identifier": "<groupId>"}` (survives a rename) or `{"type": "group", "value": "<group name>"}`. Omit it for a public item.
+- **Service Management internal notes:** in a service project pass `internal: true` (a JSON boolean) to `add_task_comment` / `add_templated_comment` for a note, `internal: false` for a reply the customer gets by e-mail. Omitted, `default_comment` decides: the project's (`jira-mcp config set-project-comment-default`), else the global one (`config set-comment-default`), else public. Pass it explicitly and read `internal` in the result. Outside a service project `internal` is refused with `INVALID_INPUT`; use `visibility` there. `get_task_details` returns `visibility` and `internal` on every comment: check both before quoting a comment to a customer or to someone outside the role or group.
 - **Delete guard:** `delete_task` is allowed only for the task creator, and `delete_comment` is allowed only for the comment author. Both require explicit `user_approved=true`.
 - **Attachments:** `add_task_attachment` takes an absolute `file_path` (relative paths are refused) and an optional bare `filename`; files over 10 MB are refused before upload. Check the result with `list_task_attachments`. An uploaded image cannot be embedded inline in a comment (ADF needs a Media Services id the REST API does not give), so mention the file name in the comment instead. `ISSUE_NOT_FOUND` means the issue is missing or not visible to the account; `ATTACHMENT_TOO_LARGE` means the site's own limit is lower.
 - **Templates:** use `list_comment_templates` to discover available templates, then `add_templated_comment` with `template_id` + `variables`.
@@ -92,6 +94,8 @@ Read-only. Needs `tempo_token` on the site's credential (`jira-mcp config set-te
 | `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-language <lang>` | Set global default language |
 | `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |
+| `jira-mcp config set-comment-default <internal\|public>` | Service Management: comment without `internal` becomes internal or public, all projects (default public) |
+| `jira-mcp config set-project-comment-default <key> <internal\|public>` | Same for one project, overriding the global value |
 | `jira-mcp cache sync-workflows` | Cache status transitions |
 | `jira-mcp cache sync-users` | Cache user list for reassignment |
 | `jira-mcp cache list-workflows` | Show cached workflows |

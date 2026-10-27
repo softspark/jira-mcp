@@ -15,11 +15,14 @@ import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
 import type { ToolResult } from './helpers.js';
 import { success, failure, getOperations } from './helpers.js';
+import { parseVisibility } from '../utils/visibility.js';
 
 export interface LogTaskTimeArgs {
   readonly task_key: string;
   readonly time_spent: string;
   readonly comment?: string;
+  /** Raw client value, validated by the handler. */
+  readonly visibility?: unknown;
 }
 
 export interface LogTaskTimeDeps {
@@ -35,18 +38,19 @@ export async function handleLogTaskTime(
   deps: LogTaskTimeDeps,
 ): Promise<ToolResult> {
   try {
+    const visibility = parseVisibility(args.visibility);
     const ops = getOperations(deps.pool, deps.cacheManager, args.task_key);
-    const result = await ops.logTime(
-      args.task_key,
-      args.time_spent,
-      args.comment,
-    );
+    const result = await ops.logTime(args.task_key, args.time_spent, {
+      ...(args.comment !== undefined ? { comment: args.comment } : {}),
+      ...(visibility ? { visibility } : {}),
+    });
 
     return success({
       message: `Logged ${args.time_spent} to ${args.task_key}`,
       worklog_id: result.worklogId,
       time_spent: result.timeSpent,
       time_spent_seconds: result.timeSpentSeconds,
+      visibility: result.visibility,
     });
   } catch (error: unknown) {
     return failure(error);

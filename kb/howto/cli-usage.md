@@ -205,6 +205,37 @@ jira-mcp config set-project-language PROJ pl
 
 ---
 
+### `config set-comment-default`
+
+Jira Service Management projects only. Sets the global `default_comment`: what a comment posted without an explicit `internal` flag becomes in every service project that has no setting of its own. Unset means `public`, Jira's own behaviour.
+
+```bash
+jira-mcp config set-comment-default <internal|public>
+```
+
+---
+
+### `config set-project-comment-default`
+
+Jira Service Management projects only. Sets what a comment posted without an explicit `internal` flag becomes in one project: an internal note or a public reply to the customer. It overrides the global value from `config set-comment-default`; with neither set, `public`. An explicit `internal: true` or `internal: false` in the tool call always wins.
+
+```bash
+jira-mcp config set-project-comment-default <KEY> <internal|public>
+```
+
+| Argument | Description |
+|----------|-------------|
+| `KEY` | An existing project key already present in `config.json` |
+| `value` | `internal` or `public` |
+
+```bash
+jira-mcp config set-project-comment-default SUPPORT internal
+```
+
+Restart the MCP client afterwards; the server reads `config.json` at startup.
+
+---
+
 ## Cache commands
 
 Cache commands populate local JSON files under `~/.softspark/jira-mcp/cache/`.
