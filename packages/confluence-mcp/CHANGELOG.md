@@ -7,6 +7,51 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.18.0 -- Comment visibility and internal notes (2026-10-27)
+
+Jira gains restricted comments and worklogs, Service Management internal
+notes and a configurable comment default. Confluence does not change; the
+shared config.json only accepts two new optional Jira fields.
+
+### Added
+
+- **`visibility` on `add_task_comment`, `add_templated_comment` and
+  `log_task_time`.** Restricts the new comment or worklog to a project role
+  (`{"type": "role", "value": "Administrators"}`) or a group, by name
+  (`{"type": "group", "value": "jira-developers"}`) or by id
+  (`{"type": "group", "identifier": "<groupId>"}`). The id survives a group
+  rename, the name does not. Omitted, the item stays visible to everyone who
+  can browse the issue, as before. A role without `value`, a group with
+  neither field, an unknown `type` or an extra key answers `INVALID_INPUT`
+  before anything reaches Jira.
+- **`internal` on `add_task_comment` and `add_templated_comment`** posts a
+  Jira Service Management internal note: agents see it, the customer does not
+  (no portal entry, no customer e-mail). It is the `sd.public.comment` comment
+  property, not `visibility`, which is how the "Internal note" button stores
+  it. Outside a service project Jira would keep the property and still show
+  the comment to everyone, so the server checks `projectTypeKey` first and
+  answers `INVALID_INPUT` there, pointing at `visibility`. A non-boolean value
+  (the string `"true"` included) is also `INVALID_INPUT`, because reading it as
+  false would send the note to the customer.
+- **Restrictions on reads.** `get_task_details` returns `visibility` (`null`
+  when unrestricted) and `internal` on every comment; `internal` comes from a
+  second call, `GET /issue/{key}/comment?expand=properties`, since the issue's
+  comment field carries no properties. The comment tools and `log_task_time`
+  return what was stored.
+- **Comment default for Service Management**, global and per project:
+  `jira-mcp config set-comment-default <internal|public>` writes
+  `default_comment` to config.json, and
+  `jira-mcp config set-project-comment-default <key> <internal|public>` writes
+  `projects.<KEY>.default_comment`, which wins over the global value. It
+  decides what a comment without an explicit `internal` becomes in a service
+  project; an explicit `internal: true` or `internal: false` always wins.
+  Neither set means `public`, so nothing changes on upgrade: a comment without
+  the flag is still a public reply that reaches the customer, as it was
+  before. Set `internal` where a forgotten flag must not reach a customer.
+  Other project types ignore the setting. `config list-projects` shows the
+  effective value in a new `SD COMMENTS` column. The project type is read from
+  Jira once per project and kept until the server restarts.
+
 ## v1.17.0 -- Attachments on Jira issues (2026-10-25)
 
 Both packages change: Jira gains two tools, Confluence only moves to the

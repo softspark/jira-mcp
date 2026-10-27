@@ -4,17 +4,17 @@
 
 [![Publish](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.17.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.18.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.17.0
+## What's New in v1.18.0
 
-- **Attach a file to an issue.** `add_task_attachment` uploads a local file (screenshot, PDF, log) to a task: `task_key`, an absolute `file_path` and an optional `filename`. Files up to 10 MB; the media type comes from the extension. Before, adding a screenshot to a task meant calling the REST API by hand.
-- **Check what is attached.** `list_task_attachments` returns id, name, type, size, author and date of every attachment, so an upload can be verified.
-- A missing issue answers `ISSUE_NOT_FOUND` and a file Jira refuses as too large answers `ATTACHMENT_TOO_LARGE` on these two tools; every other tool answers as before.
-- Images are attached, not shown inline in a comment: Jira's comment format needs a Media Services id that its public API does not hand out. Name the attached file in the comment instead.
+- **Comments and worklogs only some people see.** `add_task_comment`, `add_templated_comment` and `log_task_time` take `visibility`: a project role (`{"type": "role", "value": "Internal"}`) or a group, by name or by id. Omit it and the item stays visible to everyone, as before.
+- **Service Management internal notes.** In a Jira Service Management project `internal: true` posts a note agents see and the customer does not; `internal: false` posts a public reply. Outside a service project `internal: true` is refused with `INVALID_INPUT`, so nobody gets a "hidden" comment that is not hidden.
+- **A default per project, or for all of them.** `jira-mcp config set-comment-default <internal|public>` and `jira-mcp config set-project-comment-default <key> <internal|public>` decide what a comment without the flag becomes. Neither set means public, which is what every service desk got until now, so upgrading changes nothing.
+- `get_task_details` returns `visibility` and `internal` on every comment, and `config list-projects` shows the effective default in a new `SD COMMENTS` column.
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ## Table of Contents

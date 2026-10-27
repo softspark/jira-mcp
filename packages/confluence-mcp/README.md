@@ -3,16 +3,16 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.17.0-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.18.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
 
 ---
 
-## What's New in v1.17.0
+## What's New in v1.18.0
 
-- **No change in behaviour.** `upload_attachment` now sends its file through the multipart helper shared with `@softspark/jira-mcp`, which gained its own attachment tools in this release. Same 31 tools, same commands, same config path.
+- **No change in behaviour.** The shared `config.json` accepts two new optional Jira fields, `default_comment` and `projects.<KEY>.default_comment`, written by `@softspark/jira-mcp`. Confluence ignores them. Same 31 tools, same commands, same config path.
 - Released together with `@softspark/jira-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ---

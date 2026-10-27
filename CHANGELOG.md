@@ -7,7 +7,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## Unreleased
+## v1.18.0 -- Comment visibility and internal notes (2026-10-27)
+
+Jira gains restricted comments and worklogs, Service Management internal
+notes and a configurable comment default. Confluence does not change; the
+shared config.json only accepts two new optional Jira fields.
 
 ### Added
 
@@ -34,7 +38,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   second call, `GET /issue/{key}/comment?expand=properties`, since the issue's
   comment field carries no properties. The comment tools and `log_task_time`
   return what was stored.
-
 - **Comment default for Service Management**, global and per project:
   `jira-mcp config set-comment-default <internal|public>` writes
   `default_comment` to config.json, and
