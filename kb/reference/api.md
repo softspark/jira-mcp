@@ -166,7 +166,7 @@ Updated PROJ-123 status to "In Progress".
 
 Add a markdown comment to a Jira task. The markdown is automatically converted to ADF format before submission.
 
-If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to block this tool before execution until the user explicitly approves the exact comment preview.
+If you use ai-toolkit hooks, install [PATH: packages/jira-mcp/hooks/jira-mcp-hooks.json] to block this tool before execution until the user explicitly approves the exact comment preview and its audience.
 
 **Parameters**
 
@@ -582,7 +582,7 @@ handoff-transition: Task Handoff
 
 Add a comment using a registered template (with variable substitution) or raw markdown. Provide exactly one of `template_id` or `markdown`.
 
-If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to render the final comment preview and require explicit user approval before this tool executes.
+If you use ai-toolkit hooks, install [PATH: packages/jira-mcp/hooks/jira-mcp-hooks.json] to render the final comment preview with its audience and require explicit user approval before this tool executes.
 
 **Parameters**
 

@@ -68,6 +68,31 @@ describe('evaluateCommentApprovalHook', () => {
     expect(result.message).toContain('Task: PROJ-1');
     expect(result.message).toContain('Hello world');
     expect(result.message).toContain('user_approved=true');
+    expect(result.message).toContain('Audience: project default.');
+  });
+
+  it.each([
+    [{ internal: true }, 'Audience: internal note (Service Management, agents only)'],
+    [{ internal: false }, 'Audience: public reply (in a Service Management project the customer is e-mailed)'],
+    [
+      { visibility: { type: 'role', value: 'Developers' } },
+      'Audience: project default, visible only to role Developers.',
+    ],
+    [
+      { internal: true, visibility: { type: 'group', identifier: 'g-1' } },
+      'Audience: internal note (Service Management, agents only), visible only to group g-1',
+    ],
+  ])('names the audience the user is approving: %j', (extra, expected) => {
+    const result = evaluateCommentApprovalHook(
+      JSON.stringify({
+        tool_name: 'mcp__jira__add_templated_comment',
+        tool_input: { task_key: 'SD-1', markdown: 'Note', ...extra },
+      }),
+      createRegistry(),
+    );
+
+    expect(result.exitCode).toBe(2);
+    expect(result.message).toContain(expected);
   });
 
   it('blocks templated comment writes without approval and renders the preview', () => {

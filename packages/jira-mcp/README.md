@@ -228,10 +228,12 @@ The URL form is re-fetched on every `ai-toolkit update`, so the rules follow rel
 To require explicit user approval before Jira comment writes, inject the repo-owned hook manifest:
 
 ```bash
-ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/hooks/jira-mcp-hooks.json
+ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/packages/jira-mcp/hooks/jira-mcp-hooks.json
 ```
 
-This installs a `PreToolUse` guard for `add_task_comment` and `add_templated_comment`. The hook blocks the tool call, shows the exact comment preview, and tells the agent to retry only after the user approves it with `user_approved=true`.
+This installs a `PreToolUse` guard for `add_task_comment` and `add_templated_comment`. The hook blocks the tool call, shows the exact comment preview and its audience (internal note, public reply, project default, role or group restriction), and tells the agent to retry only after the user approves it with `user_approved=true`.
+
+Registered the hook before 1.18.2 from `.../main/hooks/jira-mcp-hooks.json`? That path has answered 404 since the workspace split, and `ai-toolkit update` keeps a cached copy. Re-register it: `ai-toolkit remove-hook jira-mcp-hooks`, then the `inject-hook` above.
 
 The MCP server still enforces `user_approved=true` at runtime, so the hook is UX guidance plus an extra safety layer rather than the only check.
 
@@ -298,7 +300,7 @@ src/
 
 **Typed error hierarchy** -- 34 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1235 tests across 92 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1239 tests across 92 test files.
 
 ## Documentation
 
