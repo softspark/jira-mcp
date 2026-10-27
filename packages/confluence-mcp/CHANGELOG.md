@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.18.2 -- Comment audience in the approval hook (2026-10-27)
+
+Jira only; Confluence is unchanged and moves to the shared version.
+
+### Fixed
+
+- **The comment-approval hook hid who reads the comment** -- since 1.18.0 a
+  comment can be an internal note, a public reply that e-mails a Service
+  Management customer, the project default, or restricted to a role or group,
+  but `jira-mcp hook comment-approval` showed only the text. The preview now
+  carries an `Audience:` line built from `internal` and `visibility`, and asks
+  the user to approve the comment and its audience.
+- **The documented `inject-hook` URL answered 404** -- the README and the setup
+  guide pointed at `hooks/jira-mcp-hooks.json` at the repository root; the
+  manifest has lived in `packages/jira-mcp/hooks/` since the workspace split.
+  `ai-toolkit update` kept using a cached copy and printed a warning. Re-register
+  with `ai-toolkit remove-hook jira-mcp-hooks` and
+  `ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/packages/jira-mcp/hooks/jira-mcp-hooks.json`.
+
 ## v1.18.1 -- get_page field name in the docs (2026-10-27)
 
 Confluence only; Jira is unchanged and moves to the shared version.

@@ -4,14 +4,16 @@
 
 [![Publish](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.18.1-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.18.2-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.18.1
+## What's New in v1.18.2
 
-- **No Jira change.** 1.18.1 fixes a field name in `@softspark/confluence-mcp`'s `get_page` docs; this package moves to the shared version only. What 1.18.0 brought:
+- **The approval hook shows the audience.** The comment-approval preview now says whether the comment is an internal note, a public reply (e-mailed to a Service Management customer), the project default, or limited to a role or group, so the user approves who reads it as well as the text.
+- **Hook URL fixed.** Register the hook from `https://raw.githubusercontent.com/softspark/jira-mcp/main/packages/jira-mcp/hooks/jira-mcp-hooks.json`; the old root `hooks/` URL answers 404. See [AI Toolkit Hooks](#ai-toolkit-hooks).
+- What 1.18.0 brought:
 - **Comments and worklogs only some people see.** `add_task_comment`, `add_templated_comment` and `log_task_time` take `visibility`: a project role (`{"type": "role", "value": "Internal"}`) or a group, by name or by id. Omit it and the item stays visible to everyone, as before.
 - **Service Management internal notes.** In a Jira Service Management project `internal: true` posts a note agents see and the customer does not; `internal: false` posts a public reply. Outside a service project `internal: true` is refused with `INVALID_INPUT`, so nobody gets a "hidden" comment that is not hidden.
 - **A default per project, or for all of them.** `jira-mcp config set-comment-default <internal|public>` and `jira-mcp config set-project-comment-default <key> <internal|public>` decide what a comment without the flag becomes. Neither set means public, which is what every service desk got until now, so upgrading changes nothing.
