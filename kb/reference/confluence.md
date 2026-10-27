@@ -216,7 +216,7 @@ So `PageOperations.updatePage()`:
 4. accepts a `storage` body unconditionally, which is the route for editing macro-bearing pages;
 5. honours `allowMarkupLoss` for a caller that genuinely means to replace the page.
 
-`get_page` surfaces `has_storage_markup` so a caller can tell before it tries, and `body_format: "storage"` returns the XHTML to edit.
+`get_page` surfaces `page.hasStorageMarkup` so a caller can tell before it tries, and `body_format: "storage"` returns the XHTML to edit.
 
 `movePage` uses the same storage passthrough: a move must not rewrite the body it passes over.
 

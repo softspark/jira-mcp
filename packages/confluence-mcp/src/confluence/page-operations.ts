@@ -104,7 +104,7 @@ export class PageOperations {
    * Markdown by default. `storage` returns Confluence's own XHTML instead,
    * which is what an editor needs when the page carries macros: markdown
    * cannot represent them, and only the storage body can be safely written
-   * back. `has_storage_markup` reports whether that is the case, so a caller
+   * back. `hasStorageMarkup` reports whether that is the case, so a caller
    * can tell before it tries to edit.
    */
   async getPageDetail(

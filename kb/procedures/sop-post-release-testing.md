@@ -420,8 +420,8 @@ search_pages({ text: "<a word that exists in the space>" })
 get_page({ page_id: "<an existing page>" })
 ```
 
-- [ ] Returns the body, the version number and `has_storage_markup`
-- [ ] A page authored in the Confluence editor reports `has_storage_markup: true`
+- [ ] Returns the body, the version number and `page.hasStorageMarkup`
+- [ ] A page authored in the Confluence editor reports `page.hasStorageMarkup: true`
 
 ### Step 4b.5: Read the same page as storage
 

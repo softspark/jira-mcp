@@ -156,7 +156,7 @@ In config.json, per space or as a global default:
 | the other kind of body | `storage` is accepted too — it never loses anything | `content` is **refused** with `MARKUP_LOSS_REFUSED` |
 | pages that already contain macros | markdown write refused per page | n/a, the whole space is storage |
 
-`get_space_language` reports both the language and the format, so an assistant can ask once and then write correctly. `get_page` also returns `has_storage_markup`, which flags a macro-bearing page inside a markdown space.
+`get_space_language` reports both the language and the format, so an assistant can ask once and then write correctly. `get_page` also returns `page.hasStorageMarkup`, which flags a macro-bearing page inside a markdown space.
 
 ### Rules that hold in both modes
 
