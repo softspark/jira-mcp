@@ -655,6 +655,21 @@ Two things the literal commands above get wrong on the real instance:
   `@softspark/confluence-mcp` at the same version. A smoke test run from a
   temporary directory validates the tarball, not the global install the CLI
   actually uses.
+- **`create_task` answers `issue_key`, not `task_key`.** A script that reads
+  the wrong field sees no key after a successful create; search for the task
+  before creating it again.
+- **KAN can be down for billing.** On 2026-10-27 softspark.atlassian.net
+  answered 503 (subscription deactivated). Phase 4 waits for KAN; it is not
+  moved to a client project.
+
+## Verification on 2026-10-27 (1.18.0 and 1.18.1)
+
+Published 1.18.0 (comment and worklog `visibility`, Service Management
+`internal` notes, `default_comment`). Phase 4 ran on KAN after the outage
+above, including the new parameters. The run found that `get_page` docs named
+`has_storage_markup` while the response carries `page.hasStorageMarkup`;
+1.18.1 fixes the docs. Internal notes are still unverified on a real service
+project. See [the executed record](release-verification-20261027.md).
 
 ## Verification on 2026-09-18 (1.16.0)
 
