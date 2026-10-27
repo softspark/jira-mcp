@@ -156,8 +156,10 @@ look for a way around it. Phase 4 was not repeated, since Jira did not change.
 
 ## Outstanding
 
-- `~/.claude/rules/ai-toolkit-registered-jira-mcp.md` already carries the new
-  visibility and internal-note rules. The Confluence copy still says
-  `has_storage_markup` until `rules/confluence-mcp.md` is registered again with
-  `ai-toolkit add-rule`; the same holds for `.github/instructions/`.
+- Both agent rules are registered from their `raw.githubusercontent.com` URLs
+  on `main` (`~/.softspark/ai-toolkit/rules/sources.json`), so `ai-toolkit
+  update` refreshes them; no new `add-rule` is needed. The update at 11:17
+  picked up the new Jira rule but still the old Confluence one, because the
+  1.18.1 push to `main` only happened at 11:28. The next `ai-toolkit update`
+  brings `page.hasStorageMarkup`; the raw files already match the repo.
 - Internal notes need one live check on a real service project.
