@@ -662,14 +662,18 @@ Two things the literal commands above get wrong on the real instance:
   answered 503 (subscription deactivated). Phase 4 waits for KAN; it is not
   moved to a client project.
 
-## Verification on 2026-10-27 (1.18.0 and 1.18.1)
+## Verification on 2026-10-27 (1.18.0, 1.18.1 and 1.18.2)
 
 Published 1.18.0 (comment and worklog `visibility`, Service Management
 `internal` notes, `default_comment`). Phase 4 ran on KAN after the outage
 above, including the new parameters. The run found that `get_page` docs named
 `has_storage_markup` while the response carries `page.hasStorageMarkup`;
-1.18.1 fixes the docs. Internal notes are still unverified on a real service
-project. See [the executed record](release-verification-20261027.md).
+1.18.1 fixes the docs. The `ai-toolkit update` that followed exposed a 404 on
+the documented hook URL and a comment-approval preview without the audience;
+1.18.2 fixes both. When a release changes who can read a comment, check the
+hook output too: pipe a tool call into `jira-mcp hook comment-approval`.
+Internal notes are still unverified on a real service project. See
+[the executed record](release-verification-20261027.md).
 
 ## Verification on 2026-09-18 (1.16.0)
 

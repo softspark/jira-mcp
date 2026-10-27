@@ -1,15 +1,15 @@
 ---
-title: "Release verification: 1.18.0 and 1.18.1"
+title: "Release verification: 1.18.0, 1.18.1 and 1.18.2"
 category: procedures
 service: jira-mcp
-tags: [release, verification, post-release-testing, visibility, internal-notes, service-management, confluence]
-version: "1.18.1"
+tags: [release, verification, post-release-testing, visibility, internal-notes, service-management, confluence, hooks]
+version: "1.18.2"
 created: "2026-10-27"
 last_updated: "2026-10-27"
-description: "Executed record of 1.18.0 (comment and worklog visibility, Service Management internal notes, the default_comment setting) and the 1.18.1 docs patch it needed for get_page's hasStorageMarkup: gates, publish verification, live checks against DevOps, the KAN outage that delayed Phase 4, and the full run against KAN once it was back."
+description: "Executed record of 1.18.0 (comment and worklog visibility, Service Management internal notes, the default_comment setting), the 1.18.1 docs patch for get_page's hasStorageMarkup, and the 1.18.2 patch that shows the comment audience in the approval hook and fixes the hook URL: gates, publish verification, live checks against DevOps, the KAN outage that delayed Phase 4, and the full run against KAN once it was back."
 ---
 
-# Release verification: 1.18.0 and 1.18.1
+# Release verification: 1.18.0, 1.18.1 and 1.18.2
 
 Executed on 2026-10-27, following [sop-release](sop-release.md) and
 [sop-post-release-testing](sop-post-release-testing.md).
@@ -36,6 +36,9 @@ Commits `8d83aff` (feature), `af84793` (release), tag `v1.18.0`.
 **1.18.1** (patch, docs only): found by this run, see
 [Confluence finding](#confluence-finding). Commits `ce6d586` (fix),
 `02a3258` (release).
+
+**1.18.2** (patch, Jira only): found by the `ai-toolkit update` after 1.18.1,
+see [1.18.2](#1182). Commits `83fed98` (fix), `9a92438` (release).
 
 ## Design decisions made on the way
 
@@ -154,6 +157,31 @@ The release script ran from the maintainer's shell: in the agent session the
 auto mode classifier refused the tag-push-publish step, and the agent did not
 look for a way around it. Phase 4 was not repeated, since Jira did not change.
 
+## 1.18.2
+
+`ai-toolkit update` after 1.18.1 refreshed both agent rules, then warned that
+`jira-mcp-hooks` could not be refreshed: `.../main/hooks/jira-mcp-hooks.json`
+answered 404. The README and `kb/howto/setup.md` still gave that root path;
+the manifest has lived in `packages/jira-mcp/hooks/` since the workspace
+split, and ai-toolkit had been running a cached copy.
+
+Looking at the hook exposed the second gap. `jira-mcp hook comment-approval`
+showed the comment text only, while since 1.18.0 the user is also approving
+who reads it. The preview now has an `Audience:` line built from `internal`
+and `visibility`. An earlier answer in this session said the hook was not in
+the repository; it is, under `packages/jira-mcp/`, and the search had looked
+at the root only.
+
+| Check | Result |
+|---|---|
+| `npm run release -- 1.18.2` | all gates green on macOS and Linux, 1239 tests; tag `v1.18.2` on `9a92438` |
+| Publish run 40491341425 | green in 41s; both packages on npm with provenance; GitHub Release created |
+| 1 Install | both binaries at 1.18.2; `serverInfo.version` 1.18.2 |
+| Hook, live binary | `internal: true` plus a role: exit 2, `Audience: internal note (Service Management, agents only), visible only to role Internal`; no flag: the project-default line; `user_approved: true`: exit 0 |
+| 3 Server | the 1.18.0 refusals still answer `INVALID_INPUT` and write nothing |
+| 5 Supply chain | `PROVENANCE OK` on both; 3 registry signatures, 2 attestations verified |
+| New hook URL | `.../main/packages/jira-mcp/hooks/jira-mcp-hooks.json` answers 200 and equals the repo file |
+
 ## Outstanding
 
 - Both agent rules are registered from their `raw.githubusercontent.com` URLs
@@ -162,4 +190,9 @@ look for a way around it. Phase 4 was not repeated, since Jira did not change.
   picked up the new Jira rule but still the old Confluence one, because the
   1.18.1 push to `main` only happened at 11:28. The next `ai-toolkit update`
   brings `page.hasStorageMarkup`; the raw files already match the repo.
+- Installations that registered the hook from the old root URL keep the cached
+  pre-1.18.2 manifest. The manifest itself did not change (the audience line
+  comes from the installed binary), but `ai-toolkit update` warns on every run
+  until the hook is re-registered: `ai-toolkit remove-hook jira-mcp-hooks`,
+  then `ai-toolkit inject-hook` with the new URL.
 - Internal notes need one live check on a real service project.
