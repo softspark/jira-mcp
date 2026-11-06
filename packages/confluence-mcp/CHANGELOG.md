@@ -7,6 +7,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.19.0 -- User mentions in comments and descriptions (2026-11-06)
+
+### Added
+
+- **`@email` mentions** -- `add_task_comment`, `add_templated_comment` and the
+  `description` of `create_task` and `update_task` turn
+  `@jan.kowalski@example.com` into a real ADF mention, so the person is tagged
+  and notified. Each distinct address is looked up once in Jira; an address
+  with no match fails the call before anything is posted. Code spans, fenced
+  blocks and `\@` keep an address literal.
+- **`[~accountid:ID]` mentions** -- the shared markdown converter accepts
+  `[~accountid:ID]` and `[Label|~accountid:ID]` in both servers, with no API
+  call.
+
+### Fixed
+
+- **Mentions were posted as plain text** -- the markdown to ADF converter never
+  produced a `mention` node, so `@Name` reached Jira as text and notified
+  nobody.
+- **Reads dropped the account id of a mention** -- `get_task_details` and
+  `get_page` rendered a mention as a bare `@Name`, so a read-modify-write of a
+  description or a markdown Confluence page silently turned every mention into
+  text. Mentions now read as `[@Name|~accountid:ID]`, which writes back as the
+  same mention.
+
 ## v1.18.2 -- Comment audience in the approval hook (2026-10-27)
 
 Jira only; Confluence is unchanged and moves to the shared version.
