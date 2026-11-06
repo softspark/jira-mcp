@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, confluence-api, provenance, supply-chain]
 version: "1.16.0"
 created: "2026-04-13"
-last_updated: "2026-09-18"
+last_updated: "2026-11-06"
 description: "End-to-end smoke test after publishing a release of the Atlassian MCP workspace — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN, live Confluence API tests against the default space, supply-chain verification (provenance, npm audit signatures), and cleanup."
 ---
 
@@ -248,6 +248,13 @@ add_task_comment({
 
 - [ ] Comment added, returns comment ID
 - [ ] No ADF conversion errors
+
+Since 1.19.0, also post one comment with a mention: `@<your-email>` plus the
+same address in backticks.
+
+- [ ] The returned `body` shows `[@Name|~accountid:...]` for the first one and
+  the code span unchanged
+- [ ] An unknown `@address` fails the call and no comment is created
 
 ### Step 4.7: Add Templated Comment
 
@@ -661,6 +668,14 @@ Two things the literal commands above get wrong on the real instance:
 - **KAN can be down for billing.** On 2026-10-27 softspark.atlassian.net
   answered 503 (subscription deactivated). Phase 4 waits for KAN; it is not
   moved to a client project.
+
+## Verification on 2026-11-06 (1.19.0)
+
+Published 1.19.0 (user mentions via `@email` and `[~accountid:ID]`, reads
+that keep the account id). Full run on KAN-17, including the mention checks
+added to Step 4.6; Confluence read-only on DevOps. A notification to another
+user is still unverified, KAN has one account. See
+[the executed record](release-verification-20261106.md).
 
 ## Verification on 2026-10-27 (1.18.0, 1.18.1 and 1.18.2)
 
