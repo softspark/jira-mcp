@@ -298,11 +298,11 @@ src/
 
 **Attachments** -- `add_task_attachment` uploads a local file (absolute path, 10 MB cap, media type from the extension) to an issue, and `list_task_attachments` lists what is attached so an agent can check the upload. An uploaded image cannot be embedded inline in a comment: ADF media nodes need a Media Services file id, which the public REST API does not return. See [API Reference](kb/reference/api.md).
 
-**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 569KB library bundle, 1 runtime dep (commander).
+**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 575KB library bundle, 1 runtime dep (commander).
 
 **Typed error hierarchy** -- 34 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1239 tests across 92 test files.
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1255 tests across 93 test files.
 
 ## Documentation
 

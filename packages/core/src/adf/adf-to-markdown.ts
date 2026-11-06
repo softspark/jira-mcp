@@ -83,8 +83,17 @@ function convertNode(node: AdfNode): string {
       return '\n';
 
     case 'mention': {
+      // Written in the form markdownToAdf parses, so a read-modify-write
+      // keeps the mention instead of turning it into plain text.
+      const id = node.attrs?.['id'] as string | undefined;
       const text = node.attrs?.['text'] as string | undefined;
-      return text ?? '@unknown';
+      if (id === undefined || id.length === 0) {
+        return text ?? '@unknown';
+      }
+      const label = text?.replace(/[[\]|]/g, '').trim() ?? '';
+      return label.length > 0
+        ? `[${label}|~accountid:${id}]`
+        : `[~accountid:${id}]`;
     }
 
     case 'emoji': {

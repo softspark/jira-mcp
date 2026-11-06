@@ -33,6 +33,7 @@ import type {
 } from './types.js';
 import { markdownToAdf, adfToMarkdown } from '@softspark/atlassian-mcp-core';
 import { parseTimeSpent } from '../connector/time-parser.js';
+import { resolveEmailMentions } from './mentions.js';
 import {
   DEFAULT_COMMENT,
   InvalidInputError,
@@ -142,7 +143,11 @@ export class TaskOperations {
     options: AddCommentOptions = {},
   ): Promise<CommentResult> {
     const internal = await this.resolveInternal(taskKey, options);
-    const adfBody = markdownToAdf(markdownComment);
+    const adfBody = markdownToAdf(
+      await resolveEmailMentions(markdownComment, (email) =>
+        this.connector.findUser(email),
+      ),
+    );
     const comment = await this.connector.addComment(taskKey, adfBody, {
       ...(options.visibility ? { visibility: options.visibility } : {}),
       ...(internal ? { internal: true } : {}),

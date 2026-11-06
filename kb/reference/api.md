@@ -166,6 +166,8 @@ Updated PROJ-123 status to "In Progress".
 
 Add a markdown comment to a Jira task. The markdown is automatically converted to ADF format before submission.
 
+**Mentions.** `@jan.kowalski@example.com` and `[~accountid:<id>]` become ADF `mention` nodes, so the person is tagged and notified. A plain `@Jan` is text. Each distinct `@email` is resolved once through `/rest/api/3/user/search`; an address with no match fails the call before anything is posted. Code spans, fenced blocks and `\@` keep an address literal. The same applies to `add_templated_comment` and to `description` in `create_task` and `update_task`. Reads (`get_task_details`) return mentions as `[@Name|~accountid:<id>]`, which can be pasted back unchanged.
+
 If you use ai-toolkit hooks, install [PATH: packages/jira-mcp/hooks/jira-mcp-hooks.json] to block this tool before execution until the user explicitly approves the exact comment preview and its audience.
 
 **Parameters**

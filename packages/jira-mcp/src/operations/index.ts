@@ -12,6 +12,8 @@ export {
   AttachmentOperations,
   MAX_ATTACHMENT_BYTES,
 } from './attachment-operations.js';
+export { resolveEmailMentions } from './mentions.js';
+export type { FindUserByEmail } from './mentions.js';
 export { TEMPO_GROUP_KEYS } from './types.js';
 export type {
   AttachmentsResult,

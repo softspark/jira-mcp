@@ -15,6 +15,10 @@
 // Types
 // ---------------------------------------------------------------------------
 
+/** Appended to every markdown field that becomes ADF on a Jira write. */
+const MENTION_HINT =
+  ' Mention a user with @email (e.g. @jan.kowalski@example.com, looked up in Jira; an unknown address fails the call) or [~accountid:ID]. Plain @Name is not a mention.';
+
 export interface ToolDefinition {
   readonly name: string;
   readonly description: string;
@@ -130,7 +134,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         },
         comment: {
           type: 'string',
-          description: 'Comment text in markdown format.',
+          description: 'Comment text in markdown format.' + MENTION_HINT,
         },
         user_approved: {
           type: 'boolean',
@@ -318,7 +322,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         markdown: {
           type: 'string',
           description:
-            'Raw markdown comment. Use instead of template_id for freeform comments.',
+            'Raw markdown comment. Use instead of template_id for freeform comments.' +
+            MENTION_HINT,
         },
         user_approved: {
           type: 'boolean',
@@ -349,7 +354,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         description: {
           type: 'string',
           description:
-            'Optional issue description in markdown format. Automatically converted to ADF. Do not provide when using template_id.',
+            'Optional issue description in markdown format. Automatically converted to ADF. Do not provide when using template_id.' +
+            MENTION_HINT,
         },
         template_id: {
           type: 'string',
@@ -440,7 +446,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         description: {
           type: 'string',
           description:
-            'New issue description in markdown format. Automatically converted to ADF.',
+            'New issue description in markdown format. Automatically converted to ADF.' +
+            MENTION_HINT,
         },
         priority: {
           type: 'string',

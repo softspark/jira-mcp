@@ -43,6 +43,30 @@ describe('handleUpdateTask', () => {
     );
   });
 
+  it('turns @email in the description into a mention node', async () => {
+    const connector = {
+      updateIssue: vi.fn().mockResolvedValue(undefined),
+      findUser: vi.fn().mockResolvedValue('acc-jan'),
+    };
+    const deps = makeDeps({
+      pool: { getConnector: vi.fn().mockReturnValue(connector) } as unknown as UpdateTaskDeps['pool'],
+    });
+
+    await handleUpdateTask(
+      { task_key: 'PROJ-1', description: 'Owner: @jan@firma.pl' },
+      deps,
+    );
+
+    expect(connector.findUser).toHaveBeenCalledWith('jan@firma.pl');
+    const fields = connector.updateIssue.mock.calls[0]?.[1] as {
+      description: { content: Array<{ content: unknown[] }> };
+    };
+    expect(fields.description.content[0]?.content).toEqual([
+      { type: 'text', text: 'Owner: ' },
+      { type: 'mention', attrs: { id: 'acc-jan' } },
+    ]);
+  });
+
   it('updates summary only', async () => {
     const deps = makeDeps();
     const result = await handleUpdateTask(
