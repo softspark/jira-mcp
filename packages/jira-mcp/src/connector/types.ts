@@ -62,6 +62,29 @@ export interface JiraIssueDetail {
 // Comments
 // ---------------------------------------------------------------------------
 
+/**
+ * Who may see a comment or worklog. `null` on a read means everyone who
+ * can browse the issue.
+ */
+export interface JiraVisibility {
+  readonly type: 'group' | 'role';
+  /** Role name or group name. A group name can change; its id cannot. */
+  readonly value?: string;
+  /** Group id. For a role Jira repeats the role name here. */
+  readonly identifier?: string;
+}
+
+/** Optional parts of a new comment. */
+export interface CommentOptions {
+  readonly visibility?: JiraVisibility;
+  /**
+   * Jira Service Management "internal note": hidden from the customer on
+   * the portal and in notifications. Stored as the `sd.public.comment`
+   * comment property, which only a service project honours.
+   */
+  readonly internal?: boolean;
+}
+
 /** A single Jira comment. */
 export interface JiraComment {
   readonly id: string;
@@ -69,6 +92,7 @@ export interface JiraComment {
   readonly authorAccountId: string | null;
   readonly body: AdfDocument | null;
   readonly created: string;
+  readonly visibility: JiraVisibility | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +116,13 @@ export interface JiraWorklog {
   readonly timeSpent: string;
   readonly timeSpentSeconds: number;
   readonly created: string;
+  readonly visibility: JiraVisibility | null;
+}
+
+/** Optional parts of a new worklog. */
+export interface WorklogOptions {
+  readonly comment?: AdfDocument;
+  readonly visibility?: JiraVisibility;
 }
 
 // ---------------------------------------------------------------------------
@@ -183,4 +214,33 @@ export interface JiraProject {
   readonly id: string;
   readonly key: string;
   readonly name: string;
+}
+
+// ---------------------------------------------------------------------------
+// Attachments
+// ---------------------------------------------------------------------------
+
+/** Metadata of one file attached to an issue. Binary content is never held. */
+export interface JiraAttachment {
+  readonly id: string;
+  readonly filename: string;
+  readonly mimeType: string;
+  /** Size in bytes. */
+  readonly size: number;
+  readonly created: string;
+  /** Uploader's email, or display name when privacy hides it. */
+  readonly author: string | null;
+  readonly authorAccountId: string | null;
+  /** Authenticated download URL (`/rest/api/3/attachment/content/{id}`). */
+  readonly contentUrl: string;
+}
+
+/** A file to upload as an issue attachment. */
+export interface AttachmentUpload {
+  /** Stored name, a basename with no directory part. */
+  readonly filename: string;
+  /** File bytes. Build with `Uint8Array.from(buffer)` to satisfy Blob's type. */
+  readonly content: Uint8Array<ArrayBuffer>;
+  /** `Content-Type` of the multipart part, stored by Jira as `mimeType`. */
+  readonly mediaType: string;
 }

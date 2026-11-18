@@ -7,6 +7,154 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## v1.19.0 -- User mentions in comments and descriptions (2026-11-06)
+
+### Added
+
+- **`@email` mentions** -- `add_task_comment`, `add_templated_comment` and the
+  `description` of `create_task` and `update_task` turn
+  `@jan.kowalski@example.com` into a real ADF mention, so the person is tagged
+  and notified. Each distinct address is looked up once in Jira; an address
+  with no match fails the call before anything is posted. Code spans, fenced
+  blocks and `\@` keep an address literal.
+- **`[~accountid:ID]` mentions** -- the shared markdown converter accepts
+  `[~accountid:ID]` and `[Label|~accountid:ID]` in both servers, with no API
+  call.
+
+### Fixed
+
+- **Mentions were posted as plain text** -- the markdown to ADF converter never
+  produced a `mention` node, so `@Name` reached Jira as text and notified
+  nobody.
+- **Reads dropped the account id of a mention** -- `get_task_details` and
+  `get_page` rendered a mention as a bare `@Name`, so a read-modify-write of a
+  description or a markdown Confluence page silently turned every mention into
+  text. Mentions now read as `[@Name|~accountid:ID]`, which writes back as the
+  same mention.
+
+## v1.18.2 -- Comment audience in the approval hook (2026-10-27)
+
+Jira only; Confluence is unchanged and moves to the shared version.
+
+### Fixed
+
+- **The comment-approval hook hid who reads the comment** -- since 1.18.0 a
+  comment can be an internal note, a public reply that e-mails a Service
+  Management customer, the project default, or restricted to a role or group,
+  but `jira-mcp hook comment-approval` showed only the text. The preview now
+  carries an `Audience:` line built from `internal` and `visibility`, and asks
+  the user to approve the comment and its audience.
+- **The documented `inject-hook` URL answered 404** -- the README and the setup
+  guide pointed at `hooks/jira-mcp-hooks.json` at the repository root; the
+  manifest has lived in `packages/jira-mcp/hooks/` since the workspace split.
+  `ai-toolkit update` kept using a cached copy and printed a warning. Re-register
+  with `ai-toolkit remove-hook jira-mcp-hooks` and
+  `ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/packages/jira-mcp/hooks/jira-mcp-hooks.json`.
+
+## v1.18.1 -- get_page field name in the docs (2026-10-27)
+
+Confluence only; Jira is unchanged and moves to the shared version.
+
+### Fixed
+
+- **`get_page` documented a field that does not exist** -- the tool
+  description, `rules/confluence-mcp.md`, the README and the KB told callers to
+  read `has_storage_markup`, while the response has always carried
+  `page.hasStorageMarkup`. An agent following the docs never saw the flag and
+  could not tell a macro-bearing page in advance. Pages stayed safe:
+  `update_page` refuses markdown over such a page with `MARKUP_LOSS_REFUSED`
+  either way. The response is unchanged; the docs now name the real field and
+  a test ties the description to it. Found in the 1.18.0 post-release run.
+
+## v1.18.0 -- Comment visibility and internal notes (2026-10-27)
+
+Jira gains restricted comments and worklogs, Service Management internal
+notes and a configurable comment default. Confluence does not change; the
+shared config.json only accepts two new optional Jira fields.
+
+### Added
+
+- **`visibility` on `add_task_comment`, `add_templated_comment` and
+  `log_task_time`.** Restricts the new comment or worklog to a project role
+  (`{"type": "role", "value": "Administrators"}`) or a group, by name
+  (`{"type": "group", "value": "jira-developers"}`) or by id
+  (`{"type": "group", "identifier": "<groupId>"}`). The id survives a group
+  rename, the name does not. Omitted, the item stays visible to everyone who
+  can browse the issue, as before. A role without `value`, a group with
+  neither field, an unknown `type` or an extra key answers `INVALID_INPUT`
+  before anything reaches Jira.
+- **`internal` on `add_task_comment` and `add_templated_comment`** posts a
+  Jira Service Management internal note: agents see it, the customer does not
+  (no portal entry, no customer e-mail). It is the `sd.public.comment` comment
+  property, not `visibility`, which is how the "Internal note" button stores
+  it. Outside a service project Jira would keep the property and still show
+  the comment to everyone, so the server checks `projectTypeKey` first and
+  answers `INVALID_INPUT` there, pointing at `visibility`. A non-boolean value
+  (the string `"true"` included) is also `INVALID_INPUT`, because reading it as
+  false would send the note to the customer.
+- **Restrictions on reads.** `get_task_details` returns `visibility` (`null`
+  when unrestricted) and `internal` on every comment; `internal` comes from a
+  second call, `GET /issue/{key}/comment?expand=properties`, since the issue's
+  comment field carries no properties. The comment tools and `log_task_time`
+  return what was stored.
+- **Comment default for Service Management**, global and per project:
+  `jira-mcp config set-comment-default <internal|public>` writes
+  `default_comment` to config.json, and
+  `jira-mcp config set-project-comment-default <key> <internal|public>` writes
+  `projects.<KEY>.default_comment`, which wins over the global value. It
+  decides what a comment without an explicit `internal` becomes in a service
+  project; an explicit `internal: true` or `internal: false` always wins.
+  Neither set means `public`, so nothing changes on upgrade: a comment without
+  the flag is still a public reply that reaches the customer, as it was
+  before. Set `internal` where a forgotten flag must not reach a customer.
+  Other project types ignore the setting. `config list-projects` shows the
+  effective value in a new `SD COMMENTS` column. The project type is read from
+  Jira once per project and kept until the server restarts.
+
+## v1.17.0 -- Attachments on Jira issues (2026-10-25)
+
+Both packages change: Jira gains two tools, Confluence only moves to the
+shared upload helper.
+
+### Added
+
+- **`add_task_attachment`** uploads a local file to an issue
+  (`POST /rest/api/3/issue/{key}/attachments`, multipart field `file`,
+  `X-Atlassian-Token: no-check`). Takes `task_key`, an absolute `file_path`
+  and an optional bare `filename`. The file must exist, be a regular file and
+  be at most 10 MB; that cap is the server's (it holds the file in memory),
+  Jira Cloud's own default is 1 GB. The part's media type comes from the
+  extension (png, jpg/jpeg, gif, webp, pdf, txt, csv, json, zip; otherwise
+  `application/octet-stream`). Returns id, filename, mime type, size, created,
+  author and content URL of the created attachment.
+- **`list_task_attachments`** lists an issue's attachments (metadata only) via
+  `GET /rest/api/3/issue/{key}?fields=attachment`, so an agent can check that
+  an upload landed.
+- **`ISSUE_NOT_FOUND` and `ATTACHMENT_TOO_LARGE`.** The attachment calls map
+  Jira's 404 to `IssueNotFoundError` and its 413 to `AttachmentTooLargeError`,
+  both subclasses of `JiraConnectionError`. Other tools keep answering
+  `JIRA_CONNECTION` for those statuses.
+- **`parseToolArgs()`** in core validates tool arguments with a Zod schema and
+  answers `INVALID_INPUT` naming each bad argument. The attachment tools use it
+  for the task key, the absolute path and the file name.
+
+### Changed
+
+- **One multipart path for both products.** `AtlassianHttpClient.requestMultipart()`
+  sends a `FormData` body with the auth and XSRF headers and lets `fetch` set
+  the boundary. Confluence `upload_attachment` now uses it instead of building
+  the request by hand; its behaviour is unchanged.
+
+### Not done
+
+- **Inline images in comments.** An ADF `media` node needs a Media Services
+  file id, which the public REST API does not return for an uploaded
+  attachment ([JRACLOUD-96384](https://jira.atlassian.com/browse/JRACLOUD-96384)),
+  so `add_task_comment` cannot embed an attachment. Attach the file and name it
+  in the comment.
+
+---
+
 ## v1.16.1 -- Bad arguments stop answering UNKNOWN_ERROR (2026-09-18)
 
 Both packages change in this release.

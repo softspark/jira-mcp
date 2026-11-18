@@ -12,6 +12,8 @@
  * @module
  */
 
+import { z } from 'zod';
+
 import type {
   JiraInstanceConfig,
   AdfDocument,
@@ -19,11 +21,16 @@ import type {
 } from '@softspark/atlassian-mcp-core';
 import { AtlassianHttpClient } from '@softspark/atlassian-mcp-core';
 import type {
+  AttachmentUpload,
+  JiraAttachment,
   JiraIssue,
   JiraIssueDetail,
   JiraComment,
+  CommentOptions,
+  JiraVisibility,
   JiraTransition,
   JiraWorklog,
+  WorklogOptions,
   JiraTimeTracking,
   JiraField,
   JiraUser,
@@ -32,7 +39,10 @@ import type {
   JiraIssueRef,
   JiraProject,
 } from './types.js';
+import { DEFAULT_MEDIA_TYPE } from '../utils/media-type.js';
 import {
+  AttachmentTooLargeError,
+  IssueNotFoundError,
   JiraAuthenticationError,
   JiraConnectionError,
   JiraPermissionError,
@@ -44,6 +54,12 @@ import {
 
 /** Default max results for JQL search. */
 const DEFAULT_MAX_RESULTS = 1000;
+
+/** Comment property Jira Service Management reads to tell internal from public. */
+const SD_COMMENT_PROPERTY = 'sd.public.comment';
+
+/** Comments per page when reading comment properties. */
+const COMMENT_PAGE_SIZE = 100;
 
 /** Issues per `issue/bulkfetch` call; the endpoint rejects more than 100. */
 const BULK_FETCH_CHUNK = 100;
@@ -128,6 +144,42 @@ interface RawJiraComment {
   };
   readonly body?: AdfDocument;
   readonly created?: string;
+  readonly visibility?: RawJiraVisibility;
+  readonly properties?: readonly {
+    readonly key?: string;
+    readonly value?: unknown;
+  }[];
+}
+
+/** One page of `GET /issue/{key}/comment`. */
+interface RawJiraCommentPage {
+  readonly comments?: readonly RawJiraComment[];
+  readonly total?: number;
+}
+
+/** True when the comment carries `sd.public.comment` with `internal: true`. */
+function isInternalComment(comment: RawJiraComment): boolean {
+  const property = comment.properties?.find((p) => p.key === SD_COMMENT_PROPERTY);
+  const value = property?.value as { readonly internal?: unknown } | undefined;
+  return value?.internal === true;
+}
+
+interface RawJiraVisibility {
+  readonly type?: string;
+  readonly value?: string;
+  readonly identifier?: string;
+}
+
+/** Keep a restriction only when Jira names a type this server knows. */
+function toVisibility(raw: RawJiraVisibility | undefined): JiraVisibility | null {
+  if (raw?.type !== 'group' && raw?.type !== 'role') {
+    return null;
+  }
+  return {
+    type: raw.type,
+    ...(raw.value !== undefined ? { value: raw.value } : {}),
+    ...(raw.identifier !== undefined ? { identifier: raw.identifier } : {}),
+  };
 }
 
 interface RawJiraSearchResult {
@@ -149,6 +201,7 @@ interface RawJiraWorklog {
   readonly timeSpent?: string;
   readonly timeSpentSeconds?: number;
   readonly created?: string;
+  readonly visibility?: RawJiraVisibility;
 }
 
 interface RawJiraField {
@@ -198,11 +251,47 @@ interface RawJiraProject {
   readonly id: string;
   readonly key: string;
   readonly name?: string;
+  readonly projectTypeKey?: string;
 }
 
 interface RawJiraUserBulkResult {
   readonly values?: readonly RawJiraUser[];
 }
+
+/**
+ * One attachment as Jira returns it, from an upload or from `fields.attachment`.
+ *
+ * Validated with Zod rather than cast, because the upload result is handed
+ * back to an agent as proof that the file landed: a shape drift must fail
+ * loudly instead of reporting an attachment with an empty id.
+ */
+const RawJiraAttachmentSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String),
+  filename: z.string(),
+  mimeType: z.string().optional(),
+  size: z.number().optional(),
+  created: z.string().optional(),
+  content: z.string().optional(),
+  author: z
+    .object({
+      accountId: z.string().optional(),
+      emailAddress: z.string().optional(),
+      displayName: z.string().optional(),
+    })
+    .nullish(),
+});
+
+type RawJiraAttachment = z.infer<typeof RawJiraAttachmentSchema>;
+
+/** `POST /issue/{key}/attachments` answers with an array, one per file part. */
+const RawAttachmentUploadSchema = z.array(RawJiraAttachmentSchema);
+
+/** `GET /issue/{key}?fields=attachment`; the field is absent when empty on some sites. */
+const RawIssueAttachmentsSchema = z.object({
+  fields: z
+    .object({ attachment: z.array(RawJiraAttachmentSchema).nullish() })
+    .optional(),
+});
 
 // ---------------------------------------------------------------------------
 // JiraConnector
@@ -224,13 +313,47 @@ function mapJiraError({ status, detail }: HttpFailure): Error {
   return new JiraConnectionError(`Jira API error (${status}): ${detail}`);
 }
 
+/**
+ * Error mapping for the attachment endpoints.
+ *
+ * Narrower than {@link mapJiraError} on purpose: a 404 there means "issue not
+ * found or not visible" and a 413 means "file too large", both of which the
+ * caller can act on. Giving every Jira call those codes would change what
+ * existing tools answer, so only the attachment calls use this mapper.
+ */
+function mapJiraAttachmentError(failure: HttpFailure): Error {
+  const { status, detail } = failure;
+  if (status === 403) {
+    return new JiraPermissionError(
+      `Permission denied: the account may lack Browse Projects or Create Attachments on this project, or attachments are disabled on the site. ${detail}`,
+    );
+  }
+  if (status === 404) {
+    return new IssueNotFoundError(
+      `Issue not found, or not visible to this account: ${detail}`,
+    );
+  }
+  if (status === 413) {
+    return new AttachmentTooLargeError(
+      `Jira refused the attachment as too large (site attachment size limit or the issue's attachment limit): ${detail}`,
+    );
+  }
+  return mapJiraError(failure);
+}
+
 export class JiraConnector {
   private readonly http: AtlassianHttpClient;
+  private readonly attachmentHttp: AtlassianHttpClient;
+  private readonly projectTypeKeys = new Map<string, string | null>();
   readonly instanceUrl: string;
 
   constructor(config: JiraInstanceConfig) {
     this.instanceUrl = config.url;
     this.http = new AtlassianHttpClient(config, mapJiraError);
+    this.attachmentHttp = new AtlassianHttpClient(
+      config,
+      mapJiraAttachmentError,
+    );
   }
 
   // -----------------------------------------------------------------------
@@ -342,6 +465,7 @@ export class JiraConnector {
         authorAccountId: c.author?.accountId ?? null,
         body: c.body ?? null,
         created: c.created ?? '',
+        visibility: toVisibility(c.visibility),
       }),
     );
 
@@ -382,16 +506,25 @@ export class JiraConnector {
    * Add an ADF comment to an issue.
    *
    * The comment body must be a valid ADF document. Use `markdownToAdf()`
-   * to convert markdown before calling this method.
+   * to convert markdown before calling this method. Without `visibility`
+   * the comment is visible to everyone who can browse the issue, and in a
+   * service project without `internal` it also reaches the customer.
    */
   async addComment(
     issueKey: string,
     body: AdfDocument,
+    options: CommentOptions = {},
   ): Promise<JiraComment> {
     const result = await this.request<RawJiraComment>(
       'POST',
       `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment`,
-      { body },
+      {
+        body,
+        ...(options.visibility ? { visibility: options.visibility } : {}),
+        ...(options.internal
+          ? { properties: [{ key: SD_COMMENT_PROPERTY, value: { internal: true } }] }
+          : {}),
+      },
     );
 
     return {
@@ -403,7 +536,41 @@ export class JiraConnector {
       authorAccountId: result.author?.accountId ?? null,
       body: result.body ?? null,
       created: result.created ?? '',
+      visibility: toVisibility(result.visibility),
     };
+  }
+
+  /**
+   * Ids of the issue's Service Management internal comments.
+   *
+   * The issue's `comment` field never carries comment properties, so this
+   * reads `GET /issue/{key}/comment?expand=properties` page by page.
+   */
+  async getInternalCommentIds(issueKey: string): Promise<ReadonlySet<string>> {
+    const ids = new Set<string>();
+    let startAt = 0;
+    for (;;) {
+      const page = await this.request<RawJiraCommentPage>(
+        'GET',
+        `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment`,
+        undefined,
+        {
+          expand: 'properties',
+          startAt: String(startAt),
+          maxResults: String(COMMENT_PAGE_SIZE),
+        },
+      );
+      const comments = page.comments ?? [];
+      for (const c of comments) {
+        if (c.id !== undefined && isInternalComment(c)) {
+          ids.add(c.id);
+        }
+      }
+      startAt += comments.length;
+      if (comments.length === 0 || startAt >= (page.total ?? 0)) {
+        return ids;
+      }
+    }
   }
 
   /**
@@ -532,16 +699,20 @@ export class JiraConnector {
    *
    * @param issueKey      Issue key (e.g. "PROJ-123").
    * @param timeSpentSeconds  Time to log in seconds.
-   * @param comment       Optional ADF comment describing the work.
+   * @param options       Optional ADF `comment` describing the work and
+   *                      `visibility` restricting who sees the entry.
    */
   async addWorklog(
     issueKey: string,
     timeSpentSeconds: number,
-    comment?: AdfDocument,
+    options: WorklogOptions = {},
   ): Promise<JiraWorklog> {
     const body: Record<string, unknown> = { timeSpentSeconds };
-    if (comment) {
-      body['comment'] = comment;
+    if (options.comment) {
+      body['comment'] = options.comment;
+    }
+    if (options.visibility) {
+      body['visibility'] = options.visibility;
     }
 
     const result = await this.request<RawJiraWorklog>(
@@ -555,6 +726,7 @@ export class JiraConnector {
       timeSpent: result.timeSpent ?? '',
       timeSpentSeconds: result.timeSpentSeconds ?? timeSpentSeconds,
       created: result.created ?? '',
+      visibility: toVisibility(result.visibility),
     };
   }
 
@@ -782,6 +954,103 @@ export class JiraConnector {
       id: project.id,
       key: project.key,
       name: project.name ?? project.key,
+    };
+  }
+
+  /**
+   * A project's type: `software`, `business`, `service_desk` or `product_discovery`.
+   *
+   * Null when Jira omits it. Internal comments exist only in `service_desk`.
+   * Every comment asks, and a project practically never changes type, so the
+   * answer is kept for the life of this connector (the server process).
+   */
+  async getProjectTypeKey(projectKey: string): Promise<string | null> {
+    const cached = this.projectTypeKeys.get(projectKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const project = await this.request<RawJiraProject>(
+      'GET',
+      `/rest/api/3/project/${encodeURIComponent(projectKey)}`,
+    );
+    const typeKey = project.projectTypeKey ?? null;
+    this.projectTypeKeys.set(projectKey, typeKey);
+    return typeKey;
+  }
+
+  // -----------------------------------------------------------------------
+  // Attachments
+  // -----------------------------------------------------------------------
+
+  /**
+   * Upload one file as an issue attachment.
+   *
+   * Multipart with the part named `file`, as Jira requires; the shared client
+   * adds `X-Atlassian-Token: no-check`, without which Jira blocks the request.
+   * Jira answers with an array because one request may carry several parts.
+   */
+  async addAttachment(
+    issueKey: string,
+    upload: AttachmentUpload,
+  ): Promise<JiraAttachment[]> {
+    const form = new FormData();
+    form.append(
+      'file',
+      new Blob([upload.content], { type: upload.mediaType }),
+      upload.filename,
+    );
+
+    const raw = await this.attachmentHttp.requestMultipart<unknown>(
+      'POST',
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/attachments`,
+      form,
+      '/rest/api/3/issue/{issueKey}/attachments',
+    );
+
+    const parsed = RawAttachmentUploadSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new JiraConnectionError(
+        `Unexpected attachment upload response from Jira for ${issueKey}: ${parsed.error.message}`,
+      );
+    }
+    return parsed.data.map((a) => this.#toAttachment(a));
+  }
+
+  /** List attachment metadata for an issue. Binary content is never fetched. */
+  async getAttachments(issueKey: string): Promise<JiraAttachment[]> {
+    const raw = await this.attachmentHttp.requestJson<unknown>(
+      'GET',
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
+      undefined,
+      { fields: 'attachment' },
+    );
+
+    const parsed = RawIssueAttachmentsSchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new JiraConnectionError(
+        `Unexpected attachment list response from Jira for ${issueKey}: ${parsed.error.message}`,
+      );
+    }
+    return (parsed.data.fields?.attachment ?? []).map((a) =>
+      this.#toAttachment(a),
+    );
+  }
+
+  #toAttachment(a: RawJiraAttachment): JiraAttachment {
+    return {
+      id: a.id,
+      filename: a.filename,
+      mimeType: a.mimeType ?? DEFAULT_MEDIA_TYPE,
+      size: a.size ?? 0,
+      created: a.created ?? '',
+      author: personLabel(a.author),
+      authorAccountId: a.author?.accountId ?? null,
+      contentUrl:
+        a.content ??
+        new URL(
+          `/rest/api/3/attachment/content/${encodeURIComponent(a.id)}`,
+          this.instanceUrl,
+        ).toString(),
     };
   }
 

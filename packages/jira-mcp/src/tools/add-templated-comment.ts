@@ -21,8 +21,9 @@ import {
   renderTemplate,
   TemplateMissingVariableError,
 } from '@softspark/atlassian-mcp-core';
+import type { JiraConfig } from '@softspark/atlassian-mcp-core';
 import type { ToolResult } from './helpers.js';
-import { success, failure, getOperations } from './helpers.js';
+import { success, failure, getOperations, resolveCommentOptions } from './helpers.js';
 
 export interface AddTemplatedCommentArgs {
   readonly task_key: string;
@@ -30,12 +31,16 @@ export interface AddTemplatedCommentArgs {
   readonly variables?: Readonly<Record<string, string>>;
   readonly markdown?: string;
   readonly user_approved?: boolean;
+  /** Raw client values, validated by the handler. */
+  readonly visibility?: unknown;
+  readonly internal?: unknown;
 }
 
 export interface AddTemplatedCommentDeps {
   readonly pool: InstancePool;
   readonly cacheManager: CacheManager;
   readonly templateRegistry: TemplateRegistry;
+  readonly config: JiraConfig;
 }
 
 /**
@@ -51,6 +56,7 @@ export async function handleAddTemplatedComment(
 ): Promise<ToolResult> {
   try {
     assertCommentApproved(args.user_approved);
+    const options = resolveCommentOptions(args, deps.config);
 
     // Validate: exactly one source must be provided
     if (args.template_id && args.markdown) {
@@ -91,7 +97,7 @@ export async function handleAddTemplatedComment(
     }
 
     const ops = getOperations(deps.pool, deps.cacheManager, args.task_key);
-    const result = await ops.addComment(args.task_key, finalMarkdown);
+    const result = await ops.addComment(args.task_key, finalMarkdown, options);
 
     return success({
       comment: {
@@ -99,6 +105,8 @@ export async function handleAddTemplatedComment(
         author: result.author,
         body: result.bodyMarkdown,
         created: result.created,
+        visibility: result.visibility,
+        internal: result.internal,
       },
       ...(templateInfo ? { template: templateInfo } : {}),
       message: `Added comment to ${args.task_key}`,

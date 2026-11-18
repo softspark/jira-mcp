@@ -92,7 +92,7 @@ export const CONFLUENCE_TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   {
     name: 'get_page',
     description:
-      'Get a page by id with its body, labels, version number and the space language. Returns has_storage_markup: when true the page uses Confluence macros or page/attachment links, and must be edited as storage rather than markdown.',
+      'Get a page by id with its body, labels, version number and the space language. Returns page.hasStorageMarkup: when true the page uses Confluence macros or page/attachment links, and must be edited as storage rather than markdown.',
     inputSchema: {
       type: 'object',
       properties: {

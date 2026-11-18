@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [configuration, config, credentials, multi-instance, environment-variables, tempo]
 version: "1.15.0"
 created: "2026-04-13"
-last_updated: "2026-09-17"
+last_updated: "2026-10-27"
 description: "Full reference for config.json, credentials.json, the Tempo token, path resolution order, environment variables, and multi-instance setup."
 ---
 
@@ -42,6 +42,8 @@ In this example `DEVOPS` uses `"en"` and `ADMIN` inherits `"pl"` from `default_l
 | `projects` | object | Yes | Map of project key to instance config. |
 | `projects.<KEY>.url` | string (URL) | Yes | Jira Cloud base URL for this project. |
 | `projects.<KEY>.language` | `LanguageCode` | No | Language override for this project. Overrides `default_language`. |
+| `projects.<KEY>.default_comment` | `"internal"` \| `"public"` | No | Jira Service Management projects only: what a comment posted without an explicit `internal` flag becomes. Overrides `default_comment`. Ignored by other project types. See [Comment default](#comment-default-service-management). |
+| `default_comment` | `"internal"` \| `"public"` | No | Global value of the above for every project without its own. Defaults to `"public"`, Jira's own behaviour. |
 | `default_project` | string | Yes | Must reference a key present in `projects`. |
 | `default_language` | `LanguageCode` | No | Global language default. Applied to any project that has no `language` field. Defaults to `"pl"` when omitted. |
 | `tempo_api_url` | string (URL) | No | Tempo Cloud REST API base URL, version segment included. Defaults to `https://api.tempo.io/4`. Sites pinned to a Tempo region use `https://api.eu.tempo.io/4` or `https://api.us.tempo.io/4`. |
@@ -189,6 +191,29 @@ Setting these variables overrides both local and global file discovery.
 1. `projects.<KEY>.language` — set via `config set-project-language`.
 2. `default_language` — set via `config set-language`.
 3. `"pl"` — hardcoded fallback when neither field is present.
+
+---
+
+## Comment Default (Service Management)
+
+In a Jira Service Management project every comment is either an internal note (agents only) or a public reply that the customer sees on the portal and gets by e-mail. `add_task_comment` and `add_templated_comment` decide it like this:
+
+1. `internal: true` or `internal: false` in the call. The operator's explicit choice always wins.
+2. `projects.<KEY>.default_comment` from `config.json` (`config set-project-comment-default`).
+3. `default_comment` at the top of `config.json` (`config set-comment-default`).
+4. `"public"` when neither is set. That is what Jira does and what this server did before the setting existed, so upgrading changes nothing for anyone who has not opted in.
+
+Set a project to `internal` when agents there mostly write notes for each other, so a forgotten flag does not reach a customer. A reply then needs `internal: false`.
+
+The server reads the project's type from Jira (`projectTypeKey`) on the first comment to a project and remembers it until the server restarts. In any project that is not `service_desk` the setting is ignored and the comment is an ordinary one; `internal: true` is refused there with `INVALID_INPUT`.
+
+```bash
+jira-mcp config set-comment-default internal                  # every service project, unless it says otherwise
+jira-mcp config set-project-comment-default SUPPORT internal  # one project: notes stay internal unless internal: false
+jira-mcp config set-project-comment-default PORTAL public     # one project keeps public replies despite the global value
+```
+
+`jira-mcp config list-projects` shows the value in the `SD COMMENTS` column, with `(default)` when it comes from the fallback. A running MCP server reads `config.json` at startup, so restart the MCP client after changing it.
 
 ---
 

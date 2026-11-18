@@ -14,6 +14,7 @@
  *  - set-tempo-token -- set the Tempo API token
  *  - set-default     -- set default project
  *  - set-language    -- set default language
+ *  - set-comment-default / set-project-comment-default -- internal or public comments by default
  *
  * @module
  */
@@ -28,6 +29,7 @@ import { registerSetCredentialsCommand } from './set-credentials.js';
 import { registerSetTempoTokenCommand } from './set-tempo-token.js';
 import { registerSetDefaultCommand } from './set-default.js';
 import { registerSetLanguageCommand } from './set-language.js';
+import { registerSetCommentDefaultCommand } from './set-comment-default.js';
 
 /** Register all `config` subcommands on the given parent command. */
 export function registerConfigCommands(parent: Command): void {
@@ -43,4 +45,5 @@ export function registerConfigCommands(parent: Command): void {
   registerSetTempoTokenCommand(config);
   registerSetDefaultCommand(config);
   registerSetLanguageCommand(config);
+  registerSetCommentDefaultCommand(config);
 }

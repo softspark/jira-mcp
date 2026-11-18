@@ -14,18 +14,23 @@
 import type { InstancePool } from '../connector/instance-pool.js';
 import type { CacheManager } from '../cache/manager.js';
 import type { ToolResult } from './helpers.js';
-import { success, failure, getOperations } from './helpers.js';
+import { success, failure, getOperations, resolveCommentOptions } from './helpers.js';
 import { assertCommentApproved } from '@softspark/atlassian-mcp-core';
+import type { JiraConfig } from '@softspark/atlassian-mcp-core';
 
 export interface AddTaskCommentArgs {
   readonly task_key: string;
   readonly comment: string;
   readonly user_approved?: boolean;
+  /** Raw client values, validated by the handler. */
+  readonly visibility?: unknown;
+  readonly internal?: unknown;
 }
 
 export interface AddTaskCommentDeps {
   readonly pool: InstancePool;
   readonly cacheManager: CacheManager;
+  readonly config: JiraConfig;
 }
 
 /**
@@ -37,9 +42,10 @@ export async function handleAddTaskComment(
 ): Promise<ToolResult> {
   try {
     assertCommentApproved(args.user_approved);
+    const options = resolveCommentOptions(args, deps.config);
 
     const ops = getOperations(deps.pool, deps.cacheManager, args.task_key);
-    const result = await ops.addComment(args.task_key, args.comment);
+    const result = await ops.addComment(args.task_key, args.comment, options);
 
     return success({
       comment: {
@@ -47,6 +53,8 @@ export async function handleAddTaskComment(
         author: result.author,
         body: result.bodyMarkdown,
         created: result.created,
+        visibility: result.visibility,
+        internal: result.internal,
       },
       message: `Added comment to ${args.task_key}`,
     });

@@ -12,6 +12,7 @@
 import { vi } from 'vitest';
 
 import type { JiraConnector } from '../../src/connector/jira-connector';
+import type { JiraAttachment } from '../../src/connector/types';
 import type { TempoClient } from '../../src/connector/tempo-client';
 import type { CacheManager } from '../../src/cache/manager';
 import type { InstancePool } from '../../src/connector/instance-pool';
@@ -28,6 +29,8 @@ import type { UserCacheManager } from '../../src/cache/user-cache';
 interface MockJiraConnector {
   searchIssues: ReturnType<typeof vi.fn>;
   getIssue: ReturnType<typeof vi.fn>;
+  getInternalCommentIds: ReturnType<typeof vi.fn>;
+  getProjectTypeKey: ReturnType<typeof vi.fn>;
   addComment: ReturnType<typeof vi.fn>;
   deleteIssue: ReturnType<typeof vi.fn>;
   deleteComment: ReturnType<typeof vi.fn>;
@@ -46,6 +49,8 @@ interface MockJiraConnector {
   getIssuesByIdsOrKeys: ReturnType<typeof vi.fn>;
   getProject: ReturnType<typeof vi.fn>;
   getProjectStatuses: ReturnType<typeof vi.fn>;
+  addAttachment: ReturnType<typeof vi.fn>;
+  getAttachments: ReturnType<typeof vi.fn>;
   instanceUrl: string;
 }
 
@@ -55,6 +60,8 @@ export function createMockConnector(
   return {
     searchIssues: vi.fn(),
     getIssue: vi.fn(),
+    getInternalCommentIds: vi.fn().mockResolvedValue(new Set<string>()),
+    getProjectTypeKey: vi.fn(),
     addComment: vi.fn(),
     deleteIssue: vi.fn(),
     deleteComment: vi.fn(),
@@ -73,7 +80,26 @@ export function createMockConnector(
     getIssuesByIdsOrKeys: vi.fn(),
     getProject: vi.fn(),
     getProjectStatuses: vi.fn(),
+    addAttachment: vi.fn(),
+    getAttachments: vi.fn(),
     instanceUrl,
+  };
+}
+
+/** A connector-level attachment, as `addAttachment`/`getAttachments` return it. */
+export function createAttachmentFixture(
+  overrides: Partial<JiraAttachment> = {},
+): JiraAttachment {
+  return {
+    id: '10000',
+    filename: 'shot.png',
+    mimeType: 'image/png',
+    size: 4,
+    created: '2026-10-25T10:00:00.000+0000',
+    author: 'dev@example.com',
+    authorAccountId: 'acc-1',
+    contentUrl: 'https://test.atlassian.net/rest/api/3/attachment/content/10000',
+    ...overrides,
   };
 }
 

@@ -120,4 +120,48 @@ describe('handleLogTaskTime', () => {
 
     expect(result.isError).toBe(true);
   });
+
+  it('passes comment and visibility to logTime and returns the restriction', async () => {
+    const { pool, cache } = setupDeps();
+    const visibility = { type: 'role', value: 'Developers' };
+    const logTime = vi.fn().mockResolvedValue({
+      taskKey: 'PROJ-1',
+      worklogId: 'wl-300',
+      timeSpent: '1h',
+      timeSpentSeconds: 3600,
+      visibility,
+    });
+
+    const { TaskOperations } = await import('../../src/operations/task-operations');
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.logTime = logTime;
+    });
+
+    const result = await handleLogTaskTime(
+      { task_key: 'PROJ-1', time_spent: '1h', comment: 'Review', visibility },
+      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+    );
+
+    expect(logTime).toHaveBeenCalledWith('PROJ-1', '1h', { comment: 'Review', visibility });
+    expect(parseResult(result)['visibility']).toEqual(visibility);
+  });
+
+  it('rejects an unknown visibility type before calling Jira', async () => {
+    const { pool, cache } = setupDeps();
+    const logTime = vi.fn();
+
+    const { TaskOperations } = await import('../../src/operations/task-operations');
+    vi.mocked(TaskOperations).mockImplementation(function (this: Record<string, unknown>) {
+      this.logTime = logTime;
+    });
+
+    const result = await handleLogTaskTime(
+      { task_key: 'PROJ-1', time_spent: '1h', visibility: { type: 'user', value: 'x' } },
+      { pool: asPool(pool), cacheManager: asCacheManager(cache) },
+    );
+
+    expect(result.isError).toBe(true);
+    expect(parseResult(result)['code']).toBe('INVALID_INPUT');
+    expect(logTime).not.toHaveBeenCalled();
+  });
 });

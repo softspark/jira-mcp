@@ -32,6 +32,9 @@ export {
   BODY_FORMATS,
   DEFAULT_BODY_FORMAT,
   DEFAULT_TEMPO_API_URL,
+  COMMENT_DEFAULTS,
+  DEFAULT_COMMENT,
+  CommentDefaultSchema,
   BodyFormatSchema,
   LanguageCodeSchema,
   ProjectConfigSchema,
@@ -47,6 +50,7 @@ export {
 } from './config/schema.js';
 export type {
   LanguageCode,
+  CommentDefault,
   BodyFormat,
   ProjectConfig,
   SpaceConfig,
@@ -104,6 +108,7 @@ export {
   asOptionalRecord,
   asOptionalString,
   asOptionalStringArray,
+  parseToolArgs,
   requireString,
 } from './tools/args.js';
 export { assertCommentApproved } from './tools/comment-approval.js';

@@ -208,18 +208,163 @@ describe('TaskOperations', () => {
         authorAccountId: 'user-account-1',
         body: adfBody,
         created: '2026-01-01T00:00:00.000Z',
+        visibility: null,
       });
+
+      connector.getProjectTypeKey.mockResolvedValue('software');
 
       const result = await ops.addComment('PROJ-1', '# My comment');
 
       expect(connector.addComment).toHaveBeenCalledWith(
         'PROJ-1',
         expect.objectContaining({ type: 'doc' }),
+        {},
       );
       expect(result.commentId).toBe('c-1');
       expect(result.author).toBe('user@example.com');
       // adfToMarkdown is mocked
       expect(result.bodyMarkdown).toBe('# Mocked markdown');
+      expect(result.visibility).toBeNull();
+      expect(result.internal).toBe(false);
+    });
+
+    describe('without an explicit internal flag in a service project', () => {
+      function serviceOps() {
+        const created = createOps();
+        created.connector.getProjectTypeKey.mockResolvedValue('service_desk');
+        created.connector.addComment.mockResolvedValue({
+          id: 'c-9',
+          author: 'agent@example.com',
+          authorAccountId: 'agent-1',
+          body: createSimpleAdfDoc('Note'),
+          created: '2026-01-01T00:00:00.000Z',
+          visibility: null,
+        });
+        return created;
+      }
+
+      it('posts a public reply when the project sets no default, as before the setting existed', async () => {
+        const { ops, connector } = serviceOps();
+
+        const result = await ops.addComment('SD-1', 'Note');
+
+        expect(connector.addComment).toHaveBeenCalledWith('SD-1', expect.anything(), {});
+        expect(result.internal).toBe(false);
+      });
+
+      it('posts an internal note when the project default is internal', async () => {
+        const { ops, connector } = serviceOps();
+
+        const result = await ops.addComment('SD-1', 'Note', { serviceDefault: 'internal' });
+
+        expect(connector.addComment).toHaveBeenCalledWith('SD-1', expect.anything(), {
+          internal: true,
+        });
+        expect(result.internal).toBe(true);
+      });
+
+      it('lets an explicit internal: true override a public default', async () => {
+        const { ops, connector } = serviceOps();
+
+        await ops.addComment('SD-1', 'Note', { internal: true, serviceDefault: 'public' });
+
+        expect(connector.addComment).toHaveBeenCalledWith('SD-1', expect.anything(), {
+          internal: true,
+        });
+      });
+
+      it('lets an explicit internal: false override an internal default without asking the project type', async () => {
+        const { ops, connector } = serviceOps();
+
+        const result = await ops.addComment('SD-1', 'Note', {
+          internal: false,
+          serviceDefault: 'internal',
+        });
+
+        expect(connector.getProjectTypeKey).not.toHaveBeenCalled();
+        expect(connector.addComment).toHaveBeenCalledWith('SD-1', expect.anything(), {});
+        expect(result.internal).toBe(false);
+      });
+    });
+
+    it('ignores an internal default outside a service project', async () => {
+      const { ops, connector } = createOps();
+      connector.getProjectTypeKey.mockResolvedValue('business');
+      connector.addComment.mockResolvedValue({
+        id: 'c-10',
+        author: 'user@example.com',
+        authorAccountId: 'user-account-1',
+        body: createSimpleAdfDoc('Note'),
+        created: '2026-01-01T00:00:00.000Z',
+        visibility: null,
+      });
+
+      const result = await ops.addComment('BIZ-1', 'Note', { serviceDefault: 'internal' });
+
+      expect(connector.addComment).toHaveBeenCalledWith('BIZ-1', expect.anything(), {});
+      expect(result.internal).toBe(false);
+    });
+
+    it('posts an internal note in a service project', async () => {
+      const { ops, connector } = createOps();
+      connector.getProjectTypeKey.mockResolvedValue('service_desk');
+      connector.addComment.mockResolvedValue({
+        id: 'c-3',
+        author: 'agent@example.com',
+        authorAccountId: 'agent-1',
+        body: createSimpleAdfDoc('Internal'),
+        created: '2026-01-01T00:00:00.000Z',
+        visibility: null,
+      });
+
+      const result = await ops.addComment('SD-7', 'Internal', { internal: true });
+
+      expect(connector.getProjectTypeKey).toHaveBeenCalledWith('SD');
+      expect(connector.addComment).toHaveBeenCalledWith(
+        'SD-7',
+        expect.objectContaining({ type: 'doc' }),
+        { internal: true },
+      );
+      expect(result.internal).toBe(true);
+    });
+
+    it('refuses an internal note outside a service project and posts nothing', async () => {
+      const { ops, connector } = createOps();
+      connector.getProjectTypeKey.mockResolvedValue('software');
+
+      await expect(ops.addComment('PROJ-1', 'Internal', { internal: true })).rejects.toMatchObject({
+        code: 'INVALID_INPUT',
+        message: expect.stringContaining('PROJ is software'),
+      });
+      expect(connector.addComment).not.toHaveBeenCalled();
+    });
+
+    it('passes visibility to the connector and returns what Jira stored', async () => {
+      const { ops, connector } = createOps();
+      const visibility = { type: 'group' as const, value: 'jira-developers' };
+      connector.getProjectTypeKey.mockResolvedValue('software');
+
+      connector.addComment.mockResolvedValue({
+        id: 'c-2',
+        author: 'user@example.com',
+        authorAccountId: 'user-account-1',
+        body: createSimpleAdfDoc('Internal'),
+        created: '2026-01-01T00:00:00.000Z',
+        visibility: { ...visibility, identifier: 'group-id-1' },
+      });
+
+      const result = await ops.addComment('PROJ-1', 'Internal', { visibility });
+
+      expect(connector.addComment).toHaveBeenCalledWith(
+        'PROJ-1',
+        expect.objectContaining({ type: 'doc' }),
+        { visibility },
+      );
+      expect(result.visibility).toEqual({
+        type: 'group',
+        value: 'jira-developers',
+        identifier: 'group-id-1',
+      });
     });
   });
 
@@ -343,6 +488,7 @@ describe('TaskOperations', () => {
             authorAccountId: 'commenter-1',
             body: adfComment,
             created: '2026-01-02T00:00:00.000Z',
+            visibility: { type: 'role', value: 'Developers' },
           },
         ],
         timeTracking: {
@@ -355,8 +501,12 @@ describe('TaskOperations', () => {
         },
       });
 
+      connector.getInternalCommentIds.mockResolvedValue(new Set(['c-1']));
+
       const details = await ops.getTaskDetails('PROJ-1');
 
+      expect(connector.getInternalCommentIds).toHaveBeenCalledWith('PROJ-1');
+      expect(details.comments[0]!.internal).toBe(true);
       expect(details.key).toBe('PROJ-1');
       expect(details.creator).toBe('creator@example.com');
       expect(details.reporter).toBe('reporter@example.com');
@@ -365,6 +515,7 @@ describe('TaskOperations', () => {
       expect(details.comments).toHaveLength(1);
       expect(details.comments[0]!.author).toBe('commenter@example.com');
       expect(details.comments[0]!.body).toBe('# Mocked markdown');
+      expect(details.comments[0]!.visibility).toEqual({ type: 'role', value: 'Developers' });
     });
   });
 
@@ -684,11 +835,7 @@ describe('TaskOperations', () => {
 
       const result = await ops.logTime('PROJ-1', '2h 30m');
 
-      expect(connector.addWorklog).toHaveBeenCalledWith(
-        'PROJ-1',
-        9000,
-        undefined,
-      );
+      expect(connector.addWorklog).toHaveBeenCalledWith('PROJ-1', 9000, {});
       expect(cache.deleteTask).toHaveBeenCalledWith('PROJ-1');
       expect(result.worklogId).toBe('wl-1');
       expect(result.timeSpent).toBe('2h 30m');
@@ -706,14 +853,31 @@ describe('TaskOperations', () => {
       });
       cache.deleteTask.mockResolvedValue(undefined);
 
-      await ops.logTime('PROJ-1', '1h', 'Work description');
+      await ops.logTime('PROJ-1', '1h', { comment: 'Work description' });
 
       // markdownToAdf is mocked, so the second call passes the ADF doc
-      expect(connector.addWorklog).toHaveBeenCalledWith(
-        'PROJ-1',
-        9000,
-        expect.objectContaining({ type: 'doc' }),
-      );
+      expect(connector.addWorklog).toHaveBeenCalledWith('PROJ-1', 9000, {
+        comment: expect.objectContaining({ type: 'doc' }),
+      });
+    });
+
+    it('passes visibility to the connector and returns it', async () => {
+      const { ops, connector, cache } = createOps();
+      const visibility = { type: 'role' as const, value: 'Administrators' };
+
+      connector.addWorklog.mockResolvedValue({
+        id: 'wl-5',
+        timeSpent: '1h',
+        timeSpentSeconds: 3600,
+        created: '2026-01-01T00:00:00.000Z',
+        visibility,
+      });
+      cache.deleteTask.mockResolvedValue(undefined);
+
+      const result = await ops.logTime('PROJ-1', '1h', { visibility });
+
+      expect(connector.addWorklog).toHaveBeenCalledWith('PROJ-1', 9000, { visibility });
+      expect(result.visibility).toEqual(visibility);
     });
 
     it('tolerates missing cache entry on delete', async () => {

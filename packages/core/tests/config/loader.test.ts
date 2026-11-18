@@ -65,6 +65,72 @@ describe('loadConfig', () => {
     expect(result.credentials.api_token).toBe(credsData.api_token);
   });
 
+  it('carries a project default_comment through and leaves it unset otherwise', async () => {
+    const configData = {
+      projects: {
+        SD: { url: 'https://sd.atlassian.net', default_comment: 'public' },
+        DEV: { url: 'https://sd.atlassian.net' },
+      },
+      default_project: 'SD',
+    };
+
+    mockedAccess.mockResolvedValue(undefined);
+    mockedReadFile
+      .mockResolvedValueOnce(JSON.stringify(configData))
+      .mockResolvedValueOnce(JSON.stringify(createCredentials()));
+
+    const result = await loadConfig({
+      configPath: '/fake/config.json',
+      credentialsPath: '/fake/credentials.json',
+    });
+
+    expect(result.projects['SD']?.default_comment).toBe('public');
+    expect(result.projects['DEV']).not.toHaveProperty('default_comment');
+  });
+
+  it('falls back to the global default_comment when the project sets none', async () => {
+    const configData = {
+      projects: {
+        SD: { url: 'https://sd.atlassian.net', default_comment: 'public' },
+        HELP: { url: 'https://sd.atlassian.net' },
+      },
+      default_project: 'SD',
+      default_comment: 'internal',
+    };
+
+    mockedAccess.mockResolvedValue(undefined);
+    mockedReadFile
+      .mockResolvedValueOnce(JSON.stringify(configData))
+      .mockResolvedValueOnce(JSON.stringify(createCredentials()));
+
+    const result = await loadConfig({
+      configPath: '/fake/config.json',
+      credentialsPath: '/fake/credentials.json',
+    });
+
+    expect(result.projects['SD']?.default_comment).toBe('public');
+    expect(result.projects['HELP']?.default_comment).toBe('internal');
+  });
+
+  it('rejects a default_comment other than internal or public', async () => {
+    const configData = {
+      projects: { SD: { url: 'https://sd.atlassian.net', default_comment: 'hidden' } },
+      default_project: 'SD',
+    };
+
+    mockedAccess.mockResolvedValue(undefined);
+    mockedReadFile
+      .mockResolvedValueOnce(JSON.stringify(configData))
+      .mockResolvedValueOnce(JSON.stringify(createCredentials()));
+
+    await expect(
+      loadConfig({
+        configPath: '/fake/config.json',
+        credentialsPath: '/fake/credentials.json',
+      }),
+    ).rejects.toThrow(ConfigValidationError);
+  });
+
   it('throws ConfigNotFoundError when config file is missing', async () => {
     mockedAccess.mockRejectedValue(new Error('ENOENT'));
 

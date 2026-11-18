@@ -17,6 +17,7 @@ import type { ToolResult } from './helpers.js';
 import { success, failure } from './helpers.js';
 import { InvalidInputError, markdownToAdf } from '@softspark/atlassian-mcp-core';
 import { parseTimeSpent } from '../connector/time-parser.js';
+import { resolveEmailMentions } from '../operations/mentions.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,7 +61,11 @@ export async function handleUpdateTask(
     }
 
     if (args.description !== undefined) {
-      fields['description'] = markdownToAdf(args.description);
+      fields['description'] = markdownToAdf(
+        await resolveEmailMentions(args.description, (email) =>
+          connector.findUser(email),
+        ),
+      );
     }
 
     if (args.priority !== undefined) {

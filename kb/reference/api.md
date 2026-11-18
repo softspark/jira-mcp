@@ -2,10 +2,10 @@
 title: "Jira MCP Server - API Reference"
 category: reference
 service: jira-mcp
-tags: [api, mcp, tools, jira, tempo]
+tags: [api, mcp, tools, jira, tempo, attachments]
 version: "1.16.1"
 created: "2026-04-13"
-last_updated: "2026-09-18"
+last_updated: "2026-10-27"
 description: "Complete reference for all MCP tools exposed by the Jira MCP server, including parameters, return values, and examples."
 ---
 
@@ -166,7 +166,9 @@ Updated PROJ-123 status to "In Progress".
 
 Add a markdown comment to a Jira task. The markdown is automatically converted to ADF format before submission.
 
-If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to block this tool before execution until the user explicitly approves the exact comment preview.
+**Mentions.** `@jan.kowalski@example.com` and `[~accountid:<id>]` become ADF `mention` nodes, so the person is tagged and notified. A plain `@Jan` is text. Each distinct `@email` is resolved once through `/rest/api/3/user/search`; an address with no match fails the call before anything is posted. Code spans, fenced blocks and `\@` keep an address literal. The same applies to `add_templated_comment` and to `description` in `create_task` and `update_task`. Reads (`get_task_details`) return mentions as `[@Name|~accountid:<id>]`, which can be pasted back unchanged.
+
+If you use ai-toolkit hooks, install [PATH: packages/jira-mcp/hooks/jira-mcp-hooks.json] to block this tool before execution until the user explicitly approves the exact comment preview and its audience.
 
 **Parameters**
 
@@ -175,6 +177,8 @@ If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to block 
 | `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
 | `comment` | string | Yes | — | Comment text in markdown format. |
 | `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves posting the comment. |
+| `visibility` | object | No | — | Restrict the comment to a role or group. See [Visibility](#visibility). |
+| `internal` | boolean | No | — | Service Management only: post an internal note the customer does not see. See [Internal notes](#internal-notes). |
 
 **Input example**
 
@@ -190,6 +194,41 @@ If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to block 
 ```
 Added comment to PROJ-123 (comment ID: 10042).
 ```
+
+#### Visibility
+
+`add_task_comment`, `add_templated_comment` and `log_task_time` take the same optional `visibility` object, in Jira's own shape. Without it the comment or worklog is visible to everyone who can browse the issue.
+
+| Restriction | Value |
+|-------------|-------|
+| Project role | `{"type": "role", "value": "Administrators"}` |
+| Group by name | `{"type": "group", "value": "jira-developers"}` |
+| Group by id | `{"type": "group", "identifier": "276f955c-63d7-42c8-9520-92d01dca0625"}` |
+
+Prefer the group id: a group can be renamed, its id stays. A role needs `value`. A group needs `value` or `identifier`. Anything else (another `type`, an empty name, an extra key) answers `INVALID_INPUT` and nothing is sent to Jira. A role or group that does not exist in the project is Jira's call and comes back as Jira's error.
+
+The response carries `visibility` as Jira stored it (Jira fills in both `value` and `identifier`), or `null` for an unrestricted item. `get_task_details` returns the same field on every comment.
+
+#### Internal notes
+
+In a Jira Service Management project the "Internal note" a support agent writes is not a `visibility` restriction. Jira stores it as the comment property `sd.public.comment` with `{"internal": true}`, and its `visibility` stays `null`. `add_task_comment` and `add_templated_comment` take `"internal": true` for this:
+
+```json
+{
+  "task_key": "SD-42",
+  "comment": "Customer's licence expired last week, renewal is with sales.",
+  "internal": true,
+  "user_approved": true
+}
+```
+
+- `internal: false` is a public reply: it shows on the portal and the customer gets it by e-mail.
+- Without `internal`, the project's `default_comment` decides: public unless it was set to internal (see [PATH: kb/reference/configuration.md], "Comment Default"). The result's `internal` says which one was posted.
+- Outside a service project the server refuses `internal: true` with `INVALID_INPUT`, because Jira would store the property and still show the comment to everyone. It reads the project's `projectTypeKey` (`service_desk`) before posting. Use `visibility` there.
+- `internal` must be a JSON boolean. `"true"` as a string is refused, not read as false.
+- `get_task_details` returns `internal` on every comment, read from `GET /rest/api/3/issue/{key}/comment?expand=properties`. Check it before quoting a comment back to a customer.
+
+No setup is needed for either field: Jira validates role and group names on the write, the same way statuses are checked live by `get_task_statuses`.
 
 ---
 
@@ -292,7 +331,9 @@ Get full task details from Jira, including description and all comments. ADF con
         "id": "10001",
         "author": "reviewer@example.com",
         "body": "Looks good, please add refresh token support.",
-        "created": "2026-04-01T11:00:00.000+0000"
+        "created": "2026-04-01T11:00:00.000+0000",
+        "visibility": null,
+        "internal": false
       }
     ]
   },
@@ -300,6 +341,8 @@ Get full task details from Jira, including description and all comments. ADF con
   "message": "Retrieved details for PROJ-123"
 }
 ```
+
+Each comment's `visibility` is `null` when everyone with issue access can read it, otherwise the role or group it is limited to (see [Visibility](#visibility)). `internal` is `true` for a Service Management internal note (see [Internal notes](#internal-notes)).
 
 `creator` is the account that filed the issue. `reporter` is the editable "reported by" field. Either is `null` when Jira returns none. Both hold the email, or the display name when Atlassian privacy settings hide the email.
 
@@ -456,6 +499,7 @@ Log work time to a Jira task. After logging, the task is removed from cache to f
 | `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
 | `time_spent` | string | Yes | — | Time in format `"2h"`, `"30m"`, or `"2h 30m"`. Days are not supported. |
 | `comment` | string | No | — | Optional work description (markdown). |
+| `visibility` | object | No | — | Restrict the worklog to a role or group. See [Visibility](#visibility). |
 
 **Input example**
 
@@ -463,7 +507,8 @@ Log work time to a Jira task. After logging, the task is removed from cache to f
 {
   "task_key": "PROJ-123",
   "time_spent": "2h 30m",
-  "comment": "Implemented JWT token refresh logic"
+  "comment": "Implemented JWT token refresh logic",
+  "visibility": { "type": "role", "value": "Developers" }
 }
 ```
 
@@ -539,7 +584,7 @@ handoff-transition: Task Handoff
 
 Add a comment using a registered template (with variable substitution) or raw markdown. Provide exactly one of `template_id` or `markdown`.
 
-If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to render the final comment preview and require explicit user approval before this tool executes.
+If you use ai-toolkit hooks, install [PATH: packages/jira-mcp/hooks/jira-mcp-hooks.json] to render the final comment preview with its audience and require explicit user approval before this tool executes.
 
 **Parameters**
 
@@ -550,6 +595,8 @@ If you use ai-toolkit hooks, install [PATH: hooks/jira-mcp-hooks.json] to render
 | `variables` | object | No | — | Key-value map of template variables. Required when using `template_id`. |
 | `markdown` | string | No | — | Raw markdown. Use instead of `template_id` for freeform comments. |
 | `user_approved` | boolean | Yes | — | Must be `true` only after the user explicitly approves posting the comment. |
+| `visibility` | object | No | — | Restrict the comment to a role or group. See [Visibility](#visibility). |
+| `internal` | boolean | No | — | Service Management only: post an internal note the customer does not see. See [Internal notes](#internal-notes). |
 
 **Input example (template)**
 
@@ -895,6 +942,100 @@ Only the grouped dimensions appear on a row: `project` for `project`, `user` plu
 
 ---
 
+## Attachment Tools (2)
+
+The task key prefix selects the Jira instance, as for every task tool. Both tools validate `task_key` against `PROJ-123` before anything is sent, and answer `INVALID_INPUT` when it does not match.
+
+Jira's 404 on these calls means "issue not found or not visible to this account" and comes back as `ISSUE_NOT_FOUND`; a 413 on upload comes back as `ATTACHMENT_TOO_LARGE`; a 403 stays `JIRA_PERMISSION` (no Browse Projects or Create Attachments permission, or attachments disabled on the site).
+
+**Inline images in comments are not supported.** An ADF `media` node references a Media Services file id, not the attachment id the REST API returns, and Atlassian exposes no public endpoint that maps one to the other ([JRACLOUD-96384](https://jira.atlassian.com/browse/JRACLOUD-96384)). Attach the file and mention its name in the comment instead.
+
+### add_task_attachment
+
+Upload one local file to a task (`POST /rest/api/3/issue/{key}/attachments`, multipart field `file`, header `X-Atlassian-Token: no-check`).
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
+| `file_path` | string | Yes | — | Absolute path of a regular local file. Relative paths are rejected: the server's working directory is not the caller's. |
+| `filename` | string | No | basename of `file_path` | Stored name. A bare file name of 1 to 255 characters, without `/`, `\` or control characters, and not `.` or `..`. |
+
+**Checks before upload** (each answers `INVALID_INPUT`, nothing is sent): the path exists (`File not found`), is readable, is a regular file and not a directory, and is at most 10 MB (10 485 760 bytes). The cap is this server's, because it holds the whole file in memory to build the multipart body. Jira Cloud's own default is 1 GB per file (admin configurable up to 2 GB); a site set lower than 10 MB answers `ATTACHMENT_TOO_LARGE`.
+
+**Media type** comes from the stored name's extension: `png`, `jpg`/`jpeg`, `gif`, `webp`, `pdf`, `txt`, `csv`, `json`, `zip`. Anything else uploads as `application/octet-stream`, which Jira offers as a download rather than a preview.
+
+**Input example**
+
+```json
+{ "task_key": "TPR-195", "file_path": "/Users/me/Desktop/bug.png" }
+```
+
+**Output example**
+
+```json
+{
+  "success": true,
+  "task_key": "TPR-195",
+  "attachments": [
+    {
+      "id": "10432",
+      "filename": "bug.png",
+      "mime_type": "image/png",
+      "size": 48213,
+      "created": "2026-10-25T21:02:11.000+0200",
+      "author": "dev@example.com",
+      "content_url": "https://site.atlassian.net/rest/api/3/attachment/content/10432"
+    }
+  ],
+  "message": "Attached 'bug.png' to TPR-195"
+}
+```
+
+`content_url` needs the same Basic auth as any other REST call. Uploading a name that already exists adds a second attachment with that name; Jira does not version issue attachments.
+
+### list_task_attachments
+
+List the attachments of a task (`GET /rest/api/3/issue/{key}?fields=attachment`). Metadata only, file content is never returned. Use it to confirm an upload.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_key` | string | Yes | — | Task key (e.g. `"PROJ-123"`). |
+
+**Input example**
+
+```json
+{ "task_key": "TPR-195" }
+```
+
+**Output example**
+
+```json
+{
+  "success": true,
+  "task_key": "TPR-195",
+  "attachments": [
+    {
+      "id": "10432",
+      "filename": "bug.png",
+      "mime_type": "image/png",
+      "size": 48213,
+      "created": "2026-10-25T21:02:11.000+0200",
+      "author": "dev@example.com",
+      "content_url": "https://site.atlassian.net/rest/api/3/attachment/content/10432"
+    }
+  ],
+  "message": "Found 1 attachment(s) on TPR-195"
+}
+```
+
+`author` is the uploader's email, their display name when Atlassian privacy hides the email, or `null`.
+
+---
+
 ## Error Codes
 
 | Code | Class | Trigger |
@@ -903,6 +1044,8 @@ Only the grouped dimensions appear on a row: `project` for `project`, `user` plu
 | `CONFIG_VALIDATION` | `ConfigValidationError` | Invalid JSON or schema mismatch |
 | `JIRA_AUTH` | `JiraAuthenticationError` | HTTP 401 from Jira |
 | `JIRA_PERMISSION` | `JiraPermissionError` | HTTP 403 from Jira |
+| `ISSUE_NOT_FOUND` | `IssueNotFoundError` | HTTP 404 from an attachment call: the issue does not exist or this account cannot browse it |
+| `ATTACHMENT_TOO_LARGE` | `AttachmentTooLargeError` | HTTP 413 on upload: over the site's attachment size setting or the issue's attachment limit |
 | `JIRA_CONNECTION` | `JiraConnectionError` | Any other Jira API error |
 | `TEMPO_NOT_CONFIGURED` | `TempoNotConfiguredError` | A Tempo tool was called for a site with no `tempo_token` |
 | `TEMPO_AUTH` | `TempoAuthenticationError` | HTTP 401 from Tempo |

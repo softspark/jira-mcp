@@ -12,7 +12,29 @@
  * @module
  */
 
+import type { z } from 'zod';
+
 import { InvalidInputError } from '../errors/index.js';
+
+/**
+ * Validate tool arguments against a Zod schema.
+ *
+ * A schema failure is the caller's to fix, so it surfaces as
+ * {@link InvalidInputError} (`INVALID_INPUT`) with every issue named by its
+ * argument, never as the `ZodError` itself, which `failure()` would answer
+ * with `UNKNOWN_ERROR`.
+ */
+export function parseToolArgs<T>(schema: z.ZodType<T>, value: unknown): T {
+  const result = schema.safeParse(value);
+  if (result.success) {
+    return result.data;
+  }
+  const problems = result.error.issues.map((issue) => {
+    const where = issue.path.map(String).join('.');
+    return where.length > 0 ? `${where}: ${issue.message}` : issue.message;
+  });
+  throw new InvalidInputError(`Invalid arguments. ${problems.join('; ')}`);
+}
 
 /**
  * Extract a string value or return undefined.

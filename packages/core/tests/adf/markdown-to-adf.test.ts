@@ -482,4 +482,58 @@ describe('markdown round-trip', () => {
     expect(back).toContain('- parent');
     expect(back).toContain('  - child');
   });
+
+  it('round-trips a labelled mention without losing the account id', () => {
+    const source = 'ping [@Jan Kowalski|~accountid:712020:abc-1] now';
+    const back = adfToMarkdown(markdownToAdf(source));
+
+    expect(back).toBe(source);
+  });
+});
+
+describe('markdownToAdf mentions', () => {
+  function inlineNodes(markdown: string): readonly unknown[] {
+    return markdownToAdf(markdown).content[0]?.content ?? [];
+  }
+
+  it('turns [~accountid:ID] into a mention node', () => {
+    expect(inlineNodes('Hi [~accountid:712020:abc-1], look')).toEqual([
+      { type: 'text', text: 'Hi ' },
+      { type: 'mention', attrs: { id: '712020:abc-1' } },
+      { type: 'text', text: ', look' },
+    ]);
+  });
+
+  it('keeps a label as the fallback text and adds the @', () => {
+    expect(inlineNodes('[Jan Kowalski|~accountid:5b10ac8d82e05b22cc7d4ef5]')).toEqual([
+      {
+        type: 'mention',
+        attrs: { id: '5b10ac8d82e05b22cc7d4ef5', text: '@Jan Kowalski' },
+      },
+    ]);
+  });
+
+  it('finds mentions inside list items and bold text', () => {
+    const adf = markdownToAdf('- **[~accountid:abc]** owns it');
+    const paragraph = adf.content[0]?.content?.[0]?.content?.[0];
+
+    expect(paragraph?.content?.[0]).toEqual({
+      type: 'mention',
+      attrs: { id: 'abc' },
+    });
+  });
+
+  it('leaves mention syntax inside inline code and code blocks alone', () => {
+    expect(inlineNodes('`[~accountid:abc]`')).toEqual([
+      { type: 'text', text: '[~accountid:abc]', marks: [{ type: 'code' }] },
+    ]);
+    const block = markdownToAdf('```\n[~accountid:abc]\n```').content[0];
+    expect(block?.type).toBe('codeBlock');
+  });
+
+  it('treats malformed or escaped syntax as text', () => {
+    expect(inlineNodes('[~accountid:] and [~user:abc] and \\[~accountid:abc]')).toEqual([
+      { type: 'text', text: '[~accountid:] and [~user:abc] and [~accountid:abc]' },
+    ]);
+  });
 });

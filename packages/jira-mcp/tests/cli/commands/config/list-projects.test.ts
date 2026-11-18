@@ -121,4 +121,52 @@ describe('handleListProjects', () => {
     expect(b?.language).toBe('de');
     expect(b?.languageSource).toBe('default');
   });
+
+  it('shows the Service Management comment default, public when unset', async () => {
+    const configDir = join(tempDir, 'jira-mcp-comments');
+    await mkdir(configDir, { recursive: true });
+    await writeFile(
+      join(configDir, 'config.json'),
+      JSON.stringify({
+        projects: {
+          SD: { url: 'https://a.atlassian.net', default_comment: 'internal' },
+          OPS: { url: 'https://a.atlassian.net' },
+        },
+        default_project: 'SD',
+      }),
+    );
+
+    const rows = await handleListProjects(configDir);
+
+    const sd = rows.find((r) => r.key === 'SD');
+    expect(sd?.defaultComment).toBe('internal');
+    expect(sd?.defaultCommentSource).toBe('project');
+
+    const ops = rows.find((r) => r.key === 'OPS');
+    expect(ops?.defaultComment).toBe('public');
+    expect(ops?.defaultCommentSource).toBe('default');
+  });
+
+  it('uses the global default_comment for projects without their own', async () => {
+    const configDir = join(tempDir, 'jira-mcp-comments-global');
+    await mkdir(configDir, { recursive: true });
+    await writeFile(
+      join(configDir, 'config.json'),
+      JSON.stringify({
+        projects: {
+          SD: { url: 'https://a.atlassian.net', default_comment: 'public' },
+          HELP: { url: 'https://a.atlassian.net' },
+        },
+        default_project: 'SD',
+        default_comment: 'internal',
+      }),
+    );
+
+    const rows = await handleListProjects(configDir);
+
+    expect(rows.find((r) => r.key === 'SD')?.defaultComment).toBe('public');
+    const help = rows.find((r) => r.key === 'HELP');
+    expect(help?.defaultComment).toBe('internal');
+    expect(help?.defaultCommentSource).toBe('default');
+  });
 });

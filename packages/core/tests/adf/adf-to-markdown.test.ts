@@ -331,7 +331,7 @@ describe('adfToMarkdown node attribute fallbacks', () => {
     expect(adfToMarkdown(doc)).toBe('```\nx = 1\n```');
   });
 
-  it('renders mention text or a placeholder', () => {
+  it('renders a mention without an id as its text or a placeholder', () => {
     const named = inlineDoc({
       type: 'mention',
       attrs: { text: '@alice' },
@@ -340,6 +340,17 @@ describe('adfToMarkdown node attribute fallbacks', () => {
 
     expect(adfToMarkdown(named)).toBe('@alice');
     expect(adfToMarkdown(anonymous)).toBe('@unknown');
+  });
+
+  it('renders a mention with an id in the [Label|~accountid:ID] form', () => {
+    const labelled = inlineDoc({
+      type: 'mention',
+      attrs: { id: '712020:abc', text: '@Alice [QA] | Lead' },
+    }) as AnyDoc;
+    const bare = inlineDoc({ type: 'mention', attrs: { id: '712020:abc' } }) as AnyDoc;
+
+    expect(adfToMarkdown(labelled)).toBe('[@Alice QA  Lead|~accountid:712020:abc]');
+    expect(adfToMarkdown(bare)).toBe('[~accountid:712020:abc]');
   });
 
   it('renders emoji shortName or nothing', () => {

@@ -8,7 +8,8 @@
  * Parses markdown line-by-line for block-level elements (headings, nested
  * lists, task lists, code blocks, blockquotes, horizontal rules, tables)
  * and inline elements within text (bold, italic, strikethrough, inline
- * code, links; images degrade to links because media requires uploads).
+ * code, links, `[~accountid:ID]` user mentions; images degrade to links
+ * because media requires uploads).
  *
  * Replaces the former `marklassian` dependency.
  */
@@ -106,6 +107,12 @@ const CODE_FENCE_RE = /^```(\w*)$/;
 const BLOCKQUOTE_RE = /^>\s?(.*)$/;
 const HORIZONTAL_RULE_RE = /^(?:---+|\*\*\*+|___+)\s*$/;
 const TABLE_DELIMITER_CELL_RE = /^:?-{3,}:?$/;
+
+/**
+ * User mention in Jira wiki style: `[~accountid:ID]`, optionally with a
+ * fallback label as `[Label|~accountid:ID]`. Anchored, matched at a `[`.
+ */
+const MENTION_RE = /^\[(?:([^\]|]+)\|)?~accountid:([A-Za-z0-9:_-]+)\]/;
 
 function parseBlocks(
   markdown: string,
@@ -580,8 +587,9 @@ function splitTableRow(line: string): readonly string[] {
 /**
  * Parse inline markdown and produce ADF inline nodes.
  *
- * Handles: bold, italic, strikethrough, inline code, links.
- * Returns an array of AdfNode (type "text" with optional marks, or "hardBreak").
+ * Handles: bold, italic, strikethrough, inline code, links, mentions.
+ * Returns an array of AdfNode ("text" with optional marks, "mention",
+ * or "hardBreak").
  */
 function parseInline(text: string): readonly AdfNode[] {
   if (text.length === 0) return [];
@@ -617,6 +625,7 @@ function parseInlineWithBreaks(text: string): readonly AdfNode[] {
  * - `~~`         -> strike
  * - `` ` ``      -> code
  * - `[text](url)` -> link
+ * - `[~accountid:ID]`, `[Label|~accountid:ID]` -> mention
  */
 function tokenizeInline(text: string): readonly AdfNode[] {
   const nodes: AdfNode[] = [];
@@ -717,6 +726,17 @@ function tokenizeInline(text: string): readonly AdfNode[] {
       }
     }
 
+    // Mention: [~accountid:ID] or [Label|~accountid:ID]
+    if (ch === '[') {
+      const mentionMatch = MENTION_RE.exec(text.slice(pos));
+      if (mentionMatch) {
+        flushBuffer();
+        nodes.push(makeMentionNode(mentionMatch[2] ?? '', mentionMatch[1]));
+        pos += mentionMatch[0].length;
+        continue;
+      }
+    }
+
     // Link: [text](url)
     if (ch === '[') {
       const linkResult = tryParseLink(text, pos);
@@ -789,6 +809,19 @@ function tryParseLink(
 /* ------------------------------------------------------------------ */
 /*  ADF node helpers                                                  */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Build an ADF mention. Atlassian renders the user's current name from
+ * the account id; `text` is only the fallback shown when it cannot.
+ */
+function makeMentionNode(accountId: string, label: string | undefined): AdfNode {
+  const trimmed = label?.trim() ?? '';
+  if (trimmed.length === 0) {
+    return { type: 'mention', attrs: { id: accountId } };
+  }
+  const text = trimmed.startsWith('@') ? trimmed : `@${trimmed}`;
+  return { type: 'mention', attrs: { id: accountId, text } };
+}
 
 function makeTextNode(
   text: string,

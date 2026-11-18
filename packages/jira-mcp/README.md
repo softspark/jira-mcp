@@ -4,19 +4,17 @@
 
 [![Publish](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml/badge.svg)](https://github.com/softspark/jira-mcp/actions/workflows/publish.yml)
 [![npm](https://img.shields.io/npm/v/@softspark/jira-mcp)](https://www.npmjs.com/package/@softspark/jira-mcp)
-[![version](https://img.shields.io/badge/version-1.16.1-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.19.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 ---
 
-## What's New in v1.16.1
+## What's New in v1.19.0
 
-- **A rejected call says so.** Every argument check used to answer `UNKNOWN_ERROR`, which reads as "something broke". They now answer `INVALID_INPUT`: a missing argument, `template_id` together with `markdown`, an update with nothing to change, a time like `2d`, a malformed Tempo date or `group_by`. Nothing reaches Jira, and the message names what to pass.
-- A template rendered without a required variable answers `TEMPLATE_MISSING_VAR`, as the API reference always said it did.
-- If a client matched on `UNKNOWN_ERROR` to detect a bad call, match on the new codes instead. `UNKNOWN_ERROR` is left for failures nobody anticipated.
-- **From 1.16.0: `creator` and `reporter` on every task read.** `search_tasks`, `get_task_details`, `sync_tasks` and `read_cached_tasks` now say who filed an issue and who it is reported by. Before, neither field reached a response, so "who raised this bug" had no answer.
-- Both hold the email, or the display name when Atlassian privacy settings hide the email, and `null` when Jira returns none. To filter by them, use JQL: `creator = "pm@example.com"` or `reporter = currentUser()`.
-- An existing task cache keeps loading. Rows cached before the upgrade read `null` for both fields until the next `sync_tasks`.
+- **Mentions that actually tag people.** Write `@jan.kowalski@example.com` in a comment (`add_task_comment`, `add_templated_comment`) or a description (`create_task`, `update_task`) and the person is tagged and notified. Until now every `@Name` reached Jira as plain text. Each address is looked up once; an unknown one fails the call before anything is posted.
+- **`[~accountid:ID]` works too**, with no lookup, and `[Label|~accountid:ID]` keeps a fallback label. Code spans, fenced blocks and `\@` keep an address literal. A plain `@Jan` is still just text.
+- **Reads keep the account id.** `get_task_details` shows a mention as `[@Name|~accountid:ID]` instead of a bare `@Name`, so editing a description no longer strips its mentions.
+- From 1.18.2: the comment-approval hook shows the audience (internal note, public reply, role or group), and the hook URL is `https://raw.githubusercontent.com/softspark/jira-mcp/main/packages/jira-mcp/hooks/jira-mcp-hooks.json`. See [AI Toolkit Hooks](#ai-toolkit-hooks).
 - Released together with `@softspark/confluence-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ## Table of Contents
@@ -99,6 +97,8 @@ That unlocks `search_tempo_worklogs` and `get_tempo_report`. Without it every ot
 | `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-language <lang>` | Set global default language |
 | `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |
+| `jira-mcp config set-comment-default <internal\|public>` | Service Management: what a comment without an explicit `internal` flag becomes, all projects (default `public`) |
+| `jira-mcp config set-project-comment-default <key> <internal\|public>` | Same for one project, overriding the global value |
 | `jira-mcp cache sync-workflows` | Sync workflow status transitions |
 | `jira-mcp cache sync-users` | Sync user list for reassignment |
 | `jira-mcp cache list-workflows` | Show cached workflows |
@@ -112,22 +112,24 @@ That unlocks `search_tempo_worklogs` and `get_tempo_report`. Without it every ot
 | `read_cached_tasks` | Read tasks from cache without hitting Jira | `task_key?` |
 | `update_task_status` | Change task status via workflow transition | `task_key`, `status` |
 | `update_task` | Update existing issue fields (markdown → ADF) | `task_key`, `summary?`, `description?`, `priority?`, `labels?`, `original_estimate?`, `remaining_estimate?` |
-| `add_task_comment` | Add a markdown comment (auto-converted to ADF) | `task_key`, `comment`, `user_approved` |
+| `add_task_comment` | Add a markdown comment (auto-converted to ADF), optionally limited to a role or group, or a Service Management internal note | `task_key`, `comment`, `user_approved`, `visibility?`, `internal?` |
 | `delete_task` | Delete a task, only when the authenticated user is the task creator | `task_key`, `user_approved` |
 | `delete_comment` | Delete a comment, only when the authenticated user is the comment author | `task_key`, `comment_id`, `user_approved` |
 | `reassign_task` | Reassign or unassign a task | `task_key`, `assignee_email?` |
 | `get_task_statuses` | Get valid workflow transitions for a task | `task_key` |
 | `get_task_details` | Get full details with description, comments, and language | `task_key` |
 | `get_project_language` | Get configured language for a project | `project_key` |
-| `log_task_time` | Log work time (`"2h 30m"` format, no days) | `task_key`, `time_spent`, `comment?` |
+| `log_task_time` | Log work time (`"2h 30m"` format, no days) | `task_key`, `time_spent`, `comment?`, `visibility?` |
 | `get_task_time_tracking` | Get time tracking info (estimate, spent, remaining) | `task_key` |
 | `list_comment_templates` | List available comment templates | `category?` |
 | `list_task_templates` | List available task templates for `create_task` | — |
-| `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?`, `user_approved` |
+| `add_templated_comment` | Add comment using a template or raw markdown | `task_key`, `template_id?`, `variables?`, `markdown?`, `user_approved`, `visibility?`, `internal?` |
 | `create_task` | Create a new Jira issue with explicit fields or a task template | `project_key`, `summary?`, `template_id?`, `variables?`, `description?`, `assignee_email?`, `labels?`, `epic_key?`, `parent_key?`, `original_estimate?` |
 | `search_tasks` | Search Jira issues with JQL (no caching) | `jql`, `max_results?`, `project_key?` |
 | `search_tempo_worklogs` | List Tempo worklogs in a date range, issue keys and user names resolved | `from`, `to`, `project_key?`, `task_key?`, `user_email?`, `limit?` |
 | `get_tempo_report` | Sum Tempo hours by project, user and/or task | `from`, `to`, `group_by?`, `project_key?`, `task_key?`, `user_email?` |
+| `add_task_attachment` | Upload a local file (10 MB max) as an issue attachment | `task_key`, `file_path` (absolute), `filename?` |
+| `list_task_attachments` | List an issue's attachments (metadata only) | `task_key` |
 
 ## Comment Templates
 
@@ -218,17 +220,19 @@ The URL form is re-fetched on every `ai-toolkit update`, so the rules follow rel
 - **Sync before read** -- cache may be stale
 - **Status transitions** -- check valid transitions before changing status
 - **Time format** -- `"2h 30m"`, never days
-- **All 21 MCP tools** and **24 CLI commands** reference
+- **All 23 MCP tools** and **26 CLI commands** reference
 
 ### AI Toolkit Hooks
 
 To require explicit user approval before Jira comment writes, inject the repo-owned hook manifest:
 
 ```bash
-ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/hooks/jira-mcp-hooks.json
+ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/packages/jira-mcp/hooks/jira-mcp-hooks.json
 ```
 
-This installs a `PreToolUse` guard for `add_task_comment` and `add_templated_comment`. The hook blocks the tool call, shows the exact comment preview, and tells the agent to retry only after the user approves it with `user_approved=true`.
+This installs a `PreToolUse` guard for `add_task_comment` and `add_templated_comment`. The hook blocks the tool call, shows the exact comment preview and its audience (internal note, public reply, project default, role or group restriction), and tells the agent to retry only after the user approves it with `user_approved=true`.
+
+Registered the hook before 1.18.2 from `.../main/hooks/jira-mcp-hooks.json`? That path has answered 404 since the workspace split, and `ai-toolkit update` keeps a cached copy. Re-register it: `ai-toolkit remove-hook jira-mcp-hooks`, then the `inject-hook` above.
 
 The MCP server still enforces `user_approved=true` at runtime, so the hook is UX guidance plus an extra safety layer rather than the only check.
 
@@ -265,7 +269,7 @@ src/
   errors/         Typed error hierarchy
   operations/     Business logic (status, comments, time tracking, Tempo reports)
   templates/      File-backed comment/task template loading and registries
-  tools/          MCP tool handlers (21 tools, one file per tool)
+  tools/          MCP tool handlers (23 tools, one file per tool)
   types/          Shared TypeScript types
   server.ts       MCP server setup and tool registration
   cli.ts          CLI entry point
@@ -289,11 +293,13 @@ src/
 
 **Tempo worklogs and reports** -- `search_tempo_worklogs` and `get_tempo_report` read Tempo Timesheets (Cloud REST API v4) for hours per project, user or task over a date range, with Tempo's numeric ids resolved to issue keys and names through Jira. Needs a Tempo API token (`jira-mcp config set-tempo-token`); nothing else depends on it. See [API Reference](kb/reference/api.md).
 
-**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 561KB library bundle, 1 runtime dep (commander).
+**Attachments** -- `add_task_attachment` uploads a local file (absolute path, 10 MB cap, media type from the extension) to an issue, and `list_task_attachments` lists what is attached so an agent can check the upload. An uploaded image cannot be embedded inline in a comment: ADF media nodes need a Media Services file id, which the public REST API does not return. See [API Reference](kb/reference/api.md).
 
-**Typed error hierarchy** -- 32 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+**Supply chain protection** -- `ignore-scripts=true`, no axios, no dynamic requires. Self-contained 575KB library bundle, 1 runtime dep (commander).
 
-**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1109 tests across 86 test files.
+**Typed error hierarchy** -- 34 error classes with machine-readable codes. Every tool returns structured `{ success, error, code }` responses. No stack traces leak to MCP clients.
+
+**Strict TypeScript** -- `strict: true`, no `any`, `readonly` interfaces, Zod validation at all boundaries, 1255 tests across 93 test files.
 
 ## Documentation
 
@@ -301,7 +307,7 @@ src/
 |----------|-------------|
 | [Architecture](kb/reference/architecture.md) | System design and module overview |
 | [Local audit](kb/reference/audit.md) | JSON/SARIF formats, filesystem checks and hook permissions |
-| [API Reference](kb/reference/api.md) | All 21 MCP tools with schemas |
+| [API Reference](kb/reference/api.md) | All 23 MCP tools with schemas |
 | [Configuration](kb/reference/configuration.md) | Config files, env vars, multi-instance |
 | [ADF Format](kb/reference/adf.md) | Atlassian Document Format conversion |
 | [Caching](kb/reference/caching.md) | Task, workflow, and user caching |

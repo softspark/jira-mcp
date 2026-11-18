@@ -17,6 +17,7 @@ import {
 } from '@softspark/atlassian-mcp-core';
 
 import { PageOperations } from '../../src/confluence/page-operations';
+import { CONFLUENCE_TOOL_DEFINITIONS } from '../../src/confluence/tools/definitions';
 import type { ConfluenceConnector } from '../../src/confluence/connector';
 
 const ADF_HELLO = {
@@ -92,6 +93,25 @@ describe('PageOperations', () => {
       const detail = await ops.getPageDetail('1');
 
       expect(detail.body).toBe('(No content)');
+    });
+
+    it('reports hasStorageMarkup, the field name the get_page description promises', async () => {
+      const plain = await ops.getPageDetail('123');
+      ops = new PageOperations(
+        makeConnector({
+          getPage: vi.fn().mockResolvedValue({
+            page: { id: '2', title: 'T', status: 'current', version: 1 },
+            adf: ADF_HELLO,
+            storage: '<ac:structured-macro ac:name="toc"/><p>Hello</p>',
+          }),
+        }),
+      );
+      const withMacro = await ops.getPageDetail('2');
+
+      expect(plain.hasStorageMarkup).toBe(false);
+      expect(withMacro.hasStorageMarkup).toBe(true);
+      const getPage = CONFLUENCE_TOOL_DEFINITIONS.find((d) => d.name === 'get_page');
+      expect(getPage?.description).toContain('page.hasStorageMarkup');
     });
   });
 

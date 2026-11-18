@@ -259,6 +259,16 @@ vi.mock('../../src/tools/search-tasks.js', () => ({
     content: [{ type: 'text', text: '{"success":true}' }],
   }),
 }));
+vi.mock('../../src/tools/add-task-attachment.js', () => ({
+  handleAddTaskAttachment: vi.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"success":true}' }],
+  }),
+}));
+vi.mock('../../src/tools/list-task-attachments.js', () => ({
+  handleListTaskAttachments: vi.fn().mockResolvedValue({
+    content: [{ type: 'text', text: '{"success":true}' }],
+  }),
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -496,6 +506,106 @@ describe('Tempo tool dispatch', () => {
         user_email: 'a@example.com',
         limit: 5,
       },
+      expect.anything(),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Attachment tool dispatch
+// ---------------------------------------------------------------------------
+
+describe('Attachment tool dispatch', () => {
+  it('forwards task_key, file_path and filename to add_task_attachment', async () => {
+    const { handleAddTaskAttachment } = await import('../../src/tools/add-task-attachment.js');
+
+    await callToolHandler({
+      params: {
+        name: 'add_task_attachment',
+        arguments: { task_key: 'PROJ0-1', file_path: '/tmp/a.png', filename: 'b.png' },
+      },
+    });
+
+    expect(vi.mocked(handleAddTaskAttachment)).toHaveBeenLastCalledWith(
+      { task_key: 'PROJ0-1', file_path: '/tmp/a.png', filename: 'b.png' },
+      expect.objectContaining({ pool: expect.anything() }),
+    );
+  });
+
+  it('throws INVALID_INPUT when add_task_attachment has no file_path', async () => {
+    await expect(
+      callToolHandler({
+        params: { name: 'add_task_attachment', arguments: { task_key: 'PROJ0-1' } },
+      }),
+    ).rejects.toThrow('Missing required parameter: file_path');
+  });
+
+  it('forwards task_key to list_task_attachments', async () => {
+    const { handleListTaskAttachments } = await import('../../src/tools/list-task-attachments.js');
+
+    await callToolHandler({
+      params: { name: 'list_task_attachments', arguments: { task_key: 'PROJ0-2' } },
+    });
+
+    expect(vi.mocked(handleListTaskAttachments)).toHaveBeenLastCalledWith(
+      { task_key: 'PROJ0-2' },
+      expect.objectContaining({ pool: expect.anything() }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Visibility forwarding
+// ---------------------------------------------------------------------------
+
+describe('Visibility dispatch', () => {
+  const visibility = { type: 'role', value: 'Administrators' };
+
+  it('forwards visibility and internal untouched to add_task_comment', async () => {
+    const { handleAddTaskComment } = await import('../../src/tools/add-task-comment.js');
+
+    await callToolHandler({
+      params: {
+        name: 'add_task_comment',
+        arguments: { task_key: 'PROJ0-1', comment: 'x', user_approved: true, visibility, internal: true },
+      },
+    });
+
+    expect(vi.mocked(handleAddTaskComment)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visibility, internal: true }),
+      expect.anything(),
+    );
+  });
+
+  it('forwards visibility and internal untouched to add_templated_comment', async () => {
+    const { handleAddTemplatedComment } = await import('../../src/tools/add-templated-comment.js');
+
+    await callToolHandler({
+      params: {
+        name: 'add_templated_comment',
+        arguments: { task_key: 'PROJ0-1', markdown: 'x', user_approved: true, visibility, internal: 'yes' },
+      },
+    });
+
+    // Validation is the handler's job, so a wrong type must reach it unchanged.
+    expect(vi.mocked(handleAddTemplatedComment)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visibility, internal: 'yes' }),
+      expect.anything(),
+    );
+  });
+
+  it('forwards visibility untouched to log_task_time', async () => {
+    const { handleLogTaskTime } = await import('../../src/tools/log-task-time.js');
+
+    await callToolHandler({
+      params: {
+        name: 'log_task_time',
+        arguments: { task_key: 'PROJ0-1', time_spent: '1h', visibility },
+      },
+    });
+
+    expect(vi.mocked(handleLogTaskTime)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visibility }),
       expect.anything(),
     );
   });

@@ -15,6 +15,8 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { JiraConnector } from '../../src/connector/jira-connector';
 import {
+  AttachmentTooLargeError,
+  IssueNotFoundError,
   JiraAuthenticationError,
   JiraConnectionError,
   JiraPermissionError,
@@ -949,6 +951,135 @@ describe('JiraConnector', () => {
       expect(comment.author).toBe('author@example.com');
       expect(comment.authorAccountId).toBe('author-1');
       expect(comment.body).toEqual(adfBody);
+      expect(comment.visibility).toBeNull();
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ body: adfBody });
+    });
+
+    it('sends visibility and maps it back from the response', async () => {
+      // Arrange
+      const adfBody = { type: 'doc' as const, version: 1 as const, content: [] };
+      const visibility = { type: 'role' as const, value: 'Administrators' };
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          id: '10101',
+          body: adfBody,
+          created: '2024-01-03T00:00:00.000Z',
+          visibility: { type: 'role', value: 'Administrators', identifier: 'Administrators' },
+        }),
+      );
+
+      // Act
+      const comment = await connector.addComment('PROJ-1', adfBody, { visibility });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ body: adfBody, visibility });
+      expect(comment.visibility).toEqual({
+        type: 'role',
+        value: 'Administrators',
+        identifier: 'Administrators',
+      });
+    });
+
+    it('marks an internal note with the sd.public.comment property', async () => {
+      // Arrange
+      const adfBody = { type: 'doc' as const, version: 1 as const, content: [] };
+      mockFetch.mockResolvedValue(mockResponse({ id: '10102', body: adfBody }));
+
+      // Act
+      await connector.addComment('PROJ-1', adfBody, { internal: true });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({
+        body: adfBody,
+        properties: [{ key: 'sd.public.comment', value: { internal: true } }],
+      });
+    });
+
+    it('sends no property when internal is false', async () => {
+      // Arrange
+      const adfBody = { type: 'doc' as const, version: 1 as const, content: [] };
+      mockFetch.mockResolvedValue(mockResponse({ id: '10103', body: adfBody }));
+
+      // Act
+      await connector.addComment('PROJ-1', adfBody, { internal: false });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ body: adfBody });
+    });
+  });
+
+  describe('getInternalCommentIds', () => {
+    it('reads comment properties page by page and keeps only internal notes', async () => {
+      // Arrange
+      const internal = [{ key: 'sd.public.comment', value: { internal: true } }];
+      const page = (comments: unknown[], total: number) => mockResponse({ comments, total });
+      mockFetch
+        .mockResolvedValueOnce(
+          page(
+            [
+              { id: 'c-1', properties: internal },
+              { id: 'c-2', properties: [{ key: 'sd.public.comment', value: { internal: false } }] },
+            ],
+            3,
+          ),
+        )
+        .mockResolvedValueOnce(page([{ id: 'c-3', properties: internal }], 3));
+
+      // Act
+      const ids = await connector.getInternalCommentIds('PROJ-1');
+
+      // Assert
+      expect([...ids]).toEqual(['c-1', 'c-3']);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const first = new URL(mockFetch.mock.calls[0]![0] as string);
+      expect(first.pathname).toBe('/rest/api/3/issue/PROJ-1/comment');
+      expect(first.searchParams.get('expand')).toBe('properties');
+      expect(first.searchParams.get('startAt')).toBe('0');
+      const second = new URL(mockFetch.mock.calls[1]![0] as string);
+      expect(second.searchParams.get('startAt')).toBe('2');
+    });
+
+    it('returns an empty set for an issue without comments', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ comments: [], total: 0 }));
+
+      const ids = await connector.getInternalCommentIds('PROJ-1');
+
+      expect(ids.size).toBe(0);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getProjectTypeKey', () => {
+    it('returns the project type, or null when Jira omits it', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponse({ id: '1', key: 'SD', projectTypeKey: 'service_desk' }))
+        .mockResolvedValueOnce(mockResponse({ id: '2', key: 'OLD' }));
+
+      expect(await connector.getProjectTypeKey('SD')).toBe('service_desk');
+      expect(await connector.getProjectTypeKey('OLD')).toBeNull();
+    });
+
+    it('asks Jira once per project and answers later calls from memory', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ id: '1', key: 'SD', projectTypeKey: 'service_desk' }));
+
+      await connector.getProjectTypeKey('SD');
+      const second = await connector.getProjectTypeKey('SD');
+
+      expect(second).toBe('service_desk');
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not remember a failed lookup', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponse({ errorMessages: ['boom'] }, 500, 'Server Error'))
+        .mockResolvedValue(mockResponse({ id: '1', key: 'SD', projectTypeKey: 'service_desk' }));
+
+      await expect(connector.getProjectTypeKey('SD')).rejects.toThrow();
+      expect(await connector.getProjectTypeKey('SD')).toBe('service_desk');
     });
   });
 
@@ -984,6 +1115,22 @@ describe('JiraConnector', () => {
                   body: null,
                   created: '2024-01-03T00:00:00.000Z',
                 },
+                {
+                  id: 'c-2',
+                  body: null,
+                  created: '2024-01-04T00:00:00.000Z',
+                  visibility: {
+                    type: 'group',
+                    value: 'jira-developers',
+                    identifier: '276f955c-63d7-42c8-9520-92d01dca0625',
+                  },
+                },
+                {
+                  id: 'c-3',
+                  body: null,
+                  created: '2024-01-05T00:00:00.000Z',
+                  visibility: { type: 'unknown-kind', value: 'x' },
+                },
               ],
             },
             timetracking: {},
@@ -997,6 +1144,13 @@ describe('JiraConnector', () => {
       expect(issue.creatorAccountId).toBe('creator-1');
       expect(issue.comments[0]?.author).toBe('commenter@example.com');
       expect(issue.comments[0]?.authorAccountId).toBe('commenter-1');
+      expect(issue.comments[0]?.visibility).toBeNull();
+      expect(issue.comments[1]?.visibility).toEqual({
+        type: 'group',
+        value: 'jira-developers',
+        identifier: '276f955c-63d7-42c8-9520-92d01dca0625',
+      });
+      expect(issue.comments[2]?.visibility).toBeNull();
     });
   });
 
@@ -1260,6 +1414,38 @@ describe('JiraConnector', () => {
         timeSpent: '2h',
         timeSpentSeconds: 7200,
         created: '2024-01-04T00:00:00.000Z',
+        visibility: null,
+      });
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({ timeSpentSeconds: 7200 });
+    });
+
+    it('sends comment and visibility and maps visibility back', async () => {
+      // Arrange
+      const comment = { type: 'doc' as const, version: 1 as const, content: [] };
+      const visibility = { type: 'group' as const, identifier: 'group-id-1' };
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          id: '10201',
+          timeSpentSeconds: 3600,
+          visibility: { type: 'group', identifier: 'group-id-1', value: 'devs' },
+        }),
+      );
+
+      // Act
+      const worklog = await connector.addWorklog('PROJ-1', 3600, { comment, visibility });
+
+      // Assert
+      const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(options.body as string)).toEqual({
+        timeSpentSeconds: 3600,
+        comment,
+        visibility,
+      });
+      expect(worklog.visibility).toEqual({
+        type: 'group',
+        value: 'devs',
+        identifier: 'group-id-1',
       });
     });
   });
@@ -1363,6 +1549,199 @@ describe('JiraConnector', () => {
           { name: 'Done', id: '3' },
         ],
       });
+    });
+  });
+
+  describe('addAttachment', () => {
+    const upload = {
+      filename: 'shot.png',
+      content: Uint8Array.from([0x89, 0x50, 0x4e, 0x47]),
+      mediaType: 'image/png',
+    };
+
+    const createdAttachment = {
+      self: 'https://test.atlassian.net/rest/api/3/attachments/10000',
+      id: '10000',
+      filename: 'shot.png',
+      author: {
+        accountId: 'acc-1',
+        emailAddress: 'dev@example.com',
+        displayName: 'Dev',
+      },
+      created: '2026-10-25T10:00:00.000+0000',
+      size: 4,
+      mimeType: 'image/png',
+      content: 'https://test.atlassian.net/rest/api/3/attachment/content/10000',
+      thumbnail: 'https://test.atlassian.net/rest/api/3/attachment/thumbnail/10000',
+    };
+
+    it('POSTs a multipart form with the file under "file" and the XSRF opt-out', async () => {
+      mockFetch.mockResolvedValue(mockResponse([createdAttachment]));
+
+      await connector.addAttachment('PROJ-1', upload);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe(
+        'https://test.atlassian.net/rest/api/3/issue/PROJ-1/attachments',
+      );
+      expect(init.method).toBe('POST');
+      const headers = init.headers as Record<string, string>;
+      expect(headers['X-Atlassian-Token']).toBe('no-check');
+      expect(headers['Authorization']).toBe(`Basic ${EXPECTED_AUTH_TOKEN}`);
+      expect(headers['Content-Type']).toBeUndefined();
+
+      const form = init.body as FormData;
+      expect(form).toBeInstanceOf(FormData);
+      expect([...form.keys()]).toEqual(['file']);
+      const part = form.get('file') as File;
+      expect(part.name).toBe('shot.png');
+      expect(part.type).toBe('image/png');
+      expect(new Uint8Array(await part.arrayBuffer())).toEqual(upload.content);
+    });
+
+    it('maps the created attachment', async () => {
+      mockFetch.mockResolvedValue(mockResponse([createdAttachment]));
+
+      const result = await connector.addAttachment('PROJ-1', upload);
+
+      expect(result).toEqual([
+        {
+          id: '10000',
+          filename: 'shot.png',
+          mimeType: 'image/png',
+          size: 4,
+          created: '2026-10-25T10:00:00.000+0000',
+          author: 'dev@example.com',
+          authorAccountId: 'acc-1',
+          contentUrl:
+            'https://test.atlassian.net/rest/api/3/attachment/content/10000',
+        },
+      ]);
+    });
+
+    it('fills defaults and builds the content URL when Jira omits them', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse([{ id: 10001, filename: 'notes', author: null }]),
+      );
+
+      const [attachment] = await connector.addAttachment('PROJ-1', upload);
+
+      expect(attachment).toEqual({
+        id: '10001',
+        filename: 'notes',
+        mimeType: 'application/octet-stream',
+        size: 0,
+        created: '',
+        author: null,
+        authorAccountId: null,
+        contentUrl:
+          'https://test.atlassian.net/rest/api/3/attachment/content/10001',
+      });
+    });
+
+    it('encodes the issue key in the path', async () => {
+      mockFetch.mockResolvedValue(mockResponse([createdAttachment]));
+
+      await connector.addAttachment('PROJ 1/x', upload);
+
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toContain('/rest/api/3/issue/PROJ%201%2Fx/attachments');
+    });
+
+    it('rejects a response that is not an attachment array', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ unexpected: true }));
+
+      await expect(connector.addAttachment('PROJ-1', upload)).rejects.toThrow(
+        /Unexpected attachment upload response/,
+      );
+    });
+
+    it.each([
+      [403, JiraPermissionError, 'JIRA_PERMISSION'],
+      [404, IssueNotFoundError, 'ISSUE_NOT_FOUND'],
+      [413, AttachmentTooLargeError, 'ATTACHMENT_TOO_LARGE'],
+      [401, JiraAuthenticationError, 'JIRA_AUTH'],
+      [500, JiraConnectionError, 'JIRA_CONNECTION'],
+    ] as const)(
+      'maps HTTP %i to %o with code %s',
+      async (status, ErrorClass, code) => {
+        mockFetch.mockResolvedValue(mockErrorResponse(status, 'nope'));
+
+        const error = await connector
+          .addAttachment('PROJ-1', upload)
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(ErrorClass);
+        expect((error as { code: string }).code).toBe(code);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      },
+    );
+  });
+
+  describe('getAttachments', () => {
+    it('reads fields=attachment from the issue and maps each entry', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({
+          key: 'PROJ-1',
+          fields: {
+            attachment: [
+              {
+                id: '1',
+                filename: 'a.pdf',
+                mimeType: 'application/pdf',
+                size: 2048,
+                created: '2026-10-25T10:00:00.000+0000',
+                author: { accountId: 'acc-2', displayName: 'Hidden Email' },
+                content: 'https://test.atlassian.net/rest/api/3/attachment/content/1',
+              },
+            ],
+          },
+        }),
+      );
+
+      const attachments = await connector.getAttachments('PROJ-1');
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const parsed = new URL(url);
+      expect(parsed.pathname).toBe('/rest/api/3/issue/PROJ-1');
+      expect(parsed.searchParams.get('fields')).toBe('attachment');
+      expect(init.method).toBe('GET');
+      expect(attachments).toEqual([
+        {
+          id: '1',
+          filename: 'a.pdf',
+          mimeType: 'application/pdf',
+          size: 2048,
+          created: '2026-10-25T10:00:00.000+0000',
+          author: 'Hidden Email',
+          authorAccountId: 'acc-2',
+          contentUrl: 'https://test.atlassian.net/rest/api/3/attachment/content/1',
+        },
+      ]);
+    });
+
+    it('returns an empty list when the issue has no attachment field', async () => {
+      mockFetch.mockResolvedValue(mockResponse({ key: 'PROJ-1', fields: {} }));
+
+      await expect(connector.getAttachments('PROJ-1')).resolves.toEqual([]);
+    });
+
+    it('rejects a malformed attachment entry', async () => {
+      mockFetch.mockResolvedValue(
+        mockResponse({ fields: { attachment: [{ id: '1' }] } }),
+      );
+
+      await expect(connector.getAttachments('PROJ-1')).rejects.toThrow(
+        /Unexpected attachment list response/,
+      );
+    });
+
+    it('maps a 404 to ISSUE_NOT_FOUND', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(404, 'Issue does not exist'));
+
+      await expect(connector.getAttachments('PROJ-404')).rejects.toBeInstanceOf(
+        IssueNotFoundError,
+      );
     });
   });
 

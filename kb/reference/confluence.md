@@ -121,6 +121,8 @@ The only injected piece is the status-to-error mapper, because that is genuinely
 
 The mapper returns an error rather than throwing, which keeps the retry loop in charge of *when* to raise: a mapped 429 is still retried, and only the final attempt's error escapes.
 
+File uploads in both products go through `requestMultipart()`, which adds `X-Atlassian-Token: no-check` (both refuse a multipart write without it) and leaves `Content-Type` to `fetch`, so the boundary is set correctly. Confluence `upload_attachment` and Jira `add_task_attachment` both use it.
+
 ## Moving pages
 
 Two endpoints, chosen by what the move actually is:
@@ -214,7 +216,7 @@ So `PageOperations.updatePage()`:
 4. accepts a `storage` body unconditionally, which is the route for editing macro-bearing pages;
 5. honours `allowMarkupLoss` for a caller that genuinely means to replace the page.
 
-`get_page` surfaces `has_storage_markup` so a caller can tell before it tries, and `body_format: "storage"` returns the XHTML to edit.
+`get_page` surfaces `page.hasStorageMarkup` so a caller can tell before it tries, and `body_format: "storage"` returns the XHTML to edit.
 
 `movePage` uses the same storage passthrough: a move must not rewrite the body it passes over.
 

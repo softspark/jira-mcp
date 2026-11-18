@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import type { Command } from 'commander';
 
 import {
+  DEFAULT_COMMENT,
   loadJsonFile,
 } from '@softspark/atlassian-mcp-core';
 import {
@@ -25,9 +26,13 @@ import { info, table, error } from '@softspark/atlassian-mcp-core';
 
 /** Shape of the raw config.json file (pre-validation). */
 interface RawConfigFile {
-  readonly projects: Record<string, { readonly url: string; readonly language?: string }>;
+  readonly projects: Record<
+    string,
+    { readonly url: string; readonly language?: string; readonly default_comment?: string }
+  >;
   readonly default_project: string;
   readonly default_language?: string;
+  readonly default_comment?: string;
 }
 
 /** Row data returned for external consumption (testing). */
@@ -37,6 +42,9 @@ export interface ProjectRow {
   readonly isDefault: boolean;
   readonly language: string;
   readonly languageSource: 'project' | 'default';
+  /** Service Management only: what a comment without `internal` becomes. */
+  readonly defaultComment: string;
+  readonly defaultCommentSource: 'project' | 'default';
 }
 
 /**
@@ -59,6 +67,8 @@ export async function handleListProjects(
     isDefault: key === config.default_project,
     language: project.language ?? globalLang,
     languageSource: project.language ? 'project' as const : 'default' as const,
+    defaultComment: project.default_comment ?? config.default_comment ?? DEFAULT_COMMENT,
+    defaultCommentSource: project.default_comment ? 'project' as const : 'default' as const,
   }));
 }
 
@@ -81,9 +91,12 @@ export function registerListProjectsCommand(parent: Command): void {
           r.url,
           r.isDefault ? '*' : '',
           r.languageSource === 'project' ? r.language : `${r.language} (default)`,
+          r.defaultCommentSource === 'project'
+            ? r.defaultComment
+            : `${r.defaultComment} (default)`,
         ]);
 
-        table(['KEY', 'URL', 'DEFAULT', 'LANGUAGE'], tableRows);
+        table(['KEY', 'URL', 'DEFAULT', 'LANGUAGE', 'SD COMMENTS'], tableRows);
         info(`\n${String(rows.length)} project(s) configured.`);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

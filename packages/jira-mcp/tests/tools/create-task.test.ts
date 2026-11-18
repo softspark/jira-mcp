@@ -99,6 +99,34 @@ describe('handleCreateTask', () => {
     expect(desc['version']).toBe(1);
   });
 
+  it('turns @email in the description into a mention node', async () => {
+    const { pool, cache, connector, taskRegistry } = setupDeps();
+    connector.findUser.mockResolvedValue('acc-jan');
+    connector.createIssue.mockResolvedValue({
+      key: 'PROJ-45',
+      id: '10045',
+      url: 'https://test.atlassian.net/browse/PROJ-45',
+    });
+
+    await handleCreateTask(
+      { project_key: 'PROJ', summary: 'Mention', description: 'cc @jan@firma.pl' },
+      {
+        pool: asPool(pool),
+        cacheManager: asCacheManager(cache),
+        taskTemplateRegistry: asTaskRegistry(taskRegistry),
+      },
+    );
+
+    expect(connector.findUser).toHaveBeenCalledWith('jan@firma.pl');
+    const fields = connector.createIssue.mock.calls[0][0] as {
+      description: { content: Array<{ content: unknown[] }> };
+    };
+    expect(fields.description.content[0]?.content).toEqual([
+      { type: 'text', text: 'cc ' },
+      { type: 'mention', attrs: { id: 'acc-jan' } },
+    ]);
+  });
+
   it('creates a task with assignee (resolves email via findUser)', async () => {
     const { pool, cache, connector, taskRegistry } = setupDeps();
     connector.findUser.mockResolvedValue('account-id-123');

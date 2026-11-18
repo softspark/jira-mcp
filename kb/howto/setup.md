@@ -136,10 +136,12 @@ No `env` block is needed. Configuration is loaded automatically from `~/.softspa
 Optional: if you use `@softspark/ai-toolkit`, install the repo-owned hook manifest so comment-posting tools require explicit user approval:
 
 ```bash
-ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/hooks/jira-mcp-hooks.json
+ai-toolkit inject-hook https://raw.githubusercontent.com/softspark/jira-mcp/main/packages/jira-mcp/hooks/jira-mcp-hooks.json
 ```
 
-This hook intercepts `add_task_comment` and `add_templated_comment`, renders the exact outgoing comment preview, and blocks the write until the tool is retried with `user_approved=true`.
+This hook intercepts `add_task_comment` and `add_templated_comment`, renders the exact outgoing comment preview with its audience (internal note, public reply, project default, role or group restriction), and blocks the write until the tool is retried with `user_approved=true`.
+
+The manifest lives in `packages/jira-mcp/hooks/` since the workspace split. The old `.../main/hooks/jira-mcp-hooks.json` URL answers 404 and `ai-toolkit update` falls back to a cached copy; re-register with `ai-toolkit remove-hook jira-mcp-hooks` and the command above.
 
 ### 8. First use
 

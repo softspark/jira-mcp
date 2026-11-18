@@ -30,8 +30,11 @@ import {
   TempoNotConfiguredError,
   InvalidInputError,
   AnchorNotFoundError,
+  IssueNotFoundError,
+  AttachmentTooLargeError,
 } from '../../src/errors/index';
-import { requireString } from '../../src/tools/args';
+import { parseToolArgs, requireString } from '../../src/tools/args';
+import { z } from 'zod';
 
 describe('JiraMcpError', () => {
   it('extends Error', () => {
@@ -95,6 +98,20 @@ describe('JiraConnectionError hierarchy', () => {
     expect(err).toBeInstanceOf(JiraConnectionError);
     expect(err.code).toBe('JIRA_PERMISSION');
     expect(err.name).toBe('JiraPermissionError');
+  });
+
+  it('IssueNotFoundError is a JiraConnectionError with ISSUE_NOT_FOUND', () => {
+    const err = new IssueNotFoundError('PROJ-9 not found');
+    expect(err).toBeInstanceOf(JiraConnectionError);
+    expect(err.code).toBe('ISSUE_NOT_FOUND');
+    expect(err.name).toBe('IssueNotFoundError');
+  });
+
+  it('AttachmentTooLargeError is a JiraConnectionError with ATTACHMENT_TOO_LARGE', () => {
+    const err = new AttachmentTooLargeError('too big');
+    expect(err).toBeInstanceOf(JiraConnectionError);
+    expect(err.code).toBe('ATTACHMENT_TOO_LARGE');
+    expect(err.name).toBe('AttachmentTooLargeError');
   });
 });
 
@@ -174,6 +191,40 @@ describe('caller-fixable errors', () => {
       expect(() => requireString(bad, 'task_key')).toThrow(InvalidInputError);
     }
     expect(requireString('KAN-1', 'task_key')).toBe('KAN-1');
+  });
+
+  it('parseToolArgs returns the parsed value when the schema accepts it', () => {
+    const schema = z.object({ task_key: z.string(), limit: z.number().default(5) });
+    expect(parseToolArgs(schema, { task_key: 'KAN-1' })).toEqual({
+      task_key: 'KAN-1',
+      limit: 5,
+    });
+  });
+
+  it('parseToolArgs turns a schema failure into INVALID_INPUT naming each argument', () => {
+    const schema = z.object({
+      task_key: z.string().regex(/^[A-Z]+-\d+$/, 'bad key'),
+      file_path: z.string(),
+    });
+
+    let caught: unknown;
+    try {
+      parseToolArgs(schema, { task_key: 'kan 1' });
+    } catch (error: unknown) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(InvalidInputError);
+    const message = (caught as InvalidInputError).message;
+    expect(message).toContain('task_key: bad key');
+    expect(message).toContain('file_path:');
+  });
+
+  it('parseToolArgs reports a root-level failure without a path prefix', () => {
+    const schema = z.string().refine(() => false, { message: 'no good' });
+    expect(() => parseToolArgs(schema, 'x')).toThrow(
+      new InvalidInputError('Invalid arguments. no good'),
+    );
   });
 });
 

@@ -1,6 +1,6 @@
 # Jira MCP Server
 
-Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `add_task_comment`, `delete_task`, `delete_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `get_project_language`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `list_task_templates`, `create_task`, `create_monthly_tasks`, `search_tasks`, `search_tempo_worklogs`, `get_tempo_report`
+Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `add_task_comment`, `delete_task`, `delete_comment`, `reassign_task`, `get_task_statuses`, `get_task_details`, `get_project_language`, `log_task_time`, `get_task_time_tracking`, `list_comment_templates`, `add_templated_comment`, `list_task_templates`, `create_task`, `create_monthly_tasks`, `search_tasks`, `search_tempo_worklogs`, `get_tempo_report`, `add_task_attachment`, `list_task_attachments`
 
 ## Key Rules
 
@@ -11,7 +11,11 @@ Tools: `sync_tasks`, `read_cached_tasks`, `update_task_status`, `update_task`, `
 - **Status changes:** call `get_task_statuses` first to check valid transitions.
 - **Multi-instance:** project key determines which Jira instance is used (mapped in config.json).
 - **Comments are ADF:** `add_task_comment` converts markdown to ADF (Atlassian Document Format) automatically.
+- **Mentions:** write `@jan.kowalski@example.com` or `[~accountid:<id>]` in a comment or description. Plain `@Jan` stays text and notifies nobody. Each `@email` is looked up in Jira, and an unknown address fails the whole call, so nothing is posted with a mention missing. `get_task_details` shows existing mentions as `[@Name|~accountid:<id>]`, which can be copied as is. `\@` and code spans keep an address literal.
+- **Restricted comments and worklogs:** `add_task_comment`, `add_templated_comment` and `log_task_time` take an optional `visibility`: `{"type": "role", "value": "<role name>"}`, or a group as `{"type": "group", "identifier": "<groupId>"}` (survives a rename) or `{"type": "group", "value": "<group name>"}`. Omit it for a public item.
+- **Service Management internal notes:** in a service project pass `internal: true` (a JSON boolean) to `add_task_comment` / `add_templated_comment` for a note, `internal: false` for a reply the customer gets by e-mail. Omitted, `default_comment` decides: the project's (`jira-mcp config set-project-comment-default`), else the global one (`config set-comment-default`), else public. Pass it explicitly and read `internal` in the result. Outside a service project `internal` is refused with `INVALID_INPUT`; use `visibility` there. `get_task_details` returns `visibility` and `internal` on every comment: check both before quoting a comment to a customer or to someone outside the role or group.
 - **Delete guard:** `delete_task` is allowed only for the task creator, and `delete_comment` is allowed only for the comment author. Both require explicit `user_approved=true`.
+- **Attachments:** `add_task_attachment` takes an absolute `file_path` (relative paths are refused) and an optional bare `filename`; files over 10 MB are refused before upload. Check the result with `list_task_attachments`. An uploaded image cannot be embedded inline in a comment (ADF needs a Media Services id the REST API does not give), so mention the file name in the comment instead. `ISSUE_NOT_FOUND` means the issue is missing or not visible to the account; `ATTACHMENT_TOO_LARGE` means the site's own limit is lower.
 - **Templates:** use `list_comment_templates` to discover available templates, then `add_templated_comment` with `template_id` + `variables`.
 - **Shipped templates are English, with translations available.** `jira-mcp template list-locales` shows which languages ship translated comment templates, and `jira-mcp template install-locale <lang>` installs them as overrides. Their headings ("Status Update", "Completed", "Blockers") are fixed text, and no template carries a language. On a project whose configured language is not English, a shipped template posts an English comment and breaks the language-first rule. Use `add_templated_comment` with `markdown` instead, or install a translated override of the same `id` in `~/.softspark/jira-mcp/templates/comments/`. Trust `list_comment_templates` over this list: an installation may have overridden any of them.
 - **The template catalog is read once, at server startup.** `jira-mcp template add` changes what the CLI reports immediately, but a running MCP server keeps serving the catalog it loaded when it started. After installing or editing a template, restart the MCP client, or the next `add_templated_comment` silently renders the old version.
@@ -91,6 +95,8 @@ Read-only. Needs `tempo_token` on the site's credential (`jira-mcp config set-te
 | `jira-mcp config set-default <key>` | Set default project |
 | `jira-mcp config set-language <lang>` | Set global default language |
 | `jira-mcp config set-project-language <key> <lang>` | Set language for a specific project |
+| `jira-mcp config set-comment-default <internal\|public>` | Service Management: comment without `internal` becomes internal or public, all projects (default public) |
+| `jira-mcp config set-project-comment-default <key> <internal\|public>` | Same for one project, overriding the global value |
 | `jira-mcp cache sync-workflows` | Cache status transitions |
 | `jira-mcp cache sync-users` | Cache user list for reassignment |
 | `jira-mcp cache list-workflows` | Show cached workflows |

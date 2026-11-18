@@ -52,22 +52,48 @@ function truncatePreview(markdown: string, maxLength = 1500): string {
   return `${trimmed.slice(0, maxLength)}\n\n[preview truncated]`;
 }
 
+/**
+ * Who will read the comment, as far as the call says. The user approves the
+ * audience as much as the text: a Service Management reply is e-mailed to
+ * the customer. Validation stays with the tool; this only describes.
+ */
+function describeAudience(toolInput: Readonly<Record<string, unknown>>): string {
+  const internal = toolInput['internal'];
+  const visibility = isRecord(toolInput['visibility']) ? toolInput['visibility'] : undefined;
+  const restriction = visibility
+    ? `, visible only to ${String(visibility['type'])} ${String(visibility['value'] ?? visibility['identifier'])}`
+    : '';
+
+  if (internal === true) {
+    return `Audience: internal note (Service Management, agents only)${restriction}`;
+  }
+  if (internal === false) {
+    return `Audience: public reply (in a Service Management project the customer is e-mailed)${restriction}`;
+  }
+  return (
+    `Audience: project default${restriction}. In a Service Management project the ` +
+    'default_comment setting decides (public, so e-mailed to the customer, unless set to internal)'
+  );
+}
+
 function buildApprovalMessage(
   toolName: string | undefined,
-  taskKey: string | undefined,
+  toolInput: Readonly<Record<string, unknown>>,
   preview: string,
   templateId?: string,
 ): string {
+  const taskKey = asOptionalString(toolInput['task_key']);
   const lines = [
     'Comment approval required before Jira comment write.',
     `Tool: ${normalizeToolName(toolName)}`,
     ...(taskKey ? [`Task: ${taskKey}`] : []),
     ...(templateId ? [`Template: ${templateId}`] : []),
+    describeAudience(toolInput),
     'Preview:',
     '---',
     truncatePreview(preview),
     '---',
-    'Ask the user to approve this exact comment. If approved, rerun the same tool call with user_approved=true.',
+    'Ask the user to approve this exact comment and its audience. If approved, rerun the same tool call with user_approved=true.',
   ];
 
   return lines.join('\n');
@@ -146,7 +172,7 @@ export function evaluateCommentApprovalHook(
     exitCode: 2,
     message: buildApprovalMessage(
       asOptionalString(payload.tool_name),
-      asOptionalString(toolInput['task_key']),
+      toolInput,
       preview.markdown,
       preview.templateId,
     ),

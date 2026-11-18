@@ -15,6 +15,10 @@
 // Types
 // ---------------------------------------------------------------------------
 
+/** Appended to every markdown field that becomes ADF on a Jira write. */
+const MENTION_HINT =
+  ' Mention a user with @email (e.g. @jan.kowalski@example.com, looked up in Jira; an unknown address fails the call) or [~accountid:ID]. Plain @Name is not a mention.';
+
 export interface ToolDefinition {
   readonly name: string;
   readonly description: string;
@@ -24,6 +28,38 @@ export interface ToolDefinition {
     readonly required?: readonly string[];
   };
 }
+
+// ---------------------------------------------------------------------------
+// Shared properties
+// ---------------------------------------------------------------------------
+
+/** Jira's visibility object, shared by the comment and worklog tools. */
+const VISIBILITY_PROPERTY = {
+  type: 'object',
+  description:
+    'Optional restriction. Omit it and everyone who can browse the issue sees the item. ' +
+    'Role: {"type": "role", "value": "Administrators"}. ' +
+    'Group by name: {"type": "group", "value": "jira-developers"}, ' +
+    'or by group id, which survives a rename: {"type": "group", "identifier": "<groupId>"}.',
+  properties: {
+    type: { type: 'string', enum: ['group', 'role'] },
+    value: { type: 'string', description: 'Role name, or group name.' },
+    identifier: { type: 'string', description: 'Group id.' },
+  },
+  required: ['type'],
+  additionalProperties: false,
+} as const;
+
+/** Service Management internal note flag, shared by both comment tools. */
+const INTERNAL_PROPERTY = {
+  type: 'boolean',
+  description:
+    'Jira Service Management only. true posts an internal note that agents see and the customer does not; ' +
+    'false posts a public reply that reaches the customer by e-mail. Omitted, the project\'s configured ' +
+    'default applies, which is public unless the project is set to internal. Pass it explicitly whenever ' +
+    'you know which one the user wants. true is refused with INVALID_INPUT outside a service project; ' +
+    'use visibility there. The result says which one was posted.',
+} as const;
 
 // ---------------------------------------------------------------------------
 // Definitions
@@ -98,13 +134,15 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         },
         comment: {
           type: 'string',
-          description: 'Comment text in markdown format.',
+          description: 'Comment text in markdown format.' + MENTION_HINT,
         },
         user_approved: {
           type: 'boolean',
           description:
             'Must be true only after the user explicitly approves posting this comment.',
         },
+        visibility: VISIBILITY_PROPERTY,
+        internal: INTERNAL_PROPERTY,
       },
       required: ['task_key', 'comment'],
     },
@@ -223,6 +261,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           type: 'string',
           description: 'Optional work description.',
         },
+        visibility: VISIBILITY_PROPERTY,
       },
       required: ['task_key', 'time_spent'],
     },
@@ -283,13 +322,16 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         markdown: {
           type: 'string',
           description:
-            'Raw markdown comment. Use instead of template_id for freeform comments.',
+            'Raw markdown comment. Use instead of template_id for freeform comments.' +
+            MENTION_HINT,
         },
         user_approved: {
           type: 'boolean',
           description:
             'Must be true only after the user explicitly approves posting this comment.',
         },
+        visibility: VISIBILITY_PROPERTY,
+        internal: INTERNAL_PROPERTY,
       },
       required: ['task_key'],
     },
@@ -312,7 +354,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         description: {
           type: 'string',
           description:
-            'Optional issue description in markdown format. Automatically converted to ADF. Do not provide when using template_id.',
+            'Optional issue description in markdown format. Automatically converted to ADF. Do not provide when using template_id.' +
+            MENTION_HINT,
         },
         template_id: {
           type: 'string',
@@ -403,7 +446,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         description: {
           type: 'string',
           description:
-            'New issue description in markdown format. Automatically converted to ADF.',
+            'New issue description in markdown format. Automatically converted to ADF.' +
+            MENTION_HINT,
         },
         priority: {
           type: 'string',
@@ -545,6 +589,46 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         },
       },
       required: ['from', 'to'],
+    },
+  },
+  {
+    name: 'add_task_attachment',
+    description:
+      'Upload a local file to a Jira task as an attachment. The task key prefix selects the Jira instance. Files above 10 MB are rejected. The media type comes from the extension (png, jpg, jpeg, gif, webp, pdf, txt, csv, json, zip; anything else uploads as application/octet-stream). Returns the created attachment with id, filename, mime_type, size and content_url. An uploaded image cannot be shown inline in a comment through this server: Jira needs a Media Services id for that, which the REST API does not return.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_key: {
+          type: 'string',
+          description: 'Task key (e.g. "PROJ-123").',
+        },
+        file_path: {
+          type: 'string',
+          description:
+            'Absolute path of a local regular file to upload. Relative paths are rejected because the server does not run in your working directory.',
+        },
+        filename: {
+          type: 'string',
+          description:
+            'Optional stored name, a bare file name without "/" or "\\". Defaults to the basename of file_path. Its extension also picks the media type.',
+        },
+      },
+      required: ['task_key', 'file_path'],
+    },
+  },
+  {
+    name: 'list_task_attachments',
+    description:
+      'List the attachments of a Jira task: id, filename, mime_type, size, created, author and content_url. Metadata only, file content is never returned. Use it to verify an add_task_attachment upload.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task_key: {
+          type: 'string',
+          description: 'Task key (e.g. "PROJ-123").',
+        },
+      },
+      required: ['task_key'],
     },
   },
 ];

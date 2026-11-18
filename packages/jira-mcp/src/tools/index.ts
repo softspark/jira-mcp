@@ -128,5 +128,23 @@ export type {
   GetTempoReportDeps,
 } from './get-tempo-report.js';
 
+export {
+  handleAddTaskAttachment,
+  AddTaskAttachmentArgsSchema,
+} from './add-task-attachment.js';
+export type {
+  AddTaskAttachmentArgs,
+  AddTaskAttachmentDeps,
+} from './add-task-attachment.js';
+
+export {
+  handleListTaskAttachments,
+  ListTaskAttachmentsArgsSchema,
+} from './list-task-attachments.js';
+export type {
+  ListTaskAttachmentsArgs,
+  ListTaskAttachmentsDeps,
+} from './list-task-attachments.js';
+
 export type { ToolResult } from './helpers.js';
 export { success, failure } from './helpers.js';

@@ -17,9 +17,13 @@ export type {
   JiraIssue,
   JiraIssueDetail,
   JiraComment,
+  CommentOptions,
+  JiraVisibility,
   JiraTransition,
   JiraWorklog,
   JiraTimeTracking,
   JiraIssueRef,
   JiraProject,
+  JiraAttachment,
+  AttachmentUpload,
 } from './types.js';

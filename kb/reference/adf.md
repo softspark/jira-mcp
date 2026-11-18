@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [adf, atlassian-document-format, markdown, conversion]
 version: "1.0.0"
 created: "2026-04-13"
-last_updated: "2026-06-10"
+last_updated: "2026-11-06"
 description: "Reference for Atlassian Document Format (ADF) usage, markdown conversion functions, builder helpers, and fallback behavior."
 ---
 
@@ -63,6 +63,7 @@ The built-in parser handles the following elements:
 - Blockquotes (`> `)
 - Horizontal rules (`---`)
 - Links (`[text](url)`)
+- User mentions: `[~accountid:ID]`, or `[Label|~accountid:ID]` to keep a fallback text (`@` is added when the label lacks it). Atlassian renders the user's current name from the id. Code spans and code blocks keep the syntax literal
 - Images (`![alt](url)`) degrade to links, because ADF media nodes require uploaded attachments
 - Tables with a header row and delimiter row
 
@@ -112,7 +113,7 @@ The function never throws. The JSON fallback ensures the caller always has somet
 
 ### Read-Direction Node Support
 
-Beyond the basic blocks, the reader renders: `mention` (@name), `emoji` (shortname), `inlineCard` (link), `panel` (quoted `**TYPE:**` block), `status` (`[text]`), `date` (`YYYY-MM-DD` from the timestamp attr), `taskList`/`taskItem` (`- [ ]` / `- [x]` checkboxes with nesting), nested bullet/ordered lists (2-space indentation), and `media`/`mediaSingle` (`[media]` placeholder).
+Beyond the basic blocks, the reader renders: `mention` (`[@Name|~accountid:ID]`, the form the writer parses, so a read-modify-write keeps the mention; a mention without an id falls back to its text or `@unknown`), `emoji` (shortname), `inlineCard` (link), `panel` (quoted `**TYPE:**` block), `status` (`[text]`), `date` (`YYYY-MM-DD` from the timestamp attr), `taskList`/`taskItem` (`- [ ]` / `- [x]` checkboxes with nesting), nested bullet/ordered lists (2-space indentation), and `media`/`mediaSingle` (`[media]` placeholder).
 
 ---
 

@@ -3,18 +3,19 @@
 > MCP server for Confluence Cloud -- pages, blog posts, comments, labels, attachments, restrictions and whiteboards via the Model Context Protocol.
 
 [![npm](https://img.shields.io/npm/v/@softspark/confluence-mcp)](https://www.npmjs.com/package/@softspark/confluence-mcp)
-[![version](https://img.shields.io/badge/version-1.16.1-blue)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.19.0-blue)](CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Part of the [SoftSpark Atlassian MCP workspace](https://github.com/softspark/jira-mcp), alongside [`@softspark/jira-mcp`](../jira-mcp).
 
 ---
 
-## What's New in v1.16.1
+## What's New in v1.19.0
 
-- **A rejected call says so.** Every argument check used to answer `UNKNOWN_ERROR`, which reads as "something broke". They now answer `INVALID_INPUT`: a page with no body, `content` together with `storage`, an update that names nothing, an unknown `position`, an empty label list, a file over the upload limit. Nothing is written, and the message names what to pass.
-- `add_page_inline_comment` answers `ANCHOR_NOT_FOUND` when `text_selection` is not on the page, and a page template missing a required variable answers `TEMPLATE_MISSING_VAR`.
-- If a client matched on `UNKNOWN_ERROR` to detect a bad call, match on the new codes instead. Same 31 tools, same commands, same config path.
+- **Mentions survive a markdown edit.** `get_page` in markdown used to render a user mention as a bare `@Name`, so writing the page back turned every mention into text. It now reads as `[@Name|~accountid:ID]`, and `create_page`, `update_page` and comments turn `[~accountid:ID]` (or `[Label|~accountid:ID]`) into a mention. The `@email` lookup is Jira only.
+- **From 1.18.1: `get_page` docs name the real field.** The response carries `page.hasStorageMarkup`; the tool description and the agent rule used to say `has_storage_markup`, which never exists. Read `page.hasStorageMarkup` before editing a page: `true` means macros or page links, so edit it as `storage`. The response itself did not change.
+- 1.18.0 changed nothing here: the shared `config.json` only gained two optional Jira fields (`default_comment`, `projects.<KEY>.default_comment`) that Confluence ignores.
+- Released together with `@softspark/jira-mcp` under one version. See the [changelog](CHANGELOG.md).
 
 ---
 
@@ -157,7 +158,7 @@ In config.json, per space or as a global default:
 | the other kind of body | `storage` is accepted too — it never loses anything | `content` is **refused** with `MARKUP_LOSS_REFUSED` |
 | pages that already contain macros | markdown write refused per page | n/a, the whole space is storage |
 
-`get_space_language` reports both the language and the format, so an assistant can ask once and then write correctly. `get_page` also returns `has_storage_markup`, which flags a macro-bearing page inside a markdown space.
+`get_space_language` reports both the language and the format, so an assistant can ask once and then write correctly. `get_page` also returns `page.hasStorageMarkup`, which flags a macro-bearing page inside a markdown space.
 
 ### Rules that hold in both modes
 

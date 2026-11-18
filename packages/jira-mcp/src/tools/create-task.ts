@@ -23,6 +23,7 @@ import {
   TemplateMissingVariableError,
 } from '@softspark/atlassian-mcp-core';
 import { parseTimeSpent } from '../connector/time-parser.js';
+import { resolveEmailMentions } from '../operations/mentions.js';
 import type { TaskTemplateRegistry } from '../templates/task-registry.js';
 
 // ---------------------------------------------------------------------------
@@ -159,7 +160,11 @@ export async function handleCreateTask(
 
     // Optional description (markdown -> ADF)
     if (effectiveDescription) {
-      fields['description'] = markdownToAdf(effectiveDescription);
+      fields['description'] = markdownToAdf(
+        await resolveEmailMentions(effectiveDescription, (email) =>
+          connector.findUser(email),
+        ),
+      );
     }
 
     // Optional labels

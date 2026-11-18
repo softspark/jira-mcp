@@ -5,7 +5,7 @@ service: jira-mcp
 tags: [sop, verification, release, smoke-test, install, qa, post-release, jira-api, confluence-api, provenance, supply-chain]
 version: "1.16.0"
 created: "2026-04-13"
-last_updated: "2026-09-18"
+last_updated: "2026-11-06"
 description: "End-to-end smoke test after publishing a release of the Atlassian MCP workspace — npm install verification, CLI smoke tests, MCP server verification, live Jira API tests against KAN, live Confluence API tests against the default space, supply-chain verification (provenance, npm audit signatures), and cleanup."
 ---
 
@@ -249,6 +249,13 @@ add_task_comment({
 - [ ] Comment added, returns comment ID
 - [ ] No ADF conversion errors
 
+Since 1.19.0, also post one comment with a mention: `@<your-email>` plus the
+same address in backticks.
+
+- [ ] The returned `body` shows `[@Name|~accountid:...]` for the first one and
+  the code span unchanged
+- [ ] An unknown `@address` fails the call and no comment is created
+
 ### Step 4.7: Add Templated Comment
 
 ```
@@ -420,8 +427,8 @@ search_pages({ text: "<a word that exists in the space>" })
 get_page({ page_id: "<an existing page>" })
 ```
 
-- [ ] Returns the body, the version number and `has_storage_markup`
-- [ ] A page authored in the Confluence editor reports `has_storage_markup: true`
+- [ ] Returns the body, the version number and `page.hasStorageMarkup`
+- [ ] A page authored in the Confluence editor reports `page.hasStorageMarkup: true`
 
 ### Step 4b.5: Read the same page as storage
 
@@ -655,6 +662,33 @@ Two things the literal commands above get wrong on the real instance:
   `@softspark/confluence-mcp` at the same version. A smoke test run from a
   temporary directory validates the tarball, not the global install the CLI
   actually uses.
+- **`create_task` answers `issue_key`, not `task_key`.** A script that reads
+  the wrong field sees no key after a successful create; search for the task
+  before creating it again.
+- **KAN can be down for billing.** On 2026-10-27 softspark.atlassian.net
+  answered 503 (subscription deactivated). Phase 4 waits for KAN; it is not
+  moved to a client project.
+
+## Verification on 2026-11-06 (1.19.0)
+
+Published 1.19.0 (user mentions via `@email` and `[~accountid:ID]`, reads
+that keep the account id). Full run on KAN-17, including the mention checks
+added to Step 4.6; Confluence read-only on DevOps. A notification to another
+user is still unverified, KAN has one account. See
+[the executed record](release-verification-20261106.md).
+
+## Verification on 2026-10-27 (1.18.0, 1.18.1 and 1.18.2)
+
+Published 1.18.0 (comment and worklog `visibility`, Service Management
+`internal` notes, `default_comment`). Phase 4 ran on KAN after the outage
+above, including the new parameters. The run found that `get_page` docs named
+`has_storage_markup` while the response carries `page.hasStorageMarkup`;
+1.18.1 fixes the docs. The `ai-toolkit update` that followed exposed a 404 on
+the documented hook URL and a comment-approval preview without the audience;
+1.18.2 fixes both. When a release changes who can read a comment, check the
+hook output too: pipe a tool call into `jira-mcp hook comment-approval`.
+Internal notes are still unverified on a real service project. See
+[the executed record](release-verification-20261027.md).
 
 ## Verification on 2026-09-18 (1.16.0)
 
